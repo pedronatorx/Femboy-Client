@@ -12,7 +12,12 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.fabricmc.loader.api.FabricLoader;
 
+import io.github.theamethyx.nova.client.fixture.FixtureRegistry;
 import io.github.theamethyx.nova.client.gui.NovaScreen;
+import io.github.theamethyx.nova.client.hud.HudManager;
+import io.github.theamethyx.nova.client.render.WorldRenderDispatcher;
+import io.github.theamethyx.nova.client.scenario.TestScenarioManager;
+import io.github.theamethyx.nova.client.scenario.VisualFixtureScenario;
 import io.github.theamethyx.nova.core.config.ConfigurationManager;
 import io.github.theamethyx.nova.core.diag.DiagnosticLogger;
 import io.github.theamethyx.nova.core.diag.PerformanceMonitor;
@@ -31,6 +36,9 @@ public final class NovaClient implements ClientModInitializer {
 	private KeybindManager keybinds;
 	private ConfigurationManager config;
 	private GlobalOptions options;
+	private FixtureRegistry fixtures;
+	private TestScenarioManager scenarios;
+	private WorldRenderDispatcher worldRender;
 
 	public static NovaClient get() {
 		return instance;
@@ -51,6 +59,11 @@ public final class NovaClient implements ClientModInitializer {
 		config = new ConfigurationManager(configDir, modules, options.settings, diagnostics, System::currentTimeMillis);
 		modules.setEnvironment(new ClientEnvironment(client, config));
 
+		fixtures = new FixtureRegistry(configDir.resolve("fixtures.json"), diagnostics);
+		fixtures.load();
+		scenarios = new TestScenarioManager(fixtures, diagnostics);
+		scenarios.register(new VisualFixtureScenario());
+
 		ModuleRegistry.registerAll(modules);
 
 		List<String> report = config.load();
@@ -58,6 +71,9 @@ public final class NovaClient implements ClientModInitializer {
 				+ (report.isEmpty() ? "" : " (" + report.size() + " configuration problem(s) recovered, see Diagnostics)"));
 
 		NovaKeys.register();
+		new HudManager(modules).register();
+		worldRender = new WorldRenderDispatcher(modules, diagnostics);
+		worldRender.register();
 		ClientTickEvents.END_CLIENT_TICK.register(this::onEndTick);
 		WorldRenderEvents.START_MAIN.register(context -> performance.markFrame(System.nanoTime()));
 		ClientLifecycleEvents.CLIENT_STOPPING.register(this::onStopping);
@@ -77,6 +93,7 @@ public final class NovaClient implements ClientModInitializer {
 	private void onStopping(Minecraft client) {
 		modules.stopAll();
 		config.saveNow();
+		worldRender.close();
 	}
 
 	/** Called by the keyboard mixin for key presses while no screen is open. */
@@ -114,6 +131,14 @@ public final class NovaClient implements ClientModInitializer {
 
 	public GlobalOptions options() {
 		return options;
+	}
+
+	public FixtureRegistry fixtures() {
+		return fixtures;
+	}
+
+	public TestScenarioManager scenarios() {
+		return scenarios;
 	}
 
 	/** Placeholder policy used only until the config (and therefore the server list) exists. */

@@ -26,6 +26,14 @@ public class ModuleRow extends Container {
 		this.toggle = add(new ToggleSwitch(module::isEnabled, enabled -> manager.setEnabled(module, enabled)));
 	}
 
+	public Module module() {
+		return module;
+	}
+
+	public ToggleSwitch toggle() {
+		return toggle;
+	}
+
 	@Override
 	public int preferredHeight(UiContext ui, int width) {
 		return 20;

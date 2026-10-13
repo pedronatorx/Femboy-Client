@@ -39,6 +39,7 @@ public final class UiContext {
 	private Object lastTooltipOwner;
 	private long tooltipHoverStart;
 	private CursorType cursor;
+	private final java.util.List<int[]> placedLabels = new java.util.ArrayList<>();
 	private int screenWidth = 10_000;
 	private int screenHeight = 10_000;
 
@@ -58,6 +59,7 @@ public final class UiContext {
 		this.tooltipOwner = null;
 		this.cursor = null;
 		this.clips.clear();
+		this.placedLabels.clear();
 	}
 
 	/** Draws the tooltip (after a short hover delay) and applies the requested cursor. */
@@ -323,5 +325,35 @@ public final class UiContext {
 
 	public int textWidth(String text) {
 		return font.width(text);
+	}
+
+	/**
+	 * Draws a world label (text in a small dark box with a colored underline) centered on
+	 * {@code centerX} with its bottom at {@code bottomY}. Labels placed earlier in the same frame are
+	 * avoided by moving this one upwards, so nearby labels stack instead of overlapping.
+	 */
+	public void worldLabel(String text, int centerX, int bottomY, int accent) {
+		int w = textWidth(text) + 8;
+		int h = 12;
+		int x = centerX - w / 2;
+		int y = bottomY - h;
+		for (int attempt = 0; attempt < 8; attempt++) {
+			boolean overlaps = false;
+			for (int[] r : placedLabels) {
+				if (x < r[0] + r[2] && x + w > r[0] && y < r[1] + r[3] && y + h > r[1]) {
+					overlaps = true;
+					y = r[1] - h - 1;
+				}
+			}
+
+			if (!overlaps) {
+				break;
+			}
+		}
+
+		placedLabels.add(new int[] {x, y, w, h});
+		roundRect(x, y, w, h, 0xB0101014);
+		rect(x + 1, y + h - 1, w - 2, 1, accent);
+		textCentered(text, centerX, y + 2, Theme.TEXT);
 	}
 }

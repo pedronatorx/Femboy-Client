@@ -3,9 +3,6 @@ package io.github.theamethyx.nova.client.gui.widget;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.client.input.CharacterEvent;
-import net.minecraft.client.input.KeyEvent;
-
 import io.github.theamethyx.nova.client.gui.UiContext;
 
 /** A widget holding children; renders them in order and gives events to the topmost first. */
@@ -23,6 +20,22 @@ public class Container extends Widget {
 
 	public List<Widget> children() {
 		return children;
+	}
+
+	/** All widgets of a type inside this container, depth first (used by automated UI tests). */
+	public <W extends Widget> List<W> descendants(Class<W> type) {
+		List<W> found = new ArrayList<>();
+		for (Widget child : children) {
+			if (type.isInstance(child)) {
+				found.add(type.cast(child));
+			}
+
+			if (child instanceof Container container) {
+				found.addAll(container.descendants(type));
+			}
+		}
+
+		return found;
 	}
 
 	@Override
@@ -55,25 +68,6 @@ public class Container extends Widget {
 		return false;
 	}
 
-	@Override
-	public boolean keyPressed(UiContext ui, KeyEvent event) {
-		for (int i = children.size() - 1; i >= 0; i--) {
-			if (children.get(i).keyPressed(ui, event)) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	@Override
-	public boolean charTyped(UiContext ui, CharacterEvent event) {
-		for (int i = children.size() - 1; i >= 0; i--) {
-			if (children.get(i).charTyped(ui, event)) {
-				return true;
-			}
-		}
-
-		return false;
-	}
+	// Keyboard input is deliberately not broadcast to children: only the focused widget receives
+	// keys (routed by NovaScreen). Broadcasting let unfocused text fields swallow Escape and typing.
 }

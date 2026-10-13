@@ -57,6 +57,14 @@ public class SettingRow extends Container {
 		return String.valueOf(value);
 	}
 
+	public Setting<?> setting() {
+		return setting;
+	}
+
+	public Widget control() {
+		return control;
+	}
+
 	private boolean stacked() {
 		// Sliders and dropdowns get their own line so labels are never squeezed.
 		return !(setting instanceof BooleanSetting);

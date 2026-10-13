@@ -20,6 +20,7 @@ import io.github.theamethyx.nova.client.gui.page.DashboardPage;
 import io.github.theamethyx.nova.client.gui.page.DiagnosticsPage;
 import io.github.theamethyx.nova.client.gui.page.ModulesPage;
 import io.github.theamethyx.nova.client.gui.page.Page;
+import io.github.theamethyx.nova.client.gui.page.ScenariosPage;
 import io.github.theamethyx.nova.client.gui.widget.Widget;
 import io.github.theamethyx.nova.core.module.ModuleCategory;
 
@@ -63,6 +64,7 @@ public class NovaScreen extends Screen {
 					Icon.VISUAL, ModuleCategory.HUD, ModuleCategory.VISUAL, ModuleCategory.UTILITY));
 			pages.add(new ModulesPage(ui, "World Analysis", "Analysis", "Research modules that read block states in controlled test worlds.",
 					Icon.ANALYSIS, ModuleCategory.WORLD_ANALYSIS));
+			pages.add(new ScenariosPage(ui));
 			pages.add(new DiagnosticsPage(ui));
 			pages.add(new ConfigPage(ui));
 			current = Math.max(0, Math.min(pages.size() - 1, GuiState.page));

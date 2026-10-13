@@ -30,7 +30,7 @@ public class ModulesPage extends Page {
 	/** Filter choice; {@code category == null} means all categories shown on this page. */
 	public record CategoryChoice(ModuleCategory category) {
 		String label() {
-			return category == null ? "All categories" : category.label();
+			return category == null ? "All" : category.label();
 		}
 	}
 
@@ -174,10 +174,20 @@ public class ModulesPage extends Page {
 			} else {
 				rows.addAll(SettingRow.rowsFor(module.settings().all()));
 			}
+
+			if (module instanceof io.github.theamethyx.nova.client.module.ClientHooks.CustomControls custom) {
+				// Module-specific controls (e.g. the waypoint list); refresh rebuilds this panel.
+				rows.addAll(custom.createControls(ui, () -> rebuildDetailsKeepScroll()));
+			}
 		}
 
 		details.setChildren(rows);
 		details.scrollToTop();
+	}
+
+	private void rebuildDetailsKeepScroll() {
+		lastSelection = null;
+		rebuildDetails();
 	}
 
 	/** Name, category, description and live status of the selected module. */
