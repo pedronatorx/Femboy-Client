@@ -4,17 +4,27 @@
 	"version": "${version}",
 	"name": "NOVA",
 	"description": "Client-side development and research framework: module system, ClickGUI, HUD, and controlled-world block-state research tools.",
-	"authors": ["TheAmethyx"],
+	"authors": [
+		"TheAmethyx"
+	],
 	"license": "All-Rights-Reserved",
 	"icon": "assets/nova/icon.png",
 	"environment": "*",
 	"entrypoints": {
-		"client": ["io.github.theamethyx.nova.client.NovaClient"]
+		"client": [
+			"io.github.theamethyx.nova.client.NovaClient"
+		]
 	},
 	"depends": {
 		"fabricloader": ">=0.19.5",
 		"minecraft": "~1.21.11",
 		"java": ">=21",
 		"fabric-api": "*"
-	}
+	},
+	"mixins": [
+		{
+			"config": "nova.client.mixins.json",
+			"environment": "client"
+		}
+	]
 }
