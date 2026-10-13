@@ -19,6 +19,13 @@ loom {
 			sourceSet sourceSets.client
 		}
 	}
+
+	runs {
+		configureEach {
+			// Keeps dev and test clients from claiming a large default heap on shared machines.
+			vmArg "-Xmx2G"
+		}
+	}
 }
 
 dependencies {
@@ -29,6 +36,18 @@ dependencies {
 
 	// JUnit 5 inside a Fabric Loader environment, so tests may also touch Minecraft classes.
 	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
+}
+
+fabricApi {
+	configureTests {
+		// Creates the "gametest" source set with its own fabric.mod.json, plus the
+		// runGameTest (headless server) and runClientGameTest (real client) tasks.
+		createSourceSet = true
+		modId = "nova-gametest"
+		enableGameTests = true
+		enableClientGameTests = true
+		eula = true // Accepts the Minecraft EULA for the throwaway test server/worlds.
+	}
 }
 
 test {

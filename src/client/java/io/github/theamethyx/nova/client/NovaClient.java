@@ -9,8 +9,10 @@ import net.minecraft.network.chat.Component;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.fabricmc.loader.api.FabricLoader;
 
+import io.github.theamethyx.nova.client.gui.NovaScreen;
 import io.github.theamethyx.nova.core.config.ConfigurationManager;
 import io.github.theamethyx.nova.core.diag.DiagnosticLogger;
 import io.github.theamethyx.nova.core.diag.PerformanceMonitor;
@@ -55,11 +57,19 @@ public final class NovaClient implements ClientModInitializer {
 		diagnostics.info("NOVA", "Initialized " + modules.all().size() + " modules; profile '" + config.activeProfile() + "'"
 				+ (report.isEmpty() ? "" : " (" + report.size() + " configuration problem(s) recovered, see Diagnostics)"));
 
+		NovaKeys.register();
 		ClientTickEvents.END_CLIENT_TICK.register(this::onEndTick);
+		WorldRenderEvents.START_MAIN.register(context -> performance.markFrame(System.nanoTime()));
 		ClientLifecycleEvents.CLIENT_STOPPING.register(this::onStopping);
 	}
 
 	private void onEndTick(Minecraft client) {
+		while (NovaKeys.openMenu.consumeClick()) {
+			if (client.screen == null) {
+				client.setScreen(new NovaScreen());
+			}
+		}
+
 		modules.tick();
 		config.tick();
 	}

@@ -1,25 +1,25 @@
-[18:53:38] [Test worker/INFO]: [Config] Authorized test server added: localhost:25565
-[18:53:38] [Test worker/INFO]: [Config] Authorized test server added: [::1]:25570
-[18:53:38] [Test worker/WARN]: [Config] Profile 'default' was written by a newer version of NOVA; settings this version does not know were ignored.
-[18:53:38] [Test worker/WARN]: [Config] Profile 'default': Test Module: 'enabled' must be true or false; using the default.
-[18:53:38] [Test worker/WARN]: [Config] Profile 'default': Test Module: 'Size' had an invalid value (must be between 1 and 5); using the default 2.
-[18:53:38] [Test worker/INFO]: [Config] Created profile 'pvp' from 'default'.
-[18:53:38] [Test worker/INFO]: [Config] Switched to profile 'pvp'.
-[18:53:38] [Test worker/INFO]: [Config] Switched to profile 'default'.
-[18:53:38] [Test worker/INFO]: [Config] Deleted profile 'pvp' (a copy was kept in the profiles folder).
-[18:53:38] [Test worker/INFO]: [Config] Created profile 'second' from 'default'.
-[18:53:38] [Test worker/INFO]: [Config] Switched to profile 'second'.
-[18:53:38] [Test worker/WARN]: [Config] Profile 'default' could not be read (Use JsonReader.setStrictness(Strictness.LENIENT) to accept malformed JSON at line 1 column 17 path $.modules.
-See https://github.com/google/gson/blob/main/Troubleshooting.md#malformed-json). The file was kept as default.json.corrupt-20261013-185338-056.
-[18:53:38] [Test worker/WARN]: [Config] Profile 'default' was restored from the backup copy.
-[18:53:38] [Test worker/WARN]: [Config] Global settings could not be read (Use JsonReader.setStrictness(Strictness.LENIENT) to accept malformed JSON at line 1 column 1 path $
-See https://github.com/google/gson/blob/main/Troubleshooting.md#malformed-json). The file was kept as nova.json.corrupt-20261013-185338-061.
-[18:53:38] [Test worker/WARN]: [Config] Global settings: no backup was available; using defaults.
-[18:53:38] [Test worker/INFO]: [Alpha] Enabled
-[18:53:38] [Test worker/INFO]: [Alpha] Disabled
-[18:53:38] [Test worker/INFO]: [Alpha] Enabled
-[18:53:38] [Test worker/INFO]: [Alpha] Enabled
-[18:53:38] [Test worker/ERROR]: [Alpha] Failed during enable: cannot start. The module was turned off; other modules are unaffected.
+[19:12:08] [Test worker/INFO]: [Config] Authorized test server added: localhost:25565
+[19:12:08] [Test worker/INFO]: [Config] Authorized test server added: [::1]:25570
+[19:12:08] [Test worker/WARN]: [Config] Profile 'default' was written by a newer version of NOVA; settings this version does not know were ignored.
+[19:12:08] [Test worker/WARN]: [Config] Profile 'default': Test Module: 'enabled' must be true or false; using the default.
+[19:12:08] [Test worker/WARN]: [Config] Profile 'default': Test Module: 'Size' had an invalid value (must be between 1 and 5); using the default 2.
+[19:12:08] [Test worker/INFO]: [Config] Created profile 'pvp' from 'default'.
+[19:12:08] [Test worker/INFO]: [Config] Switched to profile 'pvp'.
+[19:12:08] [Test worker/INFO]: [Config] Switched to profile 'default'.
+[19:12:08] [Test worker/INFO]: [Config] Deleted profile 'pvp' (a copy was kept in the profiles folder).
+[19:12:08] [Test worker/INFO]: [Config] Created profile 'second' from 'default'.
+[19:12:08] [Test worker/INFO]: [Config] Switched to profile 'second'.
+[19:12:08] [Test worker/WARN]: [Config] Profile 'default' could not be read (Use JsonReader.setStrictness(Strictness.LENIENT) to accept malformed JSON at line 1 column 17 path $.modules.
+See https://github.com/google/gson/blob/main/Troubleshooting.md#malformed-json). The file was kept as default.json.corrupt-20261013-191208-800.
+[19:12:08] [Test worker/WARN]: [Config] Profile 'default' was restored from the backup copy.
+[19:12:08] [Test worker/WARN]: [Config] Global settings could not be read (Use JsonReader.setStrictness(Strictness.LENIENT) to accept malformed JSON at line 1 column 1 path $
+See https://github.com/google/gson/blob/main/Troubleshooting.md#malformed-json). The file was kept as nova.json.corrupt-20261013-191208-811.
+[19:12:08] [Test worker/WARN]: [Config] Global settings: no backup was available; using defaults.
+[19:12:08] [Test worker/INFO]: [Alpha] Enabled
+[19:12:08] [Test worker/INFO]: [Alpha] Disabled
+[19:12:08] [Test worker/INFO]: [Alpha] Enabled
+[19:12:08] [Test worker/INFO]: [Alpha] Enabled
+[19:12:08] [Test worker/ERROR]: [Alpha] Failed during enable: cannot start. The module was turned off; other modules are unaffected.
 java.lang.RuntimeException: cannot start
 	at knot//io.github.theamethyx.nova.core.module.ModuleManagerTest.failureDuringEnableDoesNotLeaveModuleRunning(ModuleManagerTest.java:179)
 	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
@@ -104,13 +104,13 @@ java.lang.RuntimeException: cannot start
 	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:72)
 	at worker.org.gradle.process.internal.worker.GradleWorkerMain.run(GradleWorkerMain.java:69)
 	at worker.org.gradle.process.internal.worker.GradleWorkerMain.main(GradleWorkerMain.java:74)
-[18:53:38] [Test worker/INFO]: [Alpha] Enabled
-[18:53:38] [Test worker/INFO]: [Alpha] Disabled
-[18:53:38] [Test worker/INFO]: [Alpha] Enabled
-[18:53:38] [Test worker/INFO]: [Alpha] Enabled
-[18:53:38] [Test worker/INFO]: [Broken] Enabled
-[18:53:38] [Test worker/INFO]: [Healthy] Enabled
-[18:53:38] [Test worker/ERROR]: [Broken] Failed during tick: boom. The module was turned off; other modules are unaffected.
+[19:12:08] [Test worker/INFO]: [Alpha] Enabled
+[19:12:08] [Test worker/INFO]: [Alpha] Disabled
+[19:12:08] [Test worker/INFO]: [Alpha] Enabled
+[19:12:08] [Test worker/INFO]: [Alpha] Enabled
+[19:12:08] [Test worker/INFO]: [Broken] Enabled
+[19:12:08] [Test worker/INFO]: [Healthy] Enabled
+[19:12:08] [Test worker/ERROR]: [Broken] Failed during tick: boom. The module was turned off; other modules are unaffected.
 java.lang.IllegalStateException: boom
 	at knot//io.github.theamethyx.nova.core.module.ModuleManagerTest.aFailingModuleIsDisabledWithoutAffectingOthers(ModuleManagerTest.java:155)
 	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
@@ -195,6 +195,6 @@ java.lang.IllegalStateException: boom
 	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:72)
 	at worker.org.gradle.process.internal.worker.GradleWorkerMain.run(GradleWorkerMain.java:69)
 	at worker.org.gradle.process.internal.worker.GradleWorkerMain.main(GradleWorkerMain.java:74)
-[18:53:38] [Test worker/INFO]: [Broken] Enabled
-[18:53:38] [Test worker/INFO]: [Alpha] Enabled
-[18:53:38] [Test worker/INFO]: [Alpha] Disabled
+[19:12:08] [Test worker/INFO]: [Broken] Enabled
+[19:12:08] [Test worker/INFO]: [Alpha] Enabled
+[19:12:08] [Test worker/INFO]: [Alpha] Disabled

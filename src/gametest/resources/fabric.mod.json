@@ -1,0 +1,14 @@
+{
+	"schemaVersion": 1,
+	"id": "nova-gametest",
+	"version": "1.0.0",
+	"name": "NOVA automated tests",
+	"description": "Server GameTests and client game tests for NOVA. Development only; never shipped.",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-client-gametest": ["io.github.theamethyx.nova.gametest.NovaClientGameTest"]
+	},
+	"depends": {
+		"nova": "*"
+	}
+}
