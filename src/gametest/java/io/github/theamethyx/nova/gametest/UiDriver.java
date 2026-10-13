@@ -40,8 +40,20 @@ final class UiDriver {
 		});
 	}
 
-	/** Clicks the center of a widget with the left mouse button. */
+	/** Clicks the center of a widget with the left mouse button, scrolling it into view first. */
 	void click(Widget widget) {
+		context.runOnClient(client -> {
+			if (client.screen instanceof NovaScreen screen) {
+				for (io.github.theamethyx.nova.client.gui.widget.ScrollList list : screen.currentPage().descendants(io.github.theamethyx.nova.client.gui.widget.ScrollList.class)) {
+					for (Widget child : list.children()) {
+						if (child == widget || (child instanceof io.github.theamethyx.nova.client.gui.widget.Container c && c.descendants(Widget.class).contains(widget))) {
+							list.reveal(child);
+						}
+					}
+				}
+			}
+		});
+		context.waitTick();
 		clickVirtual(widget.x() + widget.width() / 2.0, widget.y() + widget.height() / 2.0);
 	}
 

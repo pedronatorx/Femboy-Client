@@ -35,6 +35,8 @@ public interface TestScenario {
 		public final List<ContainerRecord> containers = new ArrayList<>();
 		/** Regions cleared to air when the scenario is removed. */
 		public final List<BoundingBox> regions = new ArrayList<>();
+		/** Regions registered as test fixtures (e.g. a geode), so observations inside can be linked to this run. */
+		public final List<RegionRecord> fixtureRegions = new ArrayList<>();
 		/** Known conditions of the build (stored by the ground-truth store, never shown to classifiers). */
 		public final JsonObject groundTruth = new JsonObject();
 		public final List<String> notes = new ArrayList<>();
@@ -44,5 +46,8 @@ public interface TestScenario {
 	}
 
 	record ContainerRecord(BlockPos pos, String label, boolean fixture) {
+	}
+
+	record RegionRecord(BoundingBox box, String label) {
 	}
 }

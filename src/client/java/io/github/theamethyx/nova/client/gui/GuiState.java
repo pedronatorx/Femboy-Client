@@ -8,6 +8,7 @@ public final class GuiState {
 	public static String selectedModule;
 	public static ModuleCategory moduleFilter;
 	public static String moduleSearch = "";
+	public static String selectedResult;
 
 	private GuiState() {
 	}

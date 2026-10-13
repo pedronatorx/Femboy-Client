@@ -28,6 +28,15 @@ public final class FixtureRegistry {
 	public record ContainerFixture(int x, int y, int z, String dimension, String label, String world, String scenario) {
 	}
 
+	/** A registered test region (e.g. a geode fixture) created by one scenario run. */
+	public record RegionFixture(int minX, int minY, int minZ, int maxX, int maxY, int maxZ, String dimension, String label, String world,
+			String scenario, String runId) {
+		public boolean contains(double x, double y, double z) {
+			return x >= minX && x <= maxX + 1 && y >= minY && y <= maxY + 1 && z >= minZ && z <= maxZ + 1;
+		}
+	}
+
+	private final List<RegionFixture> regions = new ArrayList<>();
 	private final Path file;
 	private final DiagnosticLogger diagnostics;
 	private final List<EntityFixture> entities = new ArrayList<>();
@@ -44,6 +53,26 @@ public final class FixtureRegistry {
 
 	public List<ContainerFixture> containers(String world, String dimension) {
 		return containers.stream().filter(fixture -> fixture.world().equals(world) && fixture.dimension().equals(dimension)).toList();
+	}
+
+	public List<RegionFixture> regions(String world, String dimension) {
+		return regions.stream().filter(r -> r.world().equals(world) && r.dimension().equals(dimension)).toList();
+	}
+
+	/** The registered region containing a point, or {@code null}. */
+	public RegionFixture regionAt(String world, String dimension, double x, double y, double z) {
+		for (RegionFixture region : regions) {
+			if (region.world().equals(world) && region.dimension().equals(dimension) && region.contains(x, y, z)) {
+				return region;
+			}
+		}
+
+		return null;
+	}
+
+	public void addRegion(RegionFixture region) {
+		regions.add(region);
+		save();
 	}
 
 	public EntityFixture entity(String world, UUID uuid) {
@@ -70,6 +99,7 @@ public final class FixtureRegistry {
 	public void removeScenario(String world, String scenario) {
 		entities.removeIf(fixture -> fixture.world().equals(world) && fixture.scenario().equals(scenario));
 		containers.removeIf(fixture -> fixture.world().equals(world) && fixture.scenario().equals(scenario));
+		regions.removeIf(fixture -> fixture.world().equals(world) && fixture.scenario().equals(scenario));
 		save();
 	}
 
@@ -80,6 +110,7 @@ public final class FixtureRegistry {
 	public void load() {
 		entities.clear();
 		containers.clear();
+		regions.clear();
 		if (!Files.exists(file)) {
 			return;
 		}
@@ -97,9 +128,18 @@ public final class FixtureRegistry {
 				containers.add(new ContainerFixture(o.get("x").getAsInt(), o.get("y").getAsInt(), o.get("z").getAsInt(),
 						o.get("dimension").getAsString(), o.get("label").getAsString(), o.get("world").getAsString(), o.get("scenario").getAsString()));
 			}
+			if (json.get("regions") != null) {
+				for (JsonElement element : json.getAsJsonArray("regions")) {
+					JsonObject o = element.getAsJsonObject();
+					regions.add(new RegionFixture(o.get("minX").getAsInt(), o.get("minY").getAsInt(), o.get("minZ").getAsInt(),
+							o.get("maxX").getAsInt(), o.get("maxY").getAsInt(), o.get("maxZ").getAsInt(), o.get("dimension").getAsString(),
+							o.get("label").getAsString(), o.get("world").getAsString(), o.get("scenario").getAsString(), o.get("runId").getAsString()));
+				}
+			}
 		} catch (IOException | RuntimeException e) {
 			entities.clear();
 			containers.clear();
+			regions.clear();
 			diagnostics.warn("Fixtures", "The fixture list could not be read (" + e.getMessage() + "); starting with an empty list. "
 					+ "Rebuild fixtures from the Test Scenarios page.");
 		}
@@ -130,8 +170,26 @@ public final class FixtureRegistry {
 			containerArray.add(o);
 		}
 
+		JsonArray regionArray = new JsonArray();
+		for (RegionFixture r : regions) {
+			JsonObject o = new JsonObject();
+			o.addProperty("minX", r.minX());
+			o.addProperty("minY", r.minY());
+			o.addProperty("minZ", r.minZ());
+			o.addProperty("maxX", r.maxX());
+			o.addProperty("maxY", r.maxY());
+			o.addProperty("maxZ", r.maxZ());
+			o.addProperty("dimension", r.dimension());
+			o.addProperty("label", r.label());
+			o.addProperty("world", r.world());
+			o.addProperty("scenario", r.scenario());
+			o.addProperty("runId", r.runId());
+			regionArray.add(o);
+		}
+
 		json.add("entities", entityArray);
 		json.add("containers", containerArray);
+		json.add("regions", regionArray);
 
 		try {
 			JsonFiles.writeAtomically(file, json);

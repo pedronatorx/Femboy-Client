@@ -40,6 +40,10 @@ public class Button extends Widget {
 		return this;
 	}
 
+	public String label() {
+		return label.get();
+	}
+
 	public boolean isEnabled() {
 		return enabled.getAsBoolean();
 	}

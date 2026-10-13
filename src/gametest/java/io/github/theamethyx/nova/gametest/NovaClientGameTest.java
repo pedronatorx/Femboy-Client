@@ -24,6 +24,8 @@ import io.github.theamethyx.nova.client.gui.NovaScreen;
 import io.github.theamethyx.nova.client.gui.widget.KeybindButton;
 import io.github.theamethyx.nova.client.gui.widget.ModuleRow;
 import io.github.theamethyx.nova.client.gui.widget.TextField;
+import io.github.theamethyx.nova.client.analysis.WorldScanner;
+import io.github.theamethyx.nova.client.modules.AmethystGeodeAnalyzerModule;
 import io.github.theamethyx.nova.client.modules.ChunkBordersModule;
 import io.github.theamethyx.nova.client.modules.FixtureContainersModule;
 import io.github.theamethyx.nova.client.modules.FixtureEspModule;
@@ -33,6 +35,7 @@ import io.github.theamethyx.nova.client.scenario.TestScenarioManager;
 import io.github.theamethyx.nova.client.scenario.VisualFixtureScenario;
 import io.github.theamethyx.nova.client.world.WorldIdentity;
 import io.github.theamethyx.nova.core.module.Module;
+import io.github.theamethyx.nova.core.research.geode.GeodeObservation;
 
 /**
  * End-to-end tests inside a real Minecraft client. Screenshots go to
@@ -43,6 +46,7 @@ public class NovaClientGameTest implements FabricClientGameTest {
 	/** Fixed test layout in the flat test world (surface block at y = -61). */
 	static final BlockPos PLAYER = new BlockPos(0, -60, 0);
 	static final BlockPos SCENARIO_ORIGIN = new BlockPos(-6, -61, 4);
+	static final BlockPos GEODE_ORIGIN = new BlockPos(-16, -61, 14);
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
@@ -50,7 +54,7 @@ public class NovaClientGameTest implements FabricClientGameTest {
 		UiDriver ui = new UiDriver(context);
 
 		report.check("NOVA entrypoint ran", context.computeOnClient(client -> NovaClient.get() != null && NovaClient.get().modules() != null));
-		report.check("All modules registered", context.computeOnClient(client -> NovaClient.get().modules().all().size()) == 8);
+		report.check("All modules registered", context.computeOnClient(client -> NovaClient.get().modules().all().size()) == 9);
 		// Deterministic screenshots: no easing between frames.
 		context.runOnClient(client -> NovaClient.get().options().animations.set(false));
 
@@ -65,6 +69,7 @@ public class NovaClientGameTest implements FabricClientGameTest {
 			moduleInteraction(context, ui, report);
 			fixturesAndOverlays(context, singleplayer, report);
 			freeCamera(context, report);
+			geodeAnalysis(context, ui, singleplayer, report);
 			configAndProfiles(context, report);
 
 			int errors = context.computeOnClient(client -> NovaClient.get().diagnostics().errorCount());
@@ -229,6 +234,104 @@ public class NovaClientGameTest implements FabricClientGameTest {
 		context.waitTicks(2);
 		report.check("Disabling the free camera returns the view to the player",
 				context.computeOnClient(client -> client.getCameraEntity() == client.player));
+	}
+
+	/** The analyzer must reproduce the server-side ground truth exactly and flag partial scans. */
+	private static void geodeAnalysis(ClientGameTestContext context, UiDriver ui, TestSingleplayerContext singleplayer, TestReport report) {
+		singleplayer.getServer().runCommand("tp @a 0.5 -60 0.5 0 0");
+		context.waitTicks(5);
+		context.runOnClient(client -> NovaClient.get().scenarios().buildAt("geode_180", GEODE_ORIGIN));
+		context.waitFor(client -> NovaClient.get().scenarios().run("geode_180").state() != TestScenarioManager.State.BUILDING, 600);
+		TestScenarioManager.Run run = context.computeOnClient(client -> NovaClient.get().scenarios().run("geode_180"));
+		report.check("Geode fixture scenario built", run.state() == TestScenarioManager.State.BUILT, run.message());
+		context.waitTicks(40);
+
+		com.google.gson.JsonObject census = context.computeOnClient(client -> NovaClient.get().groundTruth().get(run.runId()).conditions().getAsJsonObject("serverCensus"));
+		io.github.theamethyx.nova.core.research.StageCounts truth = new io.github.theamethyx.nova.core.research.StageCounts(
+				census.get("small").getAsInt(), census.get("medium").getAsInt(), census.get("large").getAsInt(), census.get("cluster").getAsInt());
+		report.note("Ground truth (server census) for " + run.runId() + ": " + truth);
+
+		context.runOnClient(client -> {
+			var modules = NovaClient.get().modules();
+			AmethystGeodeAnalyzerModule analyzer = modules.get(AmethystGeodeAnalyzerModule.class);
+			modules.setEnabled(analyzer, true);
+			((io.github.theamethyx.nova.core.setting.NumberSetting) analyzer.settings().get("radius")).set(1.0);
+		});
+		context.waitTicks(2);
+		context.runOnClient(client -> NovaClient.get().modules().get(AmethystGeodeAnalyzerModule.class).startScan());
+		context.waitFor(client -> NovaClient.get().modules().get(AmethystGeodeAnalyzerModule.class).scanner().state() == WorldScanner.State.DONE, 600);
+		List<GeodeObservation> partial = context.computeOnClient(client -> NovaClient.get().modules().get(AmethystGeodeAnalyzerModule.class).results());
+		GeodeObservation partialGeode = partial.stream().filter(g -> run.runId().equals(g.scenarioId())).findFirst().orElse(null);
+		report.check("With a 1-chunk radius the fixture geode is reported as incomplete, not as complete or absent",
+				partialGeode != null && !partialGeode.complete() && partialGeode.counts().total() <= truth.total(),
+				partialGeode == null ? "geode not found; results " + partial.size() : partialGeode.counts() + " complete=" + partialGeode.complete() + "; " + partialGeode.completenessNote());
+
+		context.runOnClient(client -> {
+			AmethystGeodeAnalyzerModule analyzer = NovaClient.get().modules().get(AmethystGeodeAnalyzerModule.class);
+			((io.github.theamethyx.nova.core.setting.NumberSetting) analyzer.settings().get("radius")).set(4.0);
+			analyzer.startScan();
+		});
+		context.waitFor(client -> NovaClient.get().modules().get(AmethystGeodeAnalyzerModule.class).scanner().state() == WorldScanner.State.DONE, 600);
+		List<GeodeObservation> full = context.computeOnClient(client -> NovaClient.get().modules().get(AmethystGeodeAnalyzerModule.class).results());
+		GeodeObservation geode = full.stream().filter(g -> run.runId().equals(g.scenarioId())).findFirst().orElse(null);
+		report.note("4-chunk scan found " + full.size() + " geode(s)");
+		report.check("With a 4-chunk radius the fixture geode is complete", geode != null && geode.complete(),
+				geode == null ? "not found" : geode.completenessNote());
+		report.check("Analyzer stage counts equal the server ground truth exactly", geode != null && geode.counts().equals(truth),
+				"analyzer " + (geode == null ? "n/a" : geode.counts()) + " vs ground truth " + truth);
+		report.check("Budding block count equals ground truth", geode != null && geode.buddingBlocks() == context.computeOnClient(client ->
+				NovaClient.get().groundTruth().get(run.runId()).conditions().get("buddingBlocks").getAsInt()));
+		report.check("Exactly one geode is linked to the fixture run (no double counting)",
+				full.stream().filter(g -> run.runId().equals(g.scenarioId())).count() == 1);
+
+		// Open the World Analysis page, select the fixture geode, save it and follow the report link.
+		context.getInput().pressKey(GLFW.GLFW_KEY_RIGHT_SHIFT);
+		context.waitForScreen(NovaScreen.class);
+		String geodeId = geode == null ? "" : geode.id();
+		context.runOnClient(client -> {
+			NovaClient.get().modules().get(AmethystGeodeAnalyzerModule.class).select(geodeId);
+			NovaScreen screen = (NovaScreen) client.screen;
+			for (int i = 0; i < screen.pageCount(); i++) {
+				screen.showPage(i);
+				if (screen.currentPage().title().equals("World Analysis")) break;
+			}
+		});
+		context.waitTicks(5);
+		context.takeScreenshot("analysis-geode-180");
+
+		io.github.theamethyx.nova.client.gui.widget.Button save = ui.find(io.github.theamethyx.nova.client.gui.widget.Button.class,
+				b -> b.label().equals("Save observation"));
+		report.check("Save observation button is present", save != null);
+		ui.click(save);
+		int saved = context.computeOnClient(client -> NovaClient.get().results().all().size());
+		report.check("Saving stores one observation record", saved == 1, "records " + saved);
+		context.waitTicks(2);
+		io.github.theamethyx.nova.client.gui.widget.Button open = ui.find(io.github.theamethyx.nova.client.gui.widget.Button.class,
+				b -> b.label().equals("Open report"));
+		ui.click(open);
+		context.waitTicks(5);
+		String page = context.computeOnClient(client -> ((NovaScreen) client.screen).currentPage().title());
+		report.check("'Open report' navigates to the Test Results page", page.equals("Test Results"), page);
+		context.takeScreenshot("results-saved-observation");
+
+		Path reportFile = context.computeOnClient(client -> {
+			var record = NovaClient.get().results().all().getFirst();
+			return NovaClient.get().results().reportPath(record.id());
+		});
+		String markdown = Files.exists(reportFile) ? readQuietly(reportFile) : "";
+		report.check("A Markdown report was written with direct observations and labelled estimates",
+				markdown.contains("## Direct observation") && markdown.contains("## Statistical estimates") && markdown.contains("not probabilities"),
+				reportFile.toString());
+		ui.key(GLFW.GLFW_KEY_ESCAPE);
+		context.waitForScreen(null);
+	}
+
+	private static String readQuietly(Path path) {
+		try {
+			return Files.readString(path);
+		} catch (java.io.IOException e) {
+			return "";
+		}
 	}
 
 	/** Settings persist through save and reload; profiles keep independent state. */

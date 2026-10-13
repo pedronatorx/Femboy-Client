@@ -39,6 +39,8 @@ public final class NovaClient implements ClientModInitializer {
 	private FixtureRegistry fixtures;
 	private TestScenarioManager scenarios;
 	private WorldRenderDispatcher worldRender;
+	private io.github.theamethyx.nova.core.research.GroundTruthManager groundTruth;
+	private io.github.theamethyx.nova.core.research.TestResultStore results;
 
 	public static NovaClient get() {
 		return instance;
@@ -61,8 +63,20 @@ public final class NovaClient implements ClientModInitializer {
 
 		fixtures = new FixtureRegistry(configDir.resolve("fixtures.json"), diagnostics);
 		fixtures.load();
+		Path research = configDir.resolve("research");
+		groundTruth = new io.github.theamethyx.nova.core.research.GroundTruthManager(research.resolve("ground_truth.json"), diagnostics);
+		groundTruth.load();
+		results = new io.github.theamethyx.nova.core.research.TestResultStore(research, diagnostics);
+		results.load();
+
 		scenarios = new TestScenarioManager(fixtures, diagnostics);
+		scenarios.setGroundTruth(groundTruth);
 		scenarios.register(new VisualFixtureScenario());
+		// Same feature seed for all four: one geode shape, four documented growth histories.
+		scenarios.register(new io.github.theamethyx.nova.client.scenario.GeodeFixtureScenario("geode_fresh", "Geode: freshly generated", 1001, 0));
+		scenarios.register(new io.github.theamethyx.nova.client.scenario.GeodeFixtureScenario("geode_60", "Geode: 60 random ticks", 1001, 60));
+		scenarios.register(new io.github.theamethyx.nova.client.scenario.GeodeFixtureScenario("geode_180", "Geode: 180 random ticks", 1001, 180));
+		scenarios.register(new io.github.theamethyx.nova.client.scenario.GeodeFixtureScenario("geode_1500", "Geode: 1,500 random ticks (saturated)", 1001, 1500));
 
 		ModuleRegistry.registerAll(modules);
 
@@ -139,6 +153,14 @@ public final class NovaClient implements ClientModInitializer {
 
 	public TestScenarioManager scenarios() {
 		return scenarios;
+	}
+
+	public io.github.theamethyx.nova.core.research.GroundTruthManager groundTruth() {
+		return groundTruth;
+	}
+
+	public io.github.theamethyx.nova.core.research.TestResultStore results() {
+		return results;
 	}
 
 	/** Placeholder policy used only until the config (and therefore the server list) exists. */

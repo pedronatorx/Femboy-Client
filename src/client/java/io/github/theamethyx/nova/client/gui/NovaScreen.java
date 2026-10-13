@@ -20,7 +20,9 @@ import io.github.theamethyx.nova.client.gui.page.DashboardPage;
 import io.github.theamethyx.nova.client.gui.page.DiagnosticsPage;
 import io.github.theamethyx.nova.client.gui.page.ModulesPage;
 import io.github.theamethyx.nova.client.gui.page.Page;
+import io.github.theamethyx.nova.client.gui.page.ResultsPage;
 import io.github.theamethyx.nova.client.gui.page.ScenariosPage;
+import io.github.theamethyx.nova.client.gui.page.WorldAnalysisPage;
 import io.github.theamethyx.nova.client.gui.widget.Widget;
 import io.github.theamethyx.nova.core.module.ModuleCategory;
 
@@ -62,9 +64,9 @@ public class NovaScreen extends Screen {
 			pages.add(new DashboardPage(ui, () -> pages.stream().map(Page::navLabel).toList(), this::showPage));
 			pages.add(new ModulesPage(ui, "Modules", "Modules", "HUD elements, world overlays and utilities. Select a module to edit it.",
 					Icon.VISUAL, ModuleCategory.HUD, ModuleCategory.VISUAL, ModuleCategory.UTILITY));
-			pages.add(new ModulesPage(ui, "World Analysis", "Analysis", "Research modules that read block states in controlled test worlds.",
-					Icon.ANALYSIS, ModuleCategory.WORLD_ANALYSIS));
+			pages.add(new WorldAnalysisPage(ui, this::openResult));
 			pages.add(new ScenariosPage(ui));
+			pages.add(new ResultsPage(ui));
 			pages.add(new DiagnosticsPage(ui));
 			pages.add(new ConfigPage(ui));
 			current = Math.max(0, Math.min(pages.size() - 1, GuiState.page));
@@ -131,6 +133,17 @@ public class NovaScreen extends Screen {
 		pageFade.snap(0);
 		pages.get(current).onShow();
 		layoutPage();
+	}
+
+	/** Shows a saved result on the Test Results page. */
+	public void openResult(String recordId) {
+		GuiState.selectedResult = recordId;
+		for (int i = 0; i < pages.size(); i++) {
+			if (pages.get(i) instanceof ResultsPage) {
+				showPage(i);
+				return;
+			}
+		}
 	}
 
 	public Page currentPage() {

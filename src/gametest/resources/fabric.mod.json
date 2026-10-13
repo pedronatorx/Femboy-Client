@@ -6,7 +6,12 @@
 	"description": "Server GameTests and client game tests for NOVA. Development only; never shipped.",
 	"environment": "*",
 	"entrypoints": {
-		"fabric-client-gametest": ["io.github.theamethyx.nova.gametest.NovaClientGameTest"]
+		"fabric-client-gametest": [
+			"io.github.theamethyx.nova.gametest.NovaClientGameTest"
+		],
+		"fabric-gametest": [
+			"io.github.theamethyx.nova.gametest.NovaServerGameTest"
+		]
 	},
 	"depends": {
 		"nova": "*"

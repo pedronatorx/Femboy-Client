@@ -36,18 +36,23 @@ public final class TestScenarioManager {
 
 	/** The latest build of a scenario in the current world. */
 	public record Run(State state, String message, BlockPos origin, String dimension, String world, Instant time,
-			TestScenario.Build build) {
+			TestScenario.Build build, String runId) {
 	}
 
 	private final Map<String, TestScenario> scenarios = new LinkedHashMap<>();
 	private final Map<String, Run> runs = new LinkedHashMap<>();
 	private final FixtureRegistry fixtures;
 	private final DiagnosticLogger diagnostics;
+	private io.github.theamethyx.nova.core.research.GroundTruthManager groundTruth;
 	private final List<Consumer<String>> buildListeners = new ArrayList<>();
 
 	public TestScenarioManager(FixtureRegistry fixtures, DiagnosticLogger diagnostics) {
 		this.fixtures = fixtures;
 		this.diagnostics = diagnostics;
+	}
+
+	public void setGroundTruth(io.github.theamethyx.nova.core.research.GroundTruthManager groundTruth) {
+		this.groundTruth = groundTruth;
 	}
 
 	public void register(TestScenario scenario) {
@@ -70,7 +75,7 @@ public final class TestScenarioManager {
 	/** The latest run of a scenario in the current world, or a NOT_BUILT placeholder. */
 	public Run run(String id) {
 		Run run = runs.get(key(id));
-		return run != null ? run : new Run(State.NOT_BUILT, "Not built in this world.", null, null, null, null, null);
+		return run != null ? run : new Run(State.NOT_BUILT, "Not built in this world.", null, null, null, null, null, null);
 	}
 
 	private static String key(String id) {
@@ -118,7 +123,22 @@ public final class TestScenarioManager {
 		BlockPos start = origin != null ? origin : defaultOrigin(player, scenario);
 
 		Run previous = runs.get(key(id));
-		runs.put(key(id), new Run(State.BUILDING, "Building...", start, dimension.identifier().toString(), world, Instant.now(), null));
+		// Other scenarios whose area the new build would overwrite are removed first, so their
+		// fixtures and ground truth never refer to blocks that no longer exist.
+		BlockPos size = scenario.footprint();
+		BoundingBox footprint = BoundingBox.fromCorners(start, start.offset(size.getX() - 1, size.getY() - 1, size.getZ() - 1));
+		List<String> overlapped = new ArrayList<>();
+		List<TestScenario.Build> overlappedBuilds = new ArrayList<>();
+		for (Map.Entry<String, Run> entry : runs.entrySet()) {
+			Run other = entry.getValue();
+			if (other.build() == null || !world.equals(other.world()) || entry.getKey().equals(key(id))) continue;
+			if (other.build().regions.stream().anyMatch(region -> region.intersects(footprint))) {
+				overlapped.add(entry.getKey());
+				overlappedBuilds.add(other.build());
+			}
+		}
+
+		runs.put(key(id), new Run(State.BUILDING, "Building...", start, dimension.identifier().toString(), world, Instant.now(), null, null));
 		diagnostics.info("Scenarios", "Building '" + scenario.name() + "' at " + start.toShortString());
 
 		server.execute(() -> {
@@ -132,11 +152,19 @@ public final class TestScenarioManager {
 					removeFromWorld(level, previous.build());
 				}
 
+				overlappedBuilds.forEach(other -> removeFromWorld(level, other));
+				client.execute(() -> overlapped.forEach(otherKey -> {
+					String otherId = otherKey.substring(otherKey.indexOf('|') + 1);
+					fixtures.removeScenario(world, otherId);
+					runs.remove(otherKey);
+					diagnostics.info("Scenarios", "Removed '" + otherId + "' because a new scenario was built over it");
+				}));
+
 				TestScenario.Build build = scenario.build(level, start);
 				client.execute(() -> finishBuild(scenario, start, dimension, world, build, previous, result));
 			} catch (RuntimeException e) {
 				client.execute(() -> {
-					runs.put(key(id), new Run(State.FAILED, e.getMessage(), start, dimension.identifier().toString(), world, Instant.now(), null));
+					runs.put(key(id), new Run(State.FAILED, e.getMessage(), start, dimension.identifier().toString(), world, Instant.now(), null, null));
 					diagnostics.error("Scenarios", "Building '" + scenario.name() + "' failed", e);
 					result.completeExceptionally(e);
 				});
@@ -163,8 +191,21 @@ public final class TestScenarioManager {
 			}
 		}
 
+		String runId = scenario.id() + "-" + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS"));
+		for (TestScenario.RegionRecord region : build.fixtureRegions) {
+			BoundingBox box = region.box();
+			fixtures.addRegion(new FixtureRegistry.RegionFixture(box.minX(), box.minY(), box.minZ(), box.maxX(), box.maxY(), box.maxZ(),
+					dimension.identifier().toString(), region.label(), world, scenario.id(), runId));
+		}
+
+		if (groundTruth != null && !build.groundTruth.isEmpty()) {
+			// Stored separately from anything an analyzer observes; only evaluation joins them.
+			groundTruth.put(new io.github.theamethyx.nova.core.research.GroundTruthManager.Record(runId, scenario.id(), world,
+					dimension.identifier().toString(), System.currentTimeMillis(), build.groundTruth.deepCopy()));
+		}
+
 		Run run = new Run(State.BUILT, "Built at " + origin.toShortString() + (build.notes.isEmpty() ? "" : ". " + String.join(" ", build.notes)),
-				origin, dimension.identifier().toString(), world, Instant.now(), build);
+				origin, dimension.identifier().toString(), world, Instant.now(), build, runId);
 		runs.put(key(scenario.id()), run);
 		diagnostics.info("Scenarios", "Built '" + scenario.name() + "': " + build.entities.size() + " entities, "
 				+ build.containers.size() + " containers");

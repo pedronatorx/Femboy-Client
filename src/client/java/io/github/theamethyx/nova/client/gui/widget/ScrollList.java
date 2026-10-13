@@ -33,6 +33,24 @@ public class ScrollList extends Container {
 		relayout(Math.round(scroll.get()));
 	}
 
+	/** Scrolls so that a child is fully visible (no animation). Returns false if it is not a child. */
+	public boolean reveal(Widget child) {
+		if (!children.contains(child)) {
+			return false;
+		}
+
+		int offset = Math.round(scroll.get());
+		int top = child.y() - y + offset;
+		int bottom = top + child.height();
+		float target = scrollTarget;
+		if (top - padding < target) target = top - padding;
+		if (bottom + padding > target + height) target = bottom + padding - height;
+		scrollTarget = Math.max(0, Math.min(maxScroll(), target));
+		scroll.snap(scrollTarget);
+		relayout(Math.round(scrollTarget));
+		return true;
+	}
+
 	public void scrollToTop() {
 		scrollTarget = 0;
 		scroll.snap(0);

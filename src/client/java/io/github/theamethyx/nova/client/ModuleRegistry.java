@@ -1,5 +1,6 @@
 package io.github.theamethyx.nova.client;
 
+import io.github.theamethyx.nova.client.modules.AmethystGeodeAnalyzerModule;
 import io.github.theamethyx.nova.client.modules.ChunkBordersModule;
 import io.github.theamethyx.nova.client.modules.CoordinatesHudModule;
 import io.github.theamethyx.nova.client.modules.FixtureContainersModule;
@@ -24,5 +25,6 @@ public final class ModuleRegistry {
 		modules.register(new FixtureEspModule());
 		modules.register(new FixtureContainersModule());
 		modules.register(new FreeCameraModule());
+		modules.register(new AmethystGeodeAnalyzerModule());
 	}
 }
