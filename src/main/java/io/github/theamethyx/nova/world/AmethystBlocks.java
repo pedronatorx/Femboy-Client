@@ -1,10 +1,13 @@
 package io.github.theamethyx.nova.world;
 
+import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.AmethystClusterBlock;
+import net.minecraft.world.level.block.BuddingAmethystBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 import io.github.theamethyx.nova.core.research.GrowthStage;
+import io.github.theamethyx.nova.core.research.geode.ScanData;
 
 /** Maps Minecraft block states to the analyzer's categories. Uses block identity only. */
 public final class AmethystBlocks {
@@ -28,5 +31,22 @@ public final class AmethystBlocks {
 	/** Direction index (Direction ordinal) a growth object points to. */
 	public static int facing(BlockState state) {
 		return state.getValue(AmethystClusterBlock.FACING).ordinal();
+	}
+
+	/**
+	 * Classifies the neighbor of a budding amethyst block in {@code direction}, using the same rules
+	 * as {@code BuddingAmethystBlock.randomTick}: air or a water source can grow a new bud; a bud
+	 * facing {@code direction} belongs to this budding block; anything else blocks growth.
+	 */
+	public static ScanData.FaceState faceState(BlockState neighbor, Direction direction) {
+		if (BuddingAmethystBlock.canClusterGrowAtState(neighbor)) {
+			return ScanData.FaceState.FREE;
+		}
+
+		if (stageOf(neighbor) != null && neighbor.getValue(AmethystClusterBlock.FACING) == direction) {
+			return ScanData.FaceState.OWN_GROWTH;
+		}
+
+		return ScanData.FaceState.BLOCKED;
 	}
 }

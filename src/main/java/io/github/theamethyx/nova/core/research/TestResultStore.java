@@ -67,6 +67,48 @@ public final class TestResultStore {
 		return record;
 	}
 
+	/** A stored research evaluation: Markdown report plus JSON summary in the reports folder. */
+	public record Evaluation(String id, Path markdown, JsonObject summary) {
+	}
+
+	public synchronized Evaluation saveEvaluation(String title, String markdown, java.util.function.Function<String, JsonObject> summary) {
+		String id = "evaluation-" + LocalDateTime.now().format(ID_TIME);
+		try {
+			Files.createDirectories(reportsDir());
+			Files.writeString(reportsDir().resolve(id + ".md"), markdown, StandardCharsets.UTF_8);
+			JsonObject json = summary.apply(id);
+			JsonFiles.writeAtomically(reportsDir().resolve(id + ".json"), json);
+			return new Evaluation(id, reportsDir().resolve(id + ".md"), json);
+		} catch (IOException e) {
+			diagnostics.error("Results", "Could not write evaluation " + title, e);
+			return null;
+		}
+	}
+
+	/** Stored evaluations, newest first. Unreadable summaries are skipped with a warning. */
+	public synchronized List<Evaluation> evaluations() {
+		List<Evaluation> list = new ArrayList<>();
+		if (!Files.isDirectory(reportsDir())) {
+			return list;
+		}
+
+		try (var files = Files.list(reportsDir())) {
+			for (Path file : files.filter(f -> f.getFileName().toString().startsWith("evaluation-") && f.getFileName().toString().endsWith(".json")).toList()) {
+				String id = file.getFileName().toString().replace(".json", "");
+				try {
+					list.add(new Evaluation(id, reportsDir().resolve(id + ".md"), JsonFiles.readObject(file)));
+				} catch (IOException | RuntimeException e) {
+					diagnostics.warn("Results", "Skipped unreadable evaluation summary " + file.getFileName() + ": " + e.getMessage());
+				}
+			}
+		} catch (IOException e) {
+			diagnostics.warn("Results", "Could not list evaluations: " + e.getMessage());
+		}
+
+		list.sort((a, b) -> b.id().compareTo(a.id()));
+		return list;
+	}
+
 	public synchronized void delete(String id) {
 		if (records.remove(id) != null) {
 			persist();

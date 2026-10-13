@@ -120,4 +120,67 @@ public class NovaServerGameTest {
 		org.slf4j.LoggerFactory.getLogger("NOVA").info(log.toString());
 		helper.succeed();
 	}
+
+	/**
+	 * Runs the full research experiment (about 650 steps, one per tick) and writes the evaluation to
+	 * {@code <run dir>/nova-research}. Verdicts are research results, so they are reported, not asserted.
+	 */
+	@GameTest(maxTicks = 1200)
+	public void researchExperiment(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		io.github.theamethyx.nova.world.ExperimentGenerator generator = new io.github.theamethyx.nova.world.ExperimentGenerator(
+				io.github.theamethyx.nova.world.ExperimentGenerator.Config.standard(), helper.absolutePos(new BlockPos(4, 100, 4)));
+		boolean[] reported = {false};
+		helper.onEachTick(() -> {
+			if (reported[0]) {
+				return;
+			}
+
+			long deadline = System.nanoTime() + 40_000_000L;
+			while (!generator.finished() && System.nanoTime() < deadline) {
+				generator.step(level);
+			}
+
+			if (!generator.finished()) {
+				return;
+			}
+
+			reported[0] = true;
+			var dataset = generator.dataset();
+			helper.assertTrue(dataset.size() >= 500, "experiment produced " + dataset.size() + " observations");
+			var engine = new io.github.theamethyx.nova.core.research.engine.ActivityResearchEngine();
+			var main = engine.evaluate(dataset, io.github.theamethyx.nova.core.research.engine.ActivityResearchEngine.Config.defaults());
+			var withIncomplete = engine.evaluate(dataset, new io.github.theamethyx.nova.core.research.engine.ActivityResearchEngine.Config(true,
+					io.github.theamethyx.nova.core.research.engine.Hypothesis.defaults()));
+			try {
+				java.nio.file.Path dir = net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().resolve("nova-research");
+				java.nio.file.Files.createDirectories(dir);
+				java.nio.file.Files.writeString(dir.resolve("evaluation.md"), io.github.theamethyx.nova.core.research.engine.EvaluationReportWriter
+						.markdown(main, "Amethyst growth as an exposure indicator: controlled evaluation"));
+				java.nio.file.Files.writeString(dir.resolve("evaluation-including-incomplete.md"), io.github.theamethyx.nova.core.research.engine.EvaluationReportWriter
+						.markdown(withIncomplete, "Same evaluation including incomplete observations"));
+				java.nio.file.Files.writeString(dir.resolve("evaluation-summary.json"), io.github.theamethyx.nova.core.research.engine.EvaluationReportWriter
+						.summary(main, "headless", "Controlled evaluation (headless GameTest)", System.currentTimeMillis()).toString());
+				StringBuilder csv = new StringBuilder("sample,geode,condition,exposure_random_ticks,small,medium,large,cluster,budding,complete\n");
+				var truth = dataset.truthView();
+				for (var sample : dataset.samples()) {
+					var c = sample.observation().counts();
+					var t = truth.get(sample.sampleId());
+					csv.append(sample.sampleId()).append(',').append(sample.groupId()).append(',').append(t.condition()).append(',')
+							.append((long) t.exposureRandomTicks()).append(',').append(c.small()).append(',').append(c.medium()).append(',')
+							.append(c.large()).append(',').append(c.cluster()).append(',').append(sample.observation().buddingBlocks()).append(',')
+							.append(sample.observation().complete()).append('\n');
+				}
+
+				java.nio.file.Files.writeString(dir.resolve("dataset.csv"), csv.toString());
+				org.slf4j.LoggerFactory.getLogger("NOVA").info("Research experiment: {} observations, {} geodes skipped; reports in {}",
+						dataset.size(), generator.skippedGeodes(), dir.toAbsolutePath());
+				main.results().forEach(r -> org.slf4j.LoggerFactory.getLogger("NOVA").info("  {} {}: {} - {}", r.hypothesis().id(), r.hypothesis().title(), r.verdict(), r.reason()));
+			} catch (java.io.IOException e) {
+				throw helper.assertionException("could not write research report: " + e.getMessage());
+			}
+
+			helper.succeed();
+		});
+	}
 }

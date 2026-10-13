@@ -11,9 +11,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Util;
-import net.minecraft.world.level.block.AmethystClusterBlock;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.BuddingAmethystBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
@@ -181,14 +179,7 @@ public final class WorldScanner {
 				continue;
 			}
 
-			BlockState state = level.getBlockState(neighbor);
-			if (BuddingAmethystBlock.canClusterGrowAtState(state)) {
-				faces[direction.ordinal()] = ScanData.FaceState.FREE;
-			} else if (AmethystBlocks.stageOf(state) != null && state.getValue(AmethystClusterBlock.FACING) == direction) {
-				faces[direction.ordinal()] = ScanData.FaceState.OWN_GROWTH;
-			} else {
-				faces[direction.ordinal()] = ScanData.FaceState.BLOCKED;
-			}
+			faces[direction.ordinal()] = AmethystBlocks.faceState(level.getBlockState(neighbor), direction);
 		}
 
 		return faces;

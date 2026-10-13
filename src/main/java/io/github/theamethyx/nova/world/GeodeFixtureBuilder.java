@@ -75,6 +75,11 @@ public final class GeodeFixtureBuilder {
 	 * @return the number of random ticks applied per budding block
 	 */
 	public static int applyRandomTicks(ServerLevel level, BoundingBox region, int ticks, long seed) {
+		return applyRandomTicks(level, region, ticks, RandomSource.create(seed));
+	}
+
+	/** As above with a caller-owned random source, so exposure can be continued in steps. */
+	public static int applyRandomTicks(ServerLevel level, BoundingBox region, int ticks, RandomSource random) {
 		List<BlockPos> budding = new ArrayList<>();
 		for (BlockPos pos : BlockPos.betweenClosed(region.minX(), region.minY(), region.minZ(), region.maxX(), region.maxY(), region.maxZ())) {
 			if (level.getBlockState(pos).is(Blocks.BUDDING_AMETHYST)) {
@@ -83,7 +88,6 @@ public final class GeodeFixtureBuilder {
 		}
 
 		budding.sort(Comparator.comparingInt((BlockPos p) -> p.getX()).thenComparingInt(p -> p.getY()).thenComparingInt(p -> p.getZ()));
-		RandomSource random = RandomSource.create(seed);
 		for (int tick = 0; tick < ticks; tick++) {
 			for (BlockPos pos : budding) {
 				level.getBlockState(pos).randomTick(level, pos, random);

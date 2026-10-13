@@ -70,6 +70,7 @@ public class NovaClientGameTest implements FabricClientGameTest {
 			fixturesAndOverlays(context, singleplayer, report);
 			freeCamera(context, report);
 			geodeAnalysis(context, ui, singleplayer, report);
+			researchRun(context, ui, report);
 			configAndProfiles(context, report);
 
 			int errors = context.computeOnClient(client -> NovaClient.get().diagnostics().errorCount());
@@ -322,6 +323,57 @@ public class NovaClientGameTest implements FabricClientGameTest {
 		report.check("A Markdown report was written with direct observations and labelled estimates",
 				markdown.contains("## Direct observation") && markdown.contains("## Statistical estimates") && markdown.contains("not probabilities"),
 				reportFile.toString());
+		ui.key(GLFW.GLFW_KEY_ESCAPE);
+		context.waitForScreen(null);
+	}
+
+	/** Runs the quick research experiment from the Results page and checks the stored evaluation. */
+	private static void researchRun(ClientGameTestContext context, UiDriver ui, TestReport report) {
+		context.getInput().pressKey(GLFW.GLFW_KEY_RIGHT_SHIFT);
+		context.waitForScreen(NovaScreen.class);
+		context.runOnClient(client -> ((NovaScreen) client.screen).openResult(null));
+		context.waitTicks(3);
+		ui.click(ui.find(io.github.theamethyx.nova.client.gui.widget.Button.class, b -> b.label().equals("Evaluations")));
+		ui.click(ui.find(io.github.theamethyx.nova.client.gui.widget.Button.class, b -> b.label().equals("Run quick experiment")));
+		var state = context.computeOnClient(client -> NovaClient.get().experiments().state());
+		report.check("Run quick experiment starts the experiment", state == io.github.theamethyx.nova.client.research.ExperimentRunner.State.RUNNING, String.valueOf(state));
+		context.waitTicks(40);
+		context.takeScreenshot("results-evaluation-running");
+		context.waitFor(client -> {
+			var s = NovaClient.get().experiments().state();
+			return s != io.github.theamethyx.nova.client.research.ExperimentRunner.State.RUNNING
+					&& s != io.github.theamethyx.nova.client.research.ExperimentRunner.State.EVALUATING;
+		}, 12000);
+		String message = context.computeOnClient(client -> NovaClient.get().experiments().message());
+		state = context.computeOnClient(client -> NovaClient.get().experiments().state());
+		report.check("The quick experiment finishes and is evaluated", state == io.github.theamethyx.nova.client.research.ExperimentRunner.State.DONE, message);
+		var evaluations = context.computeOnClient(client -> NovaClient.get().results().evaluations());
+		report.check("An evaluation report and summary were saved", !evaluations.isEmpty() && Files.exists(evaluations.getFirst().markdown()));
+		if (!evaluations.isEmpty()) {
+			var summary = evaluations.getFirst().summary();
+			report.note("Quick evaluation: " + summary.get("samples") + " observations");
+			for (var h : summary.getAsJsonArray("hypotheses")) {
+				report.note("  " + h.getAsJsonObject().get("id").getAsString() + " " + h.getAsJsonObject().get("verdict").getAsString()
+						+ ": " + h.getAsJsonObject().get("reason").getAsString());
+			}
+		}
+
+		boolean cleared = context.computeOnClient(client -> {
+			var center = client.player.blockPosition().above(48);
+			return client.level.getBlockState(new net.minecraft.core.BlockPos(Math.floorDiv(center.getX(), 16) * 16, center.getY(), center.getZ())).isAir();
+		});
+		report.check("The experiment's stone cube was removed afterwards", cleared);
+		context.waitTicks(5);
+		context.takeScreenshot("results-evaluation");
+		ui.click(ui.find(io.github.theamethyx.nova.client.gui.widget.Button.class, b -> b.label().equals("Indicators")));
+		context.waitTicks(3);
+		context.takeScreenshot("results-indicators");
+		String amethystStatus = context.computeOnClient(client -> io.github.theamethyx.nova.core.research.IndicatorRegistry
+				.build(NovaClient.get().results().evaluations().getFirst().summary()).getFirst().status().label());
+		report.note("Amethyst indicator status after the quick run: " + amethystStatus);
+		long untested = context.computeOnClient(client -> io.github.theamethyx.nova.core.research.IndicatorRegistry.build(null).stream()
+				.filter(i -> i.status() == io.github.theamethyx.nova.core.research.IndicatorRegistry.Status.UNTESTED).count());
+		report.check("Indicators without experiments stay 'Untested' (no fabricated results)", untested == 5);
 		ui.key(GLFW.GLFW_KEY_ESCAPE);
 		context.waitForScreen(null);
 	}

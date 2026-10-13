@@ -41,6 +41,7 @@ public final class NovaClient implements ClientModInitializer {
 	private WorldRenderDispatcher worldRender;
 	private io.github.theamethyx.nova.core.research.GroundTruthManager groundTruth;
 	private io.github.theamethyx.nova.core.research.TestResultStore results;
+	private io.github.theamethyx.nova.client.research.ExperimentRunner experiments;
 
 	public static NovaClient get() {
 		return instance;
@@ -68,6 +69,7 @@ public final class NovaClient implements ClientModInitializer {
 		groundTruth.load();
 		results = new io.github.theamethyx.nova.core.research.TestResultStore(research, diagnostics);
 		results.load();
+		experiments = new io.github.theamethyx.nova.client.research.ExperimentRunner(results, diagnostics);
 
 		scenarios = new TestScenarioManager(fixtures, diagnostics);
 		scenarios.setGroundTruth(groundTruth);
@@ -161,6 +163,10 @@ public final class NovaClient implements ClientModInitializer {
 
 	public io.github.theamethyx.nova.core.research.TestResultStore results() {
 		return results;
+	}
+
+	public io.github.theamethyx.nova.client.research.ExperimentRunner experiments() {
+		return experiments;
 	}
 
 	/** Placeholder policy used only until the config (and therefore the server list) exists. */

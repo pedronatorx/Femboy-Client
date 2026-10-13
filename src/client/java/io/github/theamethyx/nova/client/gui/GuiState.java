@@ -9,6 +9,9 @@ public final class GuiState {
 	public static ModuleCategory moduleFilter;
 	public static String moduleSearch = "";
 	public static String selectedResult;
+	public static int resultsTab;
+	public static String selectedEvaluation;
+	public static String selectedIndicator;
 
 	private GuiState() {
 	}

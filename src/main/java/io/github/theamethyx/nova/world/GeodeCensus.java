@@ -3,9 +3,7 @@ package io.github.theamethyx.nova.world;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockGetter;
-import net.minecraft.world.level.block.AmethystClusterBlock;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.BuddingAmethystBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
@@ -44,13 +42,10 @@ public record GeodeCensus(StageCounts counts, int buddingBlocks, int amethystBlo
 			} else if (state.is(Blocks.BUDDING_AMETHYST)) {
 				budding++;
 				for (Direction direction : Direction.values()) {
-					BlockState neighbor = level.getBlockState(pos.relative(direction));
-					if (BuddingAmethystBlock.canClusterGrowAtState(neighbor)) {
-						free++;
-					} else if (AmethystBlocks.stageOf(neighbor) != null && neighbor.getValue(AmethystClusterBlock.FACING) == direction) {
-						own++;
-					} else {
-						blocked++;
+					switch (AmethystBlocks.faceState(level.getBlockState(pos.relative(direction)), direction)) {
+						case FREE -> free++;
+						case OWN_GROWTH -> own++;
+						default -> blocked++;
 					}
 				}
 			} else {
