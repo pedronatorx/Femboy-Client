@@ -146,6 +146,10 @@ public class NovaScreen extends Screen {
 		}
 	}
 
+	public UiContext uiContext() {
+		return ui;
+	}
+
 	public Page currentPage() {
 		return pages.get(current);
 	}

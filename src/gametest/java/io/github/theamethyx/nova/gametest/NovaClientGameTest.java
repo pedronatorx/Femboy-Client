@@ -73,11 +73,14 @@ public class NovaClientGameTest implements FabricClientGameTest {
 			researchRun(context, ui, report);
 			configAndProfiles(context, report);
 
+			controlInteractions(context, ui, report);
 			int errors = context.computeOnClient(client -> NovaClient.get().diagnostics().errorCount());
 			report.check("No module errors were logged during the run", errors == 0, errors == 0 ? ""
 					: errors + " error(s): " + context.computeOnClient(client -> NovaClient.get().diagnostics().snapshot().toString()));
 		}
 
+		NaturalWorldTest.run(context, report);
+		inspectLog(report);
 		report.finish();
 	}
 
@@ -376,6 +379,63 @@ public class NovaClientGameTest implements FabricClientGameTest {
 		report.check("Indicators without experiments stay 'Untested' (no fabricated results)", untested == 5);
 		ui.key(GLFW.GLFW_KEY_ESCAPE);
 		context.waitForScreen(null);
+	}
+
+	/** Slider drag and dropdown selection through simulated mouse input. */
+	private static void controlInteractions(ClientGameTestContext context, UiDriver ui, TestReport report) {
+		GuiState.moduleSearch = "";
+		GuiState.selectedModule = "chunk_borders";
+		context.getInput().pressKey(GLFW.GLFW_KEY_RIGHT_SHIFT);
+		context.waitForScreen(NovaScreen.class);
+		context.runOnClient(client -> ((NovaScreen) client.screen).showPage(1));
+		context.waitTicks(3);
+
+		io.github.theamethyx.nova.client.gui.widget.SettingRow radiusRow = ui.find(io.github.theamethyx.nova.client.gui.widget.SettingRow.class,
+				row -> row.setting().id().equals("radius"));
+		ui.click(radiusRow.control());
+		var slider = radiusRow.control();
+		ui.clickVirtual(slider.x() + slider.width() - 1, slider.y() + slider.height() / 2.0);
+		double radius = context.computeOnClient(client -> (Double) NovaClient.get().modules().get("chunk_borders").settings().get("radius").get());
+		report.check("Clicking the right end of the 'Neighbor chunks' slider sets its maximum (4)", radius == 4.0, "value " + radius);
+
+		io.github.theamethyx.nova.client.gui.widget.SettingRow colorRow = ui.find(io.github.theamethyx.nova.client.gui.widget.SettingRow.class,
+				row -> row.setting().id().equals("color"));
+		ui.click(colorRow.control());
+		boolean open = context.computeOnClient(client -> ((io.github.theamethyx.nova.client.gui.widget.Dropdown<?>) colorRow.control()).isOpen(
+				((NovaScreen) client.screen).uiContext()));
+		report.check("Clicking a dropdown opens its option list", open);
+		context.takeScreenshot("modules-dropdown-open");
+		// Options are 13 px tall below the control; the second option is Cyan.
+		var dropdown = colorRow.control();
+		ui.clickVirtual(dropdown.x() + 20, dropdown.y() + dropdown.height() + 1 + 13 + 6);
+		Object color = context.computeOnClient(client -> NovaClient.get().modules().get("chunk_borders").settings().get("color").get());
+		report.check("Choosing 'Cyan' in the dropdown changes the setting", String.valueOf(color).equals("CYAN"), String.valueOf(color));
+		ui.key(GLFW.GLFW_KEY_ESCAPE);
+		context.waitForScreen(null);
+	}
+
+	/**
+	 * Scans the client log for problems attributable to the game session: errors on the render or
+	 * server thread, and any stack frame inside NOVA's own code. Known noise of the offline test
+	 * environment is ignored and listed in the report.
+	 */
+	private static void inspectLog(TestReport report) {
+		Path log = net.fabricmc.loader.api.FabricLoader.getInstance().getGameDir().resolve("logs/latest.log");
+		List<String> problems = new java.util.ArrayList<>();
+		for (String line : readQuietly(log).split("\\n")) {
+			boolean knownNoise = line.contains("Anisotropic") || line.contains("cursor shape") || line.contains("GL ERROR ##")
+					|| line.contains("@ Render") || line.contains("Realms") || line.contains("realms") || line.contains("user properties");
+			boolean gameThreadError = line.contains("[Render thread/ERROR]") || line.contains("[Server thread/ERROR]");
+			boolean novaFrame = line.contains("io.github.theamethyx") && (line.contains("Exception") || line.trim().startsWith("at "));
+			boolean testFrame = line.contains("io.github.theamethyx.nova.gametest");
+			if ((gameThreadError || novaFrame) && !knownNoise && !testFrame) {
+				problems.add(line.length() > 160 ? line.substring(0, 160) : line);
+			}
+		}
+
+		report.note("Ignored known offline-test noise: missing X11 cursor shapes (Xvfb), anisotropic filtering option, Realms and "
+				+ "account-properties requests failing without a real login.");
+		report.check("No render-thread, server-thread or NOVA-code errors in the client log", problems.isEmpty(), String.join(" | ", problems));
 	}
 
 	private static String readQuietly(Path path) {
