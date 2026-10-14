@@ -16,7 +16,7 @@ import io.github.theamethyx.femboyclient.client.gui.widget.TextField;
 import io.github.theamethyx.femboyclient.client.gui.widget.Widget;
 import io.github.theamethyx.femboyclient.core.config.ConfigurationManager;
 
-/** Profiles, client-wide options, authorized test servers and config files. */
+/** Profiles, client-wide options and config files. */
 public class ConfigPage extends Page {
 	private static final long CONFIRM_WINDOW_MS = 4000;
 
@@ -43,7 +43,7 @@ public class ConfigPage extends Page {
 
 	@Override
 	public String subtitle() {
-		return "Profiles, client options and authorized servers.";
+		return "Profiles, client options and config files.";
 	}
 
 	@Override
@@ -81,24 +81,6 @@ public class ConfigPage extends Page {
 
 		rows.add(new SectionTitle("Client options", "Apply to every profile."));
 		rows.addAll(SettingRow.rowsFor(femboy.options().settings.all()));
-
-		rows.add(new SectionTitle("Authorized test servers", "Entity ESP, Storage ESP, the Geode Analyzer and Free Camera only run in "
-				+ "singleplayer and on servers listed here. Only add servers you own or have permission to test on."));
-		List<String> servers = config.authorizedServers();
-		if (servers.isEmpty()) {
-			rows.add(new ModulesPage.Message("No servers listed: restricted modules run in singleplayer only."));
-		}
-
-		for (String server : servers) {
-			rows.add(new ServerRow(server));
-		}
-
-		rows.add(new CreateRow("host or host:port", "Add", "Allow restricted modules on this server address.", 253,
-				cp -> cp > 32 && cp < 127, address -> {
-			String problem = config.addAuthorizedServer(address);
-			report(problem == null ? "Added " + ConfigurationManager.normalizeServer(address) + "." : problem, problem == null);
-			return problem == null;
-		}));
 
 		rows.add(new SectionTitle("Files", "Stored in " + config.root().toAbsolutePath()));
 		rows.add(new FileActions());
@@ -221,40 +203,6 @@ public class ConfigPage extends Page {
 		}
 	}
 
-	private final class ServerRow extends Container {
-		private final String address;
-		private final Button remove;
-
-		ServerRow(String address) {
-			this.address = address;
-			remove = add(new Button("", Button.Style.DANGER, () -> {
-				femboy.config().removeAuthorizedServer(address);
-				report("Removed " + address + ".", true);
-				rebuild();
-			}).icon(Icon.CLOSE));
-			remove.tooltip("Stop treating this server as an authorized test environment.");
-		}
-
-		@Override
-		public int preferredHeight(UiContext ui, int width) {
-			return 18;
-		}
-
-		@Override
-		protected void onLayout() {
-			remove.setBounds(x + width - 21, y + 2, 18, 14);
-		}
-
-		@Override
-		public void render(UiContext ui) {
-			ui.roundRect(x, y, width, height, Theme.SURFACE);
-			ui.icon(Icon.LOCK, x + 7, y + 5, 8, Theme.SUCCESS);
-			ui.textClipped(address, x + 20, y + 5, width - 46, Theme.TEXT);
-			super.render(ui);
-		}
-	}
-
-	/** Text field plus a button that submits it; clears the field on success. */
 	private final class CreateRow extends Container {
 		private final TextField field;
 		private final Button button;

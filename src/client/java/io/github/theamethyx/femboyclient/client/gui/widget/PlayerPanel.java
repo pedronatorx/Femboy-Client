@@ -220,8 +220,8 @@ public class PlayerPanel extends Container {
 			String status;
 			int color;
 			switch (entry.knowledge()) {
-				case VISIBLE -> {
-					status = "In view  ·  " + PlayerFinderModule.distanceAndArrow(entry.position());
+				case IN_RANGE -> {
+					status = "In range  ·  " + PlayerFinderModule.distanceAndArrow(entry.position());
 					color = Theme.SUCCESS;
 				}
 				case LAST_SEEN -> {
@@ -241,10 +241,10 @@ public class PlayerPanel extends Container {
 				}
 
 				ui.tooltip(this, switch (entry.knowledge()) {
-					case VISIBLE -> "You can see this player. Click to " + (tracked ? "stop navigating." : "navigate to them.");
-					case LAST_SEEN -> "Not in view now. The position is where you last saw them " + PlayerFinderModule.ago(entry.seenAt())
+					case IN_RANGE -> "Within your range: the position is live. Click to " + (tracked ? "stop navigating." : "navigate to them.");
+					case LAST_SEEN -> "Out of range now. The position is where you last saw them " + PlayerFinderModule.ago(entry.seenAt())
 							+ " and may be out of date. Click to navigate there.";
-					case UNKNOWN -> "Online, but you have not seen this player in this world, so their position is unknown.";
+					case UNKNOWN -> "Online, but this player has not been within your range in this world, so their position is unknown.";
 				});
 			}
 		}

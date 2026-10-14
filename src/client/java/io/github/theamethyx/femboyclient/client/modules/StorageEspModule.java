@@ -39,8 +39,8 @@ import io.github.theamethyx.femboyclient.core.setting.NumberSetting;
  * loaded. Blocks are chosen by block id, not by block-entity type: copper chests, for example, share the
  * chest block entity but are separate choices here.
  *
- * <p>Scans run every few ticks within a block budget, never per frame. Restricted to singleplayer and
- * authorized servers; it reads only block entities the client already has and never asks the server.
+ * <p>Scans run every few ticks within a block budget, never per frame. It reads only block entities
+ * the client already has and never asks the server.
  */
 public final class StorageEspModule extends Module implements ClientHooks.WorldRender, ClientHooks.ScreenOverlay {
 	/** Storage groups in display order, each with its built-in color. */
@@ -115,11 +115,6 @@ public final class StorageEspModule extends Module implements ClientHooks.WorldR
 			ticksUntilScan = 0;
 		});
 		selected = Set.copyOf(blocks.get());
-	}
-
-	@Override
-	public boolean isRestricted() {
-		return true;
 	}
 
 	/** One color per group, listed right after the "Custom colors" switch and shown only while it is on. */

@@ -284,18 +284,16 @@ public class ClientScreen extends Screen {
 			}
 		}
 
-		// Footer: active profile and whether restricted modules may run here.
+		// Footer: active profile and where the client is connected.
 		int footerY = panelY + panelH - 26;
 		ui.rect(x + 6, footerY - 4, sidebar - 12, 1, Theme.BORDER);
 		ui.icon(Icon.FOLDER, x + 8, footerY, 8, Theme.TEXT_MUTED);
 		ui.textClipped(femboy.config().activeProfile(), x + 20, footerY, sidebar - 26, Theme.TEXT_SECONDARY);
-		boolean authorized = femboy.modules().environment().isAuthorizedEnvironment();
-		ui.icon(authorized ? Icon.LOCK : Icon.INFO, x + 8, footerY + 11, 8, authorized ? Theme.SUCCESS : Theme.TEXT_MUTED);
-		ui.textClipped(authorized ? "Authorized" : "Restricted", x + 20, footerY + 11, sidebar - 26, authorized ? Theme.SUCCESS : Theme.TEXT_MUTED);
+		String where = femboy.modules().environment().describe();
+		ui.icon(Icon.INFO, x + 8, footerY + 11, 8, Theme.TEXT_MUTED);
+		ui.textClipped(where, x + 20, footerY + 11, sidebar - 26, Theme.TEXT_MUTED);
 		if (ui.hovered(x + 4, footerY - 2, sidebar - 8, 24)) {
-			ui.tooltip("footer", "Profile: " + femboy.config().activeProfile() + "\nEnvironment: " + femboy.modules().environment().describe()
-					+ (authorized ? "" : "\nEntity ESP, Storage ESP, the Geode Analyzer and Free Camera are paused here. They run in "
-					+ "singleplayer and on servers you authorize under Settings."));
+			ui.tooltip("footer", "Profile: " + femboy.config().activeProfile() + "\nEnvironment: " + where);
 		}
 	}
 

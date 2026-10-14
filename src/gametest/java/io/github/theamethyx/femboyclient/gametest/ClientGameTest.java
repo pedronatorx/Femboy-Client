@@ -67,7 +67,7 @@ public class ClientGameTest implements FabricClientGameTest {
 		UiDriver ui = new UiDriver(context);
 
 		report.check("Femboy Client entrypoint ran", context.computeOnClient(client -> FemboyClient.get() != null && FemboyClient.get().modules() != null));
-		report.check("All 10 modules registered", context.computeOnClient(client -> FemboyClient.get().modules().all().size()) == 10);
+		report.check("All 11 modules registered", context.computeOnClient(client -> FemboyClient.get().modules().all().size()) == 11);
 		// Deterministic screenshots: no easing between frames.
 		context.runOnClient(client -> FemboyClient.get().options().animations.set(false));
 
@@ -77,8 +77,6 @@ public class ClientGameTest implements FabricClientGameTest {
 			singleplayer.getServer().runCommand("gamemode creative @a");
 			singleplayer.getServer().runCommand("tp @a " + PLAYER.getX() + ".5 " + PLAYER.getY() + " " + PLAYER.getZ() + ".5 0 15");
 			context.waitTicks(5);
-			report.check("Singleplayer counts as an authorized environment",
-					context.computeOnClient(client -> FemboyClient.get().modules().environment().isAuthorizedEnvironment()));
 
 			navigationAndScreenshots(context, ui, report);
 			moduleBrowser(context, ui, report);
@@ -97,7 +95,7 @@ public class ClientGameTest implements FabricClientGameTest {
 		}
 
 		NaturalWorldTest.run(context, report);
-		MultiplayerRestrictionTest.run(context, ui, report);
+		MultiplayerTest.run(context, ui, report);
 		inspectLog(report);
 		report.finish();
 	}
@@ -550,7 +548,7 @@ public class ClientGameTest implements FabricClientGameTest {
 				.get(PlayerFinderModule.class).settings().get("include_self")).set(true));
 		var self = context.computeOnClient(client -> femboy().modules().get(PlayerFinderModule.class).entries());
 		report.check("With 'Include yourself' your own entry is listed with a known position", self.size() == 1
-				&& self.getFirst().knowledge() == PlayerFinderModule.Knowledge.VISIBLE && self.getFirst().position() != null, self.toString());
+				&& self.getFirst().knowledge() == PlayerFinderModule.Knowledge.IN_RANGE && self.getFirst().position() != null, self.toString());
 
 		openMenu(context);
 		openModule(context, PlayerFinderModule.class);

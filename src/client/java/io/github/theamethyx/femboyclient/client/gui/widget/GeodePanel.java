@@ -81,7 +81,7 @@ public class GeodePanel extends Container {
 	private String emptyText() {
 		GeodeScanner scanner = analyzer.scanner();
 		if (!analyzer.isRunning()) {
-			return "Turn the analyzer on to start. It runs in singleplayer and on authorized test servers.";
+			return "Turn the analyzer on to start.";
 		}
 
 		if (scanner.resultsAt() == 0) {

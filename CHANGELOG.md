@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.3.0 - 2026-10-14
+
+### Removed
+- **The authorization system.** Every module now runs everywhere, in singleplayer and on any server.
+  - Removed the "Authorized test servers" list from Settings and the "Authorized / Restricted" footer.
+  - An old `authorizedServers` entry in `femboyclient.json` is ignored and dropped on the next save.
+
+### Changed
+- **Player Finder** shows the position of every player within your range (the server's entity tracking range, roughly render distance), not only players in your line of sight. "In view" is now "In range".
+- **Free Camera works properly on servers.**
+  - Your player keeps sending position updates while the camera is detached. Vanilla stops them whenever another entity is the camera, which left the server without updates for the whole flight.
+  - Attack, use and pick-block are blocked while the camera is detached, because vanilla aims them from the camera.
+  - Turning it on stops any block you were mining or item you were using.
+
+### Added
+- **Player Alert (Player).** Warns when another player comes within your render distance.
+  - Chat message, sound and/or pop-up.
+  - Optional warning when they leave or log off.
+  - Ignore NPCs, and a repeat delay per player.
+- **Tests.**
+  - A second player is spawned on a real dedicated server to test Player Alert, Player Finder and Entity ESP.
+  - Free Camera is tested on that server: position sync, no attacks from the camera, no rubber-band.
+  - Both Free Camera mixins were checked by removing each one: the matching check then fails.
+
 ## 0.2.0 - 2026-10-14: Femboy Client
 
 ### Changed

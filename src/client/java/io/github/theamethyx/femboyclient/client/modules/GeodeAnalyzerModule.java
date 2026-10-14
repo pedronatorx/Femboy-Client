@@ -29,8 +29,7 @@ import io.github.theamethyx.femboyclient.core.setting.NumberSetting;
  * completeness and evidence quality, updating automatically as chunks load and buds grow.
  *
  * <p>Observed block states are kept separate from interpretation: the panel shows counts and
- * denominators, and only quotes documented results from controlled tests as reference. Restricted to
- * singleplayer and authorized servers.
+ * denominators, and only quotes documented results from controlled tests as reference.
  */
 public final class GeodeAnalyzerModule extends Module implements ClientHooks.WorldRender, ClientHooks.HudBlock, ClientHooks.CustomControls {
 	/**
@@ -79,11 +78,6 @@ public final class GeodeAnalyzerModule extends Module implements ClientHooks.Wor
 		super("geode_analyzer", "Geode Analyzer",
 				"Finds amethyst geodes in loaded chunks and reports exact growth-stage counts, completeness and evidence quality.",
 				ModuleCategory.WORLD, false, NO_KEY);
-	}
-
-	@Override
-	public boolean isRestricted() {
-		return true;
 	}
 
 	// ----- operation -------------------------------------------------------------------------

@@ -92,11 +92,6 @@ public abstract class Module {
 
 	// ----- availability ----------------------------------------------------------------------
 
-	/** Restricted modules only run in singleplayer or explicitly authorized test servers. */
-	public boolean isRestricted() {
-		return false;
-	}
-
 	/** Whether the module needs a loaded world to do anything useful. */
 	public boolean requiresWorld() {
 		return true;
@@ -105,10 +100,6 @@ public abstract class Module {
 	public Availability availability(EnvironmentPolicy environment) {
 		if (requiresWorld() && !environment.inWorld()) {
 			return Availability.unavailable("Waiting for a world to load.");
-		}
-
-		if (isRestricted() && !environment.isAuthorizedEnvironment()) {
-			return Availability.unavailable("Only runs in singleplayer or on servers listed as authorized test environments.");
 		}
 
 		return Availability.AVAILABLE;

@@ -26,16 +26,10 @@ class ModuleManagerTest {
 
 	static final class MutableEnvironment implements EnvironmentPolicy {
 		boolean inWorld = true;
-		boolean authorized = true;
 
 		@Override
 		public boolean inWorld() {
 			return inWorld;
-		}
-
-		@Override
-		public boolean isAuthorizedEnvironment() {
-			return authorized;
 		}
 
 		@Override
@@ -48,7 +42,6 @@ class ModuleManagerTest {
 		final List<String> events = new ArrayList<>();
 		final NumberSetting size;
 		final BooleanSetting flag;
-		boolean restricted;
 		RuntimeException failOnTick;
 		RuntimeException failOnEnable;
 
@@ -78,11 +71,6 @@ class ModuleManagerTest {
 		protected void onTick() {
 			events.add("tick");
 			if (failOnTick != null) throw failOnTick;
-		}
-
-		@Override
-		public boolean isRestricted() {
-			return restricted;
 		}
 	}
 
@@ -130,22 +118,6 @@ class ModuleManagerTest {
 		assertFalse(module.isRunning());
 		assertTrue(module.isEnabled(), "the user's choice survives world transitions");
 		assertEquals(List.of("register", "enable", "tick", "disable"), module.events);
-	}
-
-	@Test
-	void restrictedModulesOnlyRunInAuthorizedEnvironments() {
-		RecordingModule module = manager.register(new RecordingModule("a", "Alpha", Module.NO_KEY));
-		module.restricted = true;
-		environment.authorized = false;
-		manager.setEnabled(module, true);
-
-		assertFalse(module.isRunning());
-		assertFalse(manager.availability(module).available());
-		assertTrue(manager.availability(module).reason().contains("authorized"));
-
-		environment.authorized = true;
-		manager.tick();
-		assertTrue(module.isRunning());
 	}
 
 	@Test

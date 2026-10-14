@@ -31,13 +31,12 @@ import io.github.theamethyx.femboyclient.core.setting.BooleanSetting;
 import io.github.theamethyx.femboyclient.core.setting.EnumSetting;
 
 /**
- * Lists online players from the server's player list and helps you navigate to players you can see and
- * to your own waypoints.
+ * Lists online players from the server's player list and helps you navigate to players in range and to
+ * your own waypoints.
  *
- * <p>Positions are only shown when the information is legitimately available: on ordinary servers only
- * for players in your direct line of sight; in singleplayer and on authorized test servers also for
- * other players your client has loaded. Out-of-sight players are shown as "position unknown", or with
- * their last seen position and its age. Nothing is inferred or invented.
+ * <p>A position is known for every player the client has loaded, i.e. within the server's entity
+ * tracking range (roughly your render distance). Players further away are shown as "position unknown",
+ * or with their last seen position and its age. Nothing is inferred or invented.
  */
 public final class PlayerFinderModule extends Module implements ClientHooks.HudBlock, ClientHooks.CustomControls {
 	public static final int MAX_REMEMBERED = 200;
@@ -58,7 +57,7 @@ public final class PlayerFinderModule extends Module implements ClientHooks.HudB
 	}
 
 	/** How much is known about a player's position right now. */
-	public enum Knowledge { VISIBLE, LAST_SEEN, UNKNOWN }
+	public enum Knowledge { IN_RANGE, LAST_SEEN, UNKNOWN }
 
 	/** One row of the list. {@code position} is null when unknown; {@code seenAt} is when it was observed. */
 	public record Entry(UUID id, String name, int ping, String gameMode, Knowledge knowledge, Vec3 position, long seenAt) {
@@ -69,7 +68,7 @@ public final class PlayerFinderModule extends Module implements ClientHooks.HudB
 
 	private final EnumSetting<Sort> sort = settings().add(new EnumSetting<>("sort", "Sort by", "Order of the player list.", Sort.NAME));
 	private final BooleanSetting rememberLastSeen = settings().add(new BooleanSetting("remember_last_seen", "Remember last seen positions",
-			"When a player leaves your view, keep the position where you last saw them, shown with its age. Cleared when you change "
+			"When a player leaves your range, keep the position where you last saw them, shown with its age. Cleared when you change "
 					+ "world or dimension.", true));
 	private final BooleanSetting includeSelf = settings().add(new BooleanSetting("include_self", "Include yourself", "Show your own name in the list.", false));
 	private final BooleanSetting hud = settings().add(new BooleanSetting("hud", "Navigation on HUD",
@@ -83,7 +82,7 @@ public final class PlayerFinderModule extends Module implements ClientHooks.HudB
 	private WaypointsModule.Waypoint trackedWaypoint;
 
 	public PlayerFinderModule() {
-		super("player_finder", "Player Finder", "Online player list with search and sorting, plus navigation to players you can see and to your waypoints.",
+		super("player_finder", "Player Finder", "Online player list with search and sorting, plus navigation to players in range and to your waypoints.",
 				ModuleCategory.PLAYER, false, NO_KEY);
 		// Edited with the dropdown above the player list; one control is enough.
 		sort.visibleWhen(() -> false);
@@ -93,16 +92,6 @@ public final class PlayerFinderModule extends Module implements ClientHooks.HudB
 	}
 
 	// ----- knowledge -------------------------------------------------------------------------
-
-	/** Whether the current environment allows using every loaded player, not only ones in line of sight. */
-	private static boolean authorized() {
-		FemboyClient femboy = FemboyClient.get();
-		return femboy != null && femboy.modules().environment().isAuthorizedEnvironment();
-	}
-
-	private static boolean inView(LocalPlayer self, AbstractClientPlayer other) {
-		return authorized() || self.hasLineOfSight(other);
-	}
 
 	@Override
 	protected void onTick() {
@@ -124,7 +113,7 @@ public final class PlayerFinderModule extends Module implements ClientHooks.HudB
 
 		long now = System.currentTimeMillis();
 		for (AbstractClientPlayer other : client.level.players()) {
-			if (other != client.player && inView(client.player, other)) {
+			if (other != client.player) {
 				lastSeen.remove(other.getUUID());
 				lastSeen.put(other.getUUID(), new Sighting(other.position(), now, here));
 			}
@@ -175,8 +164,8 @@ public final class PlayerFinderModule extends Module implements ClientHooks.HudB
 
 			String mode = info.getGameMode() == null ? "?" : info.getGameMode().getShortDisplayName().getString();
 			AbstractClientPlayer entity = id.equals(self.getUUID()) ? self : findPlayer(id);
-			if (entity != null && (entity == self || inView(self, entity))) {
-				result.add(new Entry(id, info.getProfile().name(), info.getLatency(), mode, Knowledge.VISIBLE, entity.position(), System.currentTimeMillis()));
+			if (entity != null) {
+				result.add(new Entry(id, info.getProfile().name(), info.getLatency(), mode, Knowledge.IN_RANGE, entity.position(), System.currentTimeMillis()));
 				continue;
 			}
 
@@ -268,7 +257,7 @@ public final class PlayerFinderModule extends Module implements ClientHooks.HudB
 		for (Entry entry : entries()) {
 			if (entry.id().equals(trackedPlayer)) {
 				return switch (entry.knowledge()) {
-					case VISIBLE -> new Target(entry.name(), entry.position(), "in view", Theme.SUCCESS);
+					case IN_RANGE -> new Target(entry.name(), entry.position(), "in range", Theme.SUCCESS);
 					case LAST_SEEN -> new Target(entry.name(), entry.position(), "last seen " + ago(entry.seenAt()), Theme.WARNING);
 					case UNKNOWN -> new Target(entry.name(), null, "position unknown", Theme.TEXT_MUTED);
 				};
@@ -319,7 +308,7 @@ public final class PlayerFinderModule extends Module implements ClientHooks.HudB
 		}
 
 		String value = target.position() == null ? target.note() : distanceAndArrow(target.position())
-				+ (target.note().equals("in view") || target.note().equals("waypoint") ? "" : "  (" + target.note() + ")");
+				+ (target.note().equals("in range") || target.note().equals("waypoint") ? "" : "  (" + target.note() + ")");
 		lines.add(HudLine.of(target.name(), value, target.color()));
 	}
 }

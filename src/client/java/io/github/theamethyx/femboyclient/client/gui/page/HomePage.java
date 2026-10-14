@@ -112,11 +112,8 @@ public class HomePage extends Page {
 	}
 
 	private List<InfoCard.Line> sessionLines() {
-		boolean authorized = femboy.modules().environment().isAuthorizedEnvironment();
 		List<InfoCard.Line> lines = new ArrayList<>();
-		lines.add(new InfoCard.Line("Where", femboy.modules().environment().describe(), authorized ? Theme.SUCCESS : Theme.TEXT_SECONDARY,
-				authorized ? "All modules may run here." : "Entity ESP, Storage ESP, the Geode Analyzer and Free Camera pause here. "
-						+ "They run in singleplayer and on servers you authorize under Settings."));
+		lines.add(new InfoCard.Line("Where", femboy.modules().environment().describe(), Theme.TEXT_SECONDARY));
 		lines.add(new InfoCard.Line("Profile", femboy.config().activeProfile(), Theme.ACCENT_STRONG));
 		lines.add(new InfoCard.Line("Menu key", ClientKeys.openMenu.getTranslatedKeyMessage().getString(), Theme.TEXT,
 				"Change it in Minecraft's Options > Controls > Key Binds under 'Femboy Client'."));
@@ -136,7 +133,7 @@ public class HomePage extends Page {
 		List<InfoCard.Line> lines = new ArrayList<>();
 		lines.add(new InfoCard.Line("Enabled", enabled + " of " + femboy.modules().all().size()));
 		lines.add(new InfoCard.Line("Running now", String.valueOf(running), running < enabled ? Theme.WARNING : Theme.TEXT,
-				running < enabled ? "Some enabled modules are paused because they are not allowed here or no world is loaded." : null));
+				running < enabled ? "Some enabled modules are paused because no world is loaded." : null));
 		lines.add(new InfoCard.Line("Errors", failed == 0 ? "None" : failed + " module(s) stopped", failed == 0 ? Theme.SUCCESS : Theme.ERROR,
 				failed == 0 ? null : "See Settings > Diagnostics for details."));
 		return lines;

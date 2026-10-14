@@ -1,11 +1,11 @@
 io.github.theamethyx.femboyclient.ResourceFilesTest: 5 tests, 0 failed
 io.github.theamethyx.femboyclient.core.config.ConfigurationManagerTest: 7 tests, 0 failed
 io.github.theamethyx.femboyclient.core.config.LegacyConfigMigrationTest: 3 tests, 0 failed
-io.github.theamethyx.femboyclient.core.module.ModuleManagerTest: 9 tests, 0 failed
+io.github.theamethyx.femboyclient.core.module.ModuleManagerTest: 8 tests, 0 failed
 io.github.theamethyx.femboyclient.core.research.StatisticsTest: 5 tests, 0 failed
 io.github.theamethyx.femboyclient.core.research.engine.ActivityResearchEngineTest: 8 tests, 0 failed
 io.github.theamethyx.femboyclient.core.research.geode.ChunkObservationCacheTest: 6 tests, 0 failed
 io.github.theamethyx.femboyclient.core.research.geode.GeodeClustererTest: 7 tests, 0 failed
 io.github.theamethyx.femboyclient.core.setting.CollectionSettingsTest: 6 tests, 0 failed
 io.github.theamethyx.femboyclient.core.setting.SettingsTest: 8 tests, 0 failed
-TOTAL: 64 tests, 0 failed
+TOTAL: 63 tests, 0 failed

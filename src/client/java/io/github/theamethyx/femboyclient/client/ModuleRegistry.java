@@ -7,6 +7,7 @@ import io.github.theamethyx.femboyclient.client.modules.FreeCameraModule;
 import io.github.theamethyx.femboyclient.client.modules.GeodeAnalyzerModule;
 import io.github.theamethyx.femboyclient.client.modules.ModuleListHudModule;
 import io.github.theamethyx.femboyclient.client.modules.PerformanceHudModule;
+import io.github.theamethyx.femboyclient.client.modules.PlayerAlertModule;
 import io.github.theamethyx.femboyclient.client.modules.PlayerFinderModule;
 import io.github.theamethyx.femboyclient.client.modules.StorageEspModule;
 import io.github.theamethyx.femboyclient.client.modules.WaypointsModule;
@@ -30,6 +31,7 @@ public final class ModuleRegistry {
 		modules.register(new WaypointsModule());
 		// Player
 		modules.register(new PlayerFinderModule());
+		modules.register(new PlayerAlertModule());
 		modules.register(new FreeCameraModule());
 		// HUD
 		modules.register(new CoordinatesHudModule());

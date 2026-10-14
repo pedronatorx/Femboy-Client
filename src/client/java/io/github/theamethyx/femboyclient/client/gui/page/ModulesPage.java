@@ -230,7 +230,7 @@ public class ModulesPage extends Page {
 			ui.roundRect(x, y, width, height, Theme.SURFACE);
 			ui.icon(Icon.byName(module.category().icon()), x + 6, y + 6, 9, Theme.ACCENT);
 			ui.textClipped(module.name(), x + 19, y + 7, width - 25, Theme.TEXT);
-			ui.text(module.category().label() + (module.isRestricted() ? "  ·  Singleplayer and authorized servers" : ""), x + 6, y + 18, Theme.TEXT_MUTED);
+			ui.text(module.category().label(), x + 6, y + 18, Theme.TEXT_MUTED);
 			int used = ui.wrapped(module.description(), x + 6, y + 30, width - 12, Theme.TEXT_SECONDARY);
 
 			ModuleRow.StatusView status = ModuleRow.status(module, modules);

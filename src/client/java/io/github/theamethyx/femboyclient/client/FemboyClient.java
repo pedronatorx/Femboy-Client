@@ -63,7 +63,7 @@ public final class FemboyClient implements ClientModInitializer {
 		}
 
 		config =new ConfigurationManager(configDir, modules, options.settings, diagnostics, System::currentTimeMillis);
-		modules.setEnvironment(new ClientEnvironment(client, config));
+		modules.setEnvironment(new ClientEnvironment(client));
 
 		ModuleRegistry.registerAll(modules);
 
@@ -134,15 +134,10 @@ public final class FemboyClient implements ClientModInitializer {
 		return options;
 	}
 
-	/** Placeholder policy used only until the config (and therefore the server list) exists. */
+	/** Placeholder policy used only until the modules are set up. */
 	private static final class NoWorldYet implements io.github.theamethyx.femboyclient.core.module.EnvironmentPolicy {
 		@Override
 		public boolean inWorld() {
-			return false;
-		}
-
-		@Override
-		public boolean isAuthorizedEnvironment() {
 			return false;
 		}
 

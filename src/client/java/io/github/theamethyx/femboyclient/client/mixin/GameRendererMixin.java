@@ -20,7 +20,7 @@ import io.github.theamethyx.femboyclient.client.modules.FreeCameraModule;
 public abstract class GameRendererMixin {
 	@Inject(method = "renderItemInHand", at = @At("HEAD"), cancellable = true)
 	private void femboyclient$hideHandInFreeCamera(float partialTick, boolean sleeping, Matrix4f projection, CallbackInfo ci) {
-		if (FreeCameraModule.hideHand) {
+		if (FreeCameraModule.detached) {
 			ci.cancel();
 		}
 	}

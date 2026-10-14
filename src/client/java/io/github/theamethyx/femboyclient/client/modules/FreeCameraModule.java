@@ -21,13 +21,21 @@ import io.github.theamethyx.femboyclient.core.module.ModuleCategory;
 import io.github.theamethyx.femboyclient.core.setting.NumberSetting;
 
 /**
- * Local free-camera demonstration: detaches the view from the player and flies it with the movement
- * keys while the player stays where it is.
+ * Free camera: detaches the view from the player and flies it with the movement keys while the player
+ * stays where it is. Works in singleplayer and on servers.
  *
- * <p>How it works without mixins: a client-only marker entity (never added to the world) becomes
- * the camera entity, and the player's movement input is swapped for an empty one. The camera
- * copies the player's look direction, so the mouse still steers. Restricted to singleplayer and
- * authorized test servers.
+ * <p>A client-only marker entity (never added to the world) becomes the camera entity, and the player's
+ * movement input is swapped for an empty one. The camera copies the player's look direction, so the
+ * mouse still steers. Three mixins read {@link #detached}:
+ * <ul>
+ *   <li>{@code LocalPlayerMixin} keeps the player sending its normal position updates. Vanilla stops
+ *       sending them while another entity is the camera, which on a server leaves the player out of
+ *       sync and causes a rubber-band correction when the camera returns.</li>
+ *   <li>{@code MinecraftMixin} blocks attacking, using items and pick-block. Vanilla aims those from the
+ *       camera, so a click would target blocks next to the camera, far from the player.</li>
+ *   <li>{@code GameRendererMixin} hides the first-person hand.</li>
+ * </ul>
+ * Chunks and entities are only loaded around the player, so flying far away shows empty space.
  */
 public final class FreeCameraModule extends Module implements ClientHooks.HudBlock {
 	private final NumberSetting speed = settings().add(new NumberSetting("speed", "Speed",
@@ -40,21 +48,16 @@ public final class FreeCameraModule extends Module implements ClientHooks.HudBlo
 
 	public FreeCameraModule() {
 		super("free_camera", "Free Camera",
-				"Fly the camera away from your player to inspect a test area. Your player stays still; disable to snap back.",
+				"Fly the camera away from your player. Your player stays still and can't attack or use items meanwhile; disable to snap back.",
 				ModuleCategory.PLAYER, false, NO_KEY);
-	}
-
-	@Override
-	public boolean isRestricted() {
-		return true;
 	}
 
 	public boolean isActive() {
 		return camera != null;
 	}
 
-	/** Read by GameRendererMixin: true while the view is detached, so the hand is not drawn. */
-	public static volatile boolean hideHand;
+	/** True while the view is detached; read by the mixins listed in the class comment. */
+	public static volatile boolean detached;
 
 	public Vec3 cameraPosition() {
 		return camera == null ? null : camera.position();
@@ -81,17 +84,25 @@ public final class FreeCameraModule extends Module implements ClientHooks.HudBlo
 		camera.zo = eye.z;
 		copyRotation();
 
+		// Stop anything started from the player's view: mining would otherwise continue on the server.
+		if (client.gameMode != null) {
+			client.gameMode.stopDestroyBlock();
+			if (current.isUsingItem()) {
+				client.gameMode.releaseUsingItem(current);
+			}
+		}
+
 		savedInput = current.input;
 		current.input = new ClientInput();
 		savedCameraType = client.options.getCameraType();
 		client.options.setCameraType(CameraType.FIRST_PERSON);
 		client.setCameraEntity(camera);
-		hideHand = true;
+		detached = true;
 	}
 
 	@Override
 	protected void onDisable() {
-		hideHand = false;
+		detached = false;
 		Minecraft client = Minecraft.getInstance();
 		if (player != null && savedInput != null) {
 			player.input = savedInput;

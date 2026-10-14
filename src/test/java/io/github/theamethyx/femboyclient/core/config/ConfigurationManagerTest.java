@@ -47,7 +47,7 @@ class ConfigurationManagerTest {
 
 	@BeforeEach
 	void setUp() {
-		modules = new ModuleManager(new DiagnosticLogger(), new PerformanceMonitor(), EnvironmentPolicy.ALWAYS_AUTHORIZED);
+		modules = new ModuleManager(new DiagnosticLogger(), new PerformanceMonitor(), EnvironmentPolicy.IN_WORLD);
 		module = modules.register(new TestModule());
 		global = new ModuleSettings();
 		animations = global.add(new BooleanSetting("animations", "Animations", "", true));
@@ -177,20 +177,17 @@ class ConfigurationManagerTest {
 	}
 
 	@Test
-	void authorizedServersAreNormalizedAndPersisted() {
+	void anOldAuthorizedServerListIsIgnoredAndDropped() throws Exception {
+		// Versions up to 0.2.0 stored a list of authorized servers; it no longer has a meaning.
+		newConfig().load();
+		Files.writeString(dir.resolve("femboyclient.json"), """
+				{ "schemaVersion": 1, "activeProfile": "default", "authorizedServers": ["localhost:25565"] }
+				""");
 		ConfigurationManager config = newConfig();
-		config.load();
+		List<String> report = config.load();
 
-		assertNull(config.addAuthorizedServer("LocalHost"));
-		assertNotNull(config.addAuthorizedServer("localhost:25565"), "same server after normalization");
-		assertNotNull(config.addAuthorizedServer("bad host!"));
-		assertNull(config.addAuthorizedServer("[::1]:25570"));
-		assertTrue(config.isAuthorizedServer("localhost"));
-		assertFalse(config.isAuthorizedServer("example.com"));
+		assertTrue(report.isEmpty(), report::toString);
 		config.saveNow();
-
-		ConfigurationManager restarted = newConfig();
-		restarted.load();
-		assertEquals(List.of("localhost:25565", "[::1]:25570"), restarted.authorizedServers());
+		assertFalse(Files.readString(dir.resolve("femboyclient.json")).contains("authorizedServers"));
 	}
 }

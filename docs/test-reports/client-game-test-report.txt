@@ -1,9 +1,8 @@
 Femboy Client client game test report
-Started: 2026-10-14T17:37:14.633894538
+Started: 2026-10-14T18:12:17.197324068
 
 PASS  Femboy Client entrypoint ran
-PASS  All 10 modules registered
-PASS  Singleplayer counts as an authorized environment
+PASS  All 11 modules registered
 PASS  Right Shift opens the Femboy Client screen
 PASS  Sidebar is exactly Home, Visuals, World, Player, HUD, Settings  -- [Home, Visuals, World, Player, HUD, Settings]
 PASS  No development pages (Scenarios, Analysis, Results, Dashboard) remain
@@ -49,7 +48,7 @@ PASS  At least one geode card is listed
 PASS  Clicking a geode card shows its exact counts and details
 PASS  A waypoint can be added at the player position  -- null
 PASS  In singleplayer the list has no other players (yourself excluded by default)  -- 0 entries
-PASS  With 'Include yourself' your own entry is listed with a known position  -- [Entry[id=2654e3c3-150d-3857-a426-0b141796a4e0, name=Player0, ping=0, gameMode=Creative, knowledge=VISIBLE, position=(0.5, -60.0, 0.5), seenAt=1791992268918]]
+PASS  With 'Include yourself' your own entry is listed with a known position  -- [Entry[id=2654e3c3-150d-3857-a426-0b141796a4e0, name=Player0, ping=0, gameMode=Creative, knowledge=IN_RANGE, position=(0.5, -60.0, 0.5), seenAt=1791994369585]]
 PASS  The waypoint of this world is offered as a navigation target
 PASS  Clicking the waypoint starts navigation to it  -- Target[name=Spawn, position=(0.5, -59.5, 0.5), note=waypoint, color=-9524993]
 PASS  Stopping navigation clears the target
@@ -78,16 +77,24 @@ PASS  Natural geodes are re-identified by the same id after time passes  -- 2 ma
 PASS  No natural geode lost clusters without block removal  -- 0 lost clusters
 PASS  At least one geode within simulation distance grew under boosted random ticking  -- 1 of 2
 NOTE  Connected to dedicated test server at localhost:25565
-PASS  A dedicated server is not an authorized environment by default
-PASS  Restricted modules stay paused on an unauthorized server
-PASS  The pause reason explains the authorization rule  -- Only runs in singleplayer or on servers listed as authorized test environments.
-PASS  Unrestricted HUD modules still run on any server
-PASS  Player Finder runs on any server (it only uses the player list and players in view)
-PASS  The address typed into Settings is stored as an authorized server  -- localhost:25565
-PASS  After authorizing the server, the restricted modules run
-PASS  Removing the server pauses the restricted modules again
-PASS  Leaving the free camera paused returned the view to the player
+PASS  Every module runs on a dedicated server (no server list, no pausing)
+PASS  A second player on the server reaches the client
+PASS  Player Alert warns when the player comes into range  -- [Alice (5 m ↑) is in range]
+PASS  Player Finder lists the player in range with their real position  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=IN_RANGE, position=(15.5, -29.0, 3.5), seenAt=1791994428330]
+PASS  Entity ESP highlights the other player
+PASS  Player Alert reports when the player leaves range (setting on)  -- [Alice left your range, Alice (5 m ↑) is in range]
+PASS  Player Finder keeps the last seen position once the player is out of range  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=LAST_SEEN, position=(15.5, -29.0, 3.5), seenAt=1791994428435]
+PASS  A player who logs off disappears from Player Finder
+PASS  Free Camera runs on a dedicated server
+PASS  The free camera flies on the server  -- moved 12.00
+PASS  The crosshair aims at the block under the camera
+PASS  Clicking in free camera does not attack (no swing, the block stays)  -- swung=false
+PASS  The server keeps receiving the player's updates during free camera  -- server yaw 90.0
+PASS  The player stays put on the server and on the client  -- server moved 0.000, client moved 0.000
+PASS  Disabling the free camera returns the view to the player
+PASS  No rubber-band: server and client agree on the position after the camera returns  -- server-client difference 0.000
+PASS  After the camera returns, clicking works again (control: swing, block broken)  -- swung=true
 NOTE  Ignored known offline-test noise: missing X11 cursor shapes (Xvfb), anisotropic filtering option, Realms and account-properties requests failing without a real login.
 PASS  No render-thread, server-thread or client-code errors in the client log
 
-Result: PASSED (82 checks passed, 93 s)
+Result: PASSED (89 checks passed, 94 s)

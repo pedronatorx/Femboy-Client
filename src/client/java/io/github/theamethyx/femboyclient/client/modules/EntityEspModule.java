@@ -33,8 +33,8 @@ import io.github.theamethyx.femboyclient.core.setting.NumberSetting;
  * Highlights entities of the chosen types. Types are selected by registry id and grouped into players,
  * hostile, passive, villagers and other; tamed animals can be handled separately as pets.
  *
- * <p>Restricted to singleplayer and authorized servers: on any other server the module pauses.
- * It only uses entities the client already knows about and skips entities that are invisible to you.
+ * <p>It only uses entities the client already knows about and skips entities that are invisible to you
+ * unless "Include invisible" is on.
  */
 public final class EntityEspModule extends Module implements ClientHooks.WorldRender, ClientHooks.ScreenOverlay {
 	public static final String PLAYERS = "Players";
@@ -95,11 +95,6 @@ public final class EntityEspModule extends Module implements ClientHooks.WorldRe
 		types.onChange(ids -> selected = resolve(ids));
 		selected = resolve(types.get());
 		distance.visibleWhen(names::get);
-	}
-
-	@Override
-	public boolean isRestricted() {
-		return true;
 	}
 
 	// ----- type registry ---------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 A client-side Fabric mod for **Minecraft Java Edition 1.21.11**: a clean ClickGUI with configurable visual, world, player and HUD modules.
 
-Highlighting entities and storage through walls, the Geode Analyzer and the free camera only run in **singleplayer and on servers you explicitly authorize** (Settings → Authorized test servers). On any other server they pause. Femboy Client contains nothing that hides it from anti-cheat systems.
+Every module works everywhere: in singleplayer and on any server. Femboy Client contains nothing that hides it from anti-cheat systems, and some servers' rules forbid clients like this, so check before you use it there.
 
 ![Home page](docs/screenshots/0006_gui-1280x720-0-home.png)
 
@@ -21,11 +21,11 @@ Highlighting entities and storage through walls, the Geode Analyzer and the free
 ## Installation (normal Minecraft launcher)
 
 1. Install Fabric Loader 0.19.5 for Minecraft 1.21.11.
-2. Put `femboy-client-0.2.0.jar` (from `build/libs/`) and Fabric API 0.141.6+1.21.11 into the profile's `mods` folder.
+2. Put `femboy-client-0.3.0.jar` (from `build/libs/`) and Fabric API 0.141.6+1.21.11 into the profile's `mods` folder.
 3. Start the game and press **Right Shift** to open the menu. You can rebind it under Options → Controls → Key Binds → Femboy Client.
 
 Settings live in `config/femboyclient/`:
-- `femboyclient.json`: client options, active profile, authorized servers
+- `femboyclient.json`: client options, active profile
 - `profiles/*.json`: modules, keys and settings per profile
 
 Every file is written atomically with a `.bak` copy. An unreadable file is moved aside as `*.corrupt-<time>`, never deleted, and the client falls back to the backup or to defaults.
@@ -42,7 +42,7 @@ export JAVA_HOME=$HOME/.local/share/jdks/jdk-25.0.4.1+1   # any JDK 25+
 
 | Task | Command |
 |---|---|
-| Build the mod jar (also runs the unit tests) | `./gradlew build` → `build/libs/femboy-client-0.2.0.jar` |
+| Build the mod jar (also runs the unit tests) | `./gradlew build` → `build/libs/femboy-client-0.3.0.jar` |
 | Unit tests only | `./gradlew test` |
 | Server GameTests, headless (includes the research experiment) | `./gradlew runGameTest` |
 | In-game client tests, headless (needs `xvfb-run`), with screenshots | `./scripts/run-client-tests.sh` |
@@ -59,24 +59,25 @@ The sidebar has six sections. Every module has an on/off switch, a key bind (cli
 | **Home** | Search across all modules with a category filter (click a module to open it), session status, module health, frame rate |
 | **Visuals** | Entity ESP, Storage ESP, Chunk Borders |
 | **World** | Geode Analyzer, Waypoints |
-| **Player** | Player Finder, Free Camera |
+| **Player** | Player Finder, Player Alert, Free Camera |
 | **HUD** | Coordinates, Performance, Module List |
-| **Settings** | General tab: profiles, client options (menu scale, animations, tooltips), authorized servers, config folder. Diagnostics tab: frame timing, time per module, message log |
+| **Settings** | General tab: profiles, client options (menu scale, animations, tooltips), config folder. Diagnostics tab: frame timing, time per module, message log |
 
 ### Modules
 
-| Module | What it does | Where it runs |
-|---|---|---|
-| **Entity ESP** | Highlights the entity types you choose. Types are picked by registry id (e.g. `minecraft:zombie`) in a searchable checklist grouped into players, hostile mobs, passive mobs, villagers and other. Pets can follow the type selection, always show, or never show. Options: outline, fill, through walls, names, distance, colors per group, maximum distance, maximum highlights and labels. Entities invisible to you are skipped unless you turn that on. | Singleplayer, authorized servers |
-| **Storage ESP** | Highlights storage blocks you choose by block id: chests and copper chests, trapped chests, ender chests, barrels, shulker boxes, hoppers, dispensers/droppers/crafters, furnaces, and other storage. Options: outline, fill, through walls, labels, built-in or custom colors per group, maximum distance, scan interval, maximum highlights. Reads only block entities your client has already received. | Singleplayer, authorized servers |
-| **Chunk Borders** | Chunk boundary lines around you. | Everywhere |
-| **Geode Analyzer** | Finds amethyst geodes in loaded chunks and keeps exact growth-stage counts up to date as chunks load and buds grow. See below. | Singleplayer, authorized servers |
-| **Waypoints** | Save positions; see them as markers with names and distances. | Everywhere (your own data) |
-| **Player Finder** | Online players from the server's player list (name, game mode, ping) with search and sorting, plus navigation to players you can see and to your waypoints. See below. | Everywhere |
-| **Free Camera** | Detach the camera and fly it while your player stays put. | Singleplayer, authorized servers |
-| **Coordinates, Performance, Module List** | HUD panels. | Everywhere |
+| Module | What it does |
+|---|---|
+| **Entity ESP** | Highlights the entity types you choose. Types are picked by registry id (e.g. `minecraft:zombie`) in a searchable checklist grouped into players, hostile mobs, passive mobs, villagers and other. Pets can follow the type selection, always show, or never show. Options: outline, fill, through walls, names, distance, colors per group, maximum distance, maximum highlights and labels. Entities invisible to you are skipped unless you turn that on. |
+| **Storage ESP** | Highlights storage blocks you choose by block id: chests and copper chests, trapped chests, ender chests, barrels, shulker boxes, hoppers, dispensers/droppers/crafters, furnaces, and other storage. Options: outline, fill, through walls, labels, built-in or custom colors per group, maximum distance, scan interval, maximum highlights. Reads only block entities your client has already received. |
+| **Chunk Borders** | Chunk boundary lines around you. |
+| **Geode Analyzer** | Finds amethyst geodes in loaded chunks and keeps exact growth-stage counts up to date as chunks load and buds grow. See below. |
+| **Waypoints** | Save positions; see them as markers with names and distances. |
+| **Player Finder** | Online players from the server's player list (name, game mode, ping) with search and sorting, plus navigation to players in range and to your waypoints. See below. |
+| **Player Alert** | Warns you when another player comes within your render distance: chat message, sound and/or pop-up, optionally also when they leave. See below. |
+| **Free Camera** | Detach the camera and fly it while your player stays put. Works on servers. See below. |
+| **Coordinates, Performance, Module List** | HUD panels. |
 
-An enabled module **pauses** when its environment doesn't allow it (no world loaded, or the server isn't authorized), and resumes on its own. If a module throws an error, it is turned off and reported under Settings → Diagnostics; other modules keep running.
+An enabled module **pauses** while no world is loaded and resumes on its own. If a module throws an error, it is turned off and reported under Settings → Diagnostics; other modules keep running.
 
 ### Geode Analyzer
 
@@ -88,10 +89,23 @@ An enabled module **pauses** when its environment doesn't allow it (no world loa
 
 ### Player Finder
 
-- The list comes from the server's player list. Positions are shown **only when you have them legitimately**: on ordinary servers for players in your direct line of sight; in singleplayer and on authorized servers also for other players your client has loaded.
-- Players out of view show **"Position unknown"**, or, if you saw them earlier, **"Last seen … ago"** with that old position, clearly marked as stale. Nothing is inferred or invented. Last-seen positions are forgotten when you change world or dimension.
+- The list comes from the server's player list (everyone online, wherever they are).
+- **Positions are known only for players within your range**: the server sends a player's position only while they are within its entity tracking range, roughly your render distance. Nothing on the client can see further; that would need the server to share positions.
+- Players out of range show **"Position unknown"**, or, if they were in range earlier, **"Last seen … ago"** with that old position, clearly marked as stale. Nothing is inferred or invented. Last-seen positions are forgotten when you change world or dimension.
 - Click a player with a known position, or one of your waypoints, to navigate: the HUD shows the target, distance and an arrow relative to where you're looking.
-- Not implemented: integration with a server-side API. The spec allows it for servers you control, but nothing like it exists yet.
+
+### Player Alert
+
+- Turn it on in Player → Player Alert. It warns when a player comes within your range, i.e. when the server starts sending you that player.
+- **Settings:** chat message (only you see it), sound, pop-up, warn when they leave (and whether they logged off), ignore NPCs (player-shaped entities missing from the server's player list), and a repeat delay so someone walking along the edge of your range doesn't flood the chat.
+- Players already near you when you turn it on are not announced. Several arrivals in the same moment are combined into one message.
+
+### Free Camera
+
+- Detaches the view and flies it with the movement keys (sprint doubles the speed). Your player stays where it is.
+- **On servers:** your player keeps sending its normal position updates, so the server sees you standing still and nothing snaps back when the camera returns.
+- While the camera is detached you can't attack, use items or pick blocks, because those would aim from the camera, far from your player. Hotbar, inventory and chat still work.
+- The server only sends chunks and entities around your player, so flying far away shows empty space.
 
 ## Research background
 
@@ -121,9 +135,11 @@ docs/                                    screenshots, test reports, research rep
 
 Adding a module means writing one class (settings are declared as fields) and one line in `ModuleRegistry`. The GUI builds its page entry, settings panel and persistence from the module's category and settings.
 
-Mixins (two, each documented in its source file):
+Mixins (four, each documented in its source file):
 - **`KeyboardHandlerMixin`:** module key binds. Fabric API has no in-world key event, and polling once per tick misses short taps.
 - **`GameRendererMixin`:** hides the first-person hand while the free camera is active. No API exists to do this.
+- **`LocalPlayerMixin`:** keeps your player sending position updates while the free camera is active (vanilla stops them whenever another entity is the camera).
+- **`MinecraftMixin`:** blocks attack, use and pick-block while the free camera is active, since vanilla would aim them from the camera.
 
 ## Documentation
 

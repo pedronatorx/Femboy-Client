@@ -9,13 +9,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.function.LongSupplier;
 import java.util.regex.Pattern;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
@@ -28,7 +25,7 @@ import io.github.theamethyx.femboyclient.core.setting.ModuleSettings;
  *
  * <pre>
  * config/femboyclient/
- *   femboyclient.json               global options, active profile, authorized test servers
+ *   femboyclient.json               global options, active profile
  *   profiles/&lt;name&gt;.json    module state for one profile
  *   *.bak                   previous version of each file (written before every save)
  *   *.corrupt-&lt;time&gt;       unreadable files moved aside, never deleted
@@ -41,7 +38,6 @@ public final class ConfigurationManager {
 	public static final String DEFAULT_PROFILE = "default";
 	public static final long AUTOSAVE_DELAY_MILLIS = 1500;
 	private static final Pattern PROFILE_NAME = Pattern.compile("[A-Za-z0-9_-]{1,32}");
-	private static final Pattern SERVER_ADDRESS = Pattern.compile("[A-Za-z0-9.\\-_:\\[\\]]{1,253}");
 	private static final String SOURCE = "Config";
 
 	private final Path root;
@@ -49,7 +45,6 @@ public final class ConfigurationManager {
 	private final ModuleSettings globalSettings;
 	private final DiagnosticLogger diagnostics;
 	private final LongSupplier clock;
-	private final List<String> authorizedServers = new ArrayList<>();
 	private final List<String> lastReport = new ArrayList<>();
 
 	private String activeProfile = DEFAULT_PROFILE;
@@ -81,7 +76,6 @@ public final class ConfigurationManager {
 
 		try {
 			JsonObject global = readWithRecovery(globalFile(), "Global settings", report);
-			authorizedServers.clear();
 			activeProfile = DEFAULT_PROFILE;
 			globalSettings.resetAll();
 
@@ -89,17 +83,6 @@ public final class ConfigurationManager {
 				checkSchema(global, "Global settings", report);
 				if (global.get("settings") instanceof JsonObject settings) {
 					globalSettings.load(settings).forEach(warning -> report.add("Global settings: " + warning));
-				}
-
-				if (global.get("authorizedServers") instanceof JsonArray servers) {
-					for (JsonElement element : servers) {
-						String address = element instanceof JsonPrimitive primitive && primitive.isString() ? normalizeServer(primitive.getAsString()) : null;
-						if (address == null) {
-							report.add("Global settings: ignored an invalid authorized server entry: " + element);
-						} else if (!authorizedServers.contains(address)) {
-							authorizedServers.add(address);
-						}
-					}
 				}
 
 				if (global.get("activeProfile") instanceof JsonPrimitive primitive && primitive.isString()) {
@@ -203,9 +186,6 @@ public final class ConfigurationManager {
 		json.addProperty("schemaVersion", SCHEMA_VERSION);
 		json.addProperty("activeProfile", activeProfile);
 		json.add("settings", globalSettings.toJson());
-		JsonArray servers = new JsonArray();
-		authorizedServers.forEach(servers::add);
-		json.add("authorizedServers", servers);
 		return json;
 	}
 
@@ -327,55 +307,6 @@ public final class ConfigurationManager {
 		}
 
 		return null;
-	}
-
-	// ----- authorized servers ----------------------------------------------------------------
-
-	public List<String> authorizedServers() {
-		return List.copyOf(authorizedServers);
-	}
-
-	public boolean isAuthorizedServer(String address) {
-		String normalized = normalizeServer(address);
-		return normalized != null && authorizedServers.contains(normalized);
-	}
-
-	public String addAuthorizedServer(String address) {
-		String normalized = normalizeServer(address);
-		if (normalized == null) {
-			return "Enter a host name or IP address, optionally with a port (e.g. localhost:25565).";
-		}
-
-		if (authorizedServers.contains(normalized)) {
-			return "That server is already listed.";
-		}
-
-		authorizedServers.add(normalized);
-		diagnostics.info(SOURCE, "Authorized test server added: " + normalized);
-		markDirty();
-		return null;
-	}
-
-	public void removeAuthorizedServer(String address) {
-		if (authorizedServers.remove(normalizeServer(address))) {
-			diagnostics.info(SOURCE, "Authorized test server removed: " + address);
-			markDirty();
-		}
-	}
-
-	/** Lower-cases the host and appends the default port so equivalent addresses compare equal. */
-	public static String normalizeServer(String address) {
-		if (address == null) {
-			return null;
-		}
-
-		String trimmed = address.trim().toLowerCase(Locale.ROOT);
-		if (trimmed.isEmpty() || !SERVER_ADDRESS.matcher(trimmed).matches()) {
-			return null;
-		}
-
-		boolean hasPort = trimmed.startsWith("[") ? trimmed.contains("]:") : trimmed.indexOf(':') > 0 && trimmed.indexOf(':') == trimmed.lastIndexOf(':');
-		return hasPort ? trimmed : trimmed + ":25565";
 	}
 
 	// ----- recovery helpers ------------------------------------------------------------------

@@ -2,10 +2,11 @@
 
 ## Limitations
 
-- **Restricted modules.** Entity ESP, Storage ESP, the Geode Analyzer and Free Camera run only in singleplayer and on servers listed under Settings → Authorized test servers. This is deliberate; on other servers they pause and say why.
-- **Player Finder on ordinary servers** shows positions only for players in your direct line of sight (a ray test from your eyes). A player behind a single leaf block or glass pane may count as out of view.
-  - "Last seen" positions are where you last saw someone, not where they are.
+- **Server rules.** All modules run on every server. Many servers forbid ESP, free cameras and similar clients, and their anti-cheat may notice them. Femboy Client does nothing to hide itself.
+- **Player Finder and Player Alert only know about players within your range.** The server sends a player's position only while they are within its entity tracking range (roughly your render distance; servers can set it lower). Anyone further away is "Position unknown".
+  - "Last seen" positions are where someone was when they left your range, not where they are.
   - Server API integration (for servers you control) is not implemented.
+  - "Ignore NPCs" treats a player entity that is missing from the server's player list as an NPC. A server that hides real players from the player list would make Player Alert ignore them; turn the setting off there.
 - **Geode grouping.** Geodes are grouped by touching blocks.
   - Two geodes whose shells touch are reported as one.
   - A geode cut apart by a cave or the analysis edge can appear as fragments.
@@ -21,7 +22,9 @@
 - **World labels** (ESP, waypoints) stack among themselves but can be drawn under HUD panels in the same screen corner.
 - **Free camera.**
   - Rotation is refreshed once per frame, so it can lag by up to one frame.
-  - Interacting with blocks uses the camera's crosshair; the server still applies its normal reach checks.
+  - Attacking, using items and pick-block are disabled while the camera is detached.
+  - Chunks and entities load only around your player, so far away from it the camera shows empty space.
+  - Your player still turns its head with the mouse, so other players can see it look around.
 - **What the research results cover.** The figures quoted in the Geode Analyzer hold only for the tested setup:
   - vanilla geodes in a flat test world;
   - exposure produced by calling the game's random-tick code;
@@ -35,7 +38,7 @@
   - Realms and account-property requests failing without a real login;
   - an anisotropic-filtering option warning.
 - A visible-window run (`--visible`) on the NVIDIA GPU was not performed.
-- Player Finder was only tested with no other players present (singleplayer, and a dedicated server with one client). Listing, line-of-sight and last-seen behavior with real other players is untested.
+- The second player in the multiplayer test is a Fabric fake player added on the server, not a second real client. The server sends it to the client like any player, but movement over time and real network latency were not tested.
 
 ## Unverified assumptions
 

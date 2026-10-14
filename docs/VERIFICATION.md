@@ -1,4 +1,4 @@
-# Verification report: Femboy Client 0.2.0
+# Verification report: Femboy Client 0.3.0
 
 Date: 2026-10-14.
 
@@ -49,7 +49,7 @@ Date: 2026-10-14.
 
 | Feature | Status | Evidence |
 |---|---|---|
-| Entity ESP default selection (players and hostile mobs) | Verified in the running Minecraft client | Zombie highlighted; pig, villager and wolf not |
+| Entity ESP default selection (players and hostile mobs) | Verified in the running Minecraft client | Zombie highlighted; pig, villager and wolf not. On the dedicated server, the other player is highlighted |
 | Entity type selection by registry id | Verified in the running Minecraft client | After selecting `minecraft:pig` through the GUI, the pig is highlighted |
 | Pets mode "Always" | Verified in the running Minecraft client | The tamed wolf is highlighted although wolves are not selected |
 | Invisible entities skipped by default | Verified in the running Minecraft client | Invisible husk not highlighted |
@@ -87,22 +87,30 @@ Date: 2026-10-14.
 |---|---|---|
 | Player list from the server's player list; self excluded by default | Verified in the running Minecraft client | Singleplayer: 0 entries; with "Include yourself": own entry, known position, game mode, ping |
 | Navigation to a waypoint (click in panel), HUD line with distance and arrow, stop | Verified in the running Minecraft client | Check plus screenshot `world-navigation-hud` |
-| Runs on any server (no restricted data) | Verified in the running Minecraft client | Dedicated server: Player Finder running while restricted modules are paused |
-| Other players: line-of-sight rule, "last seen" with age, "position unknown", search, sorting | Implemented, not tested | No second player was available in the test environment |
+| Other players in range: listed with their real position | Verified in the running Minecraft client | Dedicated server with a second (fake) player: entry "In range", position within 0.5 blocks of the server position |
+| Last seen after leaving range; gone after logging off | Verified in the running Minecraft client | Same player removed from the world: entry "Last seen" with the old position; removed from the player list: entry gone |
+| Search and sorting with other players | Implemented, not tested | Only one other player in the test |
+| Player Alert: warning when a player comes into range (chat) | Verified in the running Minecraft client | "Alice (5 m ↑) is in range"; screenshot `multiplayer-player-alert` shows the chat line |
+| Player Alert: warning when they leave (setting on) | Verified in the running Minecraft client | "Alice left your range" |
+| Player Alert: sound, pop-up, repeat delay, ignore NPCs, "logged off" note | Implemented, not tested | Not changed or triggered by the tests |
 | Server API integration for servers you control | Not implemented | Optional in the spec; documented in KNOWN_ISSUES.md |
-| Free Camera | Verified in the running Minecraft client | Camera moved 12 blocks, player 0; view returns to the player |
+| Free Camera in singleplayer | Verified in the running Minecraft client | Camera moved 12 blocks, player 0; view returns to the player |
+| Free Camera on a dedicated server | Verified in the running Minecraft client | Camera flies 12 blocks; player moved 0.000 on server and client; a rotation made meanwhile reaches the server (yaw 90.0); after returning, server and client positions differ by 0.000. Screenshot `multiplayer-free-camera` |
+| Free Camera blocks attacks aimed from the camera | Verified in the running Minecraft client | Crosshair on a block under the camera, left click: no arm swing and the block stays. Control after returning: swing, block broken |
+| Both Free Camera mixins are needed | Verified in the running Minecraft client | Run without `LocalPlayerMixin`: "server keeps receiving updates" fails (server yaw 0.0). Run without `MinecraftMixin`: "does not attack" fails (swung=true) |
 
-## Restrictions and stability
+## Servers and stability
 
 | Feature | Status | Evidence |
 |---|---|---|
-| Restricted modules pause on an unauthorized dedicated server and run after authorizing it in Settings | Verified in the running Minecraft client | Real local dedicated server; address typed into Settings |
+| Every module runs on a dedicated server (no authorization) | Verified in the running Minecraft client | Real local dedicated server: Geode Analyzer, Entity ESP, Storage ESP, Player Finder, Player Alert and Free Camera all running |
+| Old `authorizedServers` config entry ignored and dropped | Automated tests passed | `ConfigurationManagerTest` |
 | Dimension changes | Verified in the running Minecraft client | Overworld → Nether → Overworld: modules keep running, waypoints filtered, no errors |
 | No errors in the client log | Verified in the running Minecraft client | Log check (known offline noise excluded and listed) |
 
 ## Not verified
 
 - **Visible window on the NVIDIA GPU:** all rendering was checked with Mesa llvmpipe under Xvfb.
-- **Real other players:** Player Finder with real other players; Entity ESP on players.
+- **A second real client:** the other player in the tests is a server-side fake player; real movement and latency were not tested.
 - **Other server software:** Paper, proxies and anti-xray servers.
 - **Performance at scale:** very many entities or storage blocks, or a 16-chunk radius in a busy world.

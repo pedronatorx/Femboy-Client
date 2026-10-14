@@ -10,7 +10,7 @@ import io.github.theamethyx.femboyclient.client.gui.Icon;
 import io.github.theamethyx.femboyclient.client.gui.Theme;
 import io.github.theamethyx.femboyclient.client.gui.UiContext;
 
-/** Settings with two tabs: General (profiles, options, authorized servers, files) and Diagnostics. */
+/** Settings with two tabs: General (profiles, options, files) and Diagnostics. */
 public class SettingsPage extends Page {
 	private static final int TAB_HEIGHT = 16;
 	private static final List<String> TABS = List.of("General", "Diagnostics");
