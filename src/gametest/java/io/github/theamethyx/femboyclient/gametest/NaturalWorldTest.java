@@ -16,8 +16,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContex
 import net.fabricmc.loader.api.FabricLoader;
 
 import io.github.theamethyx.femboyclient.client.FemboyClient;
-import io.github.theamethyx.femboyclient.client.analysis.WorldScanner;
-import io.github.theamethyx.femboyclient.client.modules.AmethystGeodeAnalyzerModule;
+import io.github.theamethyx.femboyclient.client.modules.GeodeAnalyzerModule;
 import io.github.theamethyx.femboyclient.core.research.geode.GeodeObservation;
 import io.github.theamethyx.femboyclient.core.setting.NumberSetting;
 
@@ -127,16 +126,13 @@ final class NaturalWorldTest {
 
 	private static List<GeodeObservation> scan(ClientGameTestContext context) {
 		context.runOnClient(client -> {
-			var modules = FemboyClient.get().modules();
-			AmethystGeodeAnalyzerModule analyzer = modules.get(AmethystGeodeAnalyzerModule.class);
-			modules.setEnabled(analyzer, true);
+			GeodeAnalyzerModule analyzer = FemboyClient.get().modules().get(GeodeAnalyzerModule.class);
 			int radius = Math.max(2, Math.min(8, client.options.getEffectiveRenderDistance() - 1));
 			((NumberSetting) analyzer.settings().get("radius")).set((double) radius);
 		});
-		context.waitTicks(2);
-		context.runOnClient(client -> FemboyClient.get().modules().get(AmethystGeodeAnalyzerModule.class).startScan());
-		context.waitFor(client -> FemboyClient.get().modules().get(AmethystGeodeAnalyzerModule.class).scanner().state() == WorldScanner.State.DONE, 1200);
-		return context.computeOnClient(client -> new ArrayList<>(FemboyClient.get().modules().get(AmethystGeodeAnalyzerModule.class).results()));
+		// Off and on again: a fresh read of every loaded chunk, as after joining a world.
+		List<GeodeObservation> geodes = ClientGameTest.analyzeFresh(context);
+		return new ArrayList<>(geodes);
 	}
 
 	/** Per geode id: {inhabitedTime of the chunk at its center, chunk distance from the player}. */

@@ -117,6 +117,17 @@ def _(): return poly([(4.5,2.5),(13,8),(4.5,13.5)])
 @icon("stop")
 def _(): return rrect(3.5,3.5,12.5,12.5,1.2)
 
+@icon("home")
+def _(): return union(poly([(1.2,8.2),(8,1.8),(14.8,8.2)]), outline(rect(3.4,7,12.6,14.2), rect(5,8.6,11,12.6)), rect(6.9,10.2,9.1,14.2))
+@icon("player")
+def _(): return union(circle(8, 4.8, 3), lambda x, y: circle(8, 16, 6.6)(x, y) and y <= 14.4)
+@icon("storage")  # chest
+def _(): return union(outline(rrect(1.5,3.5,14.5,13.5,1.2), rrect(3.1,5.1,12.9,11.9,0.4)), rect(1.5,7.2,14.5,8.6), rrect(6.8,6.2,9.2,10.2,0.5))
+@icon("navigate")  # direction arrow
+def _(): return poly([(8,1.2),(14.2,14.6),(8,10.8),(1.8,14.6)])
+@icon("pause")
+def _(): return union(rrect(3.8,2.8,6.6,13.2,0.8), rrect(9.4,2.8,12.2,13.2,0.8))
+
 def render(path):
     cols = 8; rows = math.ceil(len(ICONS)/cols)
     w, h = cols*CELL, rows*CELL

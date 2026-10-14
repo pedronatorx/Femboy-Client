@@ -4,11 +4,12 @@ package io.github.theamethyx.femboyclient.client.gui;
 public enum Icon {
 	DASHBOARD, VISUAL, ANALYSIS, SCENARIOS, RESULTS, PERFORMANCE, SETTINGS, HUD,
 	UTILITY, SEARCH, RESET, KEY, CHECK, WARNING, CHEVRON_DOWN, CLOSE,
-	PLUS, TRASH, INFO, LOCK, STAR, FOLDER, PLAY, STOP;
+	PLUS, TRASH, INFO, LOCK, STAR, FOLDER, PLAY, STOP,
+	HOME, PLAYER, STORAGE, NAVIGATE, PAUSE;
 
 	public static final int CELL = 16;
 	public static final int ATLAS_WIDTH = 128;
-	public static final int ATLAS_HEIGHT = 48;
+	public static final int ATLAS_HEIGHT = 64;
 
 	public int u() {
 		return (ordinal() % 8) * CELL;
@@ -25,6 +26,7 @@ public enum Icon {
 			case "visual" -> VISUAL;
 			case "analysis" -> ANALYSIS;
 			case "utility" -> UTILITY;
+			case "player" -> PLAYER;
 			default -> INFO;
 		};
 	}

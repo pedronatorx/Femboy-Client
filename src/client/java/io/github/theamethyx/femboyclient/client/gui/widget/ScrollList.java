@@ -51,6 +51,36 @@ public class ScrollList extends Container {
 		return true;
 	}
 
+	/**
+	 * Scrolls so that a widget anywhere inside this list (a child or a child's descendant) is visible.
+	 * Unlike {@link #reveal}, this targets the widget itself, so it also works inside children taller than
+	 * the list. Returns false if the widget is not inside this list.
+	 */
+	public boolean revealDescendant(Widget widget) {
+		boolean inside = false;
+		for (Widget child : children) {
+			if (child == widget || (child instanceof Container c && c.descendants(Widget.class).contains(widget))) {
+				inside = true;
+				break;
+			}
+		}
+
+		if (!inside) {
+			return false;
+		}
+
+		int offset = Math.round(scroll.get());
+		int top = widget.y() - y + offset;
+		int bottom = top + widget.height();
+		float target = scrollTarget;
+		if (top - padding < target) target = top - padding;
+		if (bottom + padding > target + height) target = bottom + padding - height;
+		scrollTarget = Math.max(0, Math.min(maxScroll(), target));
+		scroll.snap(scrollTarget);
+		relayout(Math.round(scrollTarget));
+		return true;
+	}
+
 	public void scrollToTop() {
 		scrollTarget = 0;
 		scroll.snap(0);

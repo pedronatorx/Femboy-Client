@@ -12,8 +12,10 @@ import io.github.theamethyx.femboyclient.client.FemboyClient;
 import io.github.theamethyx.femboyclient.client.gui.ClientScreen;
 import io.github.theamethyx.femboyclient.client.gui.widget.Button;
 import io.github.theamethyx.femboyclient.client.gui.widget.TextField;
-import io.github.theamethyx.femboyclient.client.modules.AmethystGeodeAnalyzerModule;
-import io.github.theamethyx.femboyclient.client.modules.FixtureEspModule;
+import io.github.theamethyx.femboyclient.client.modules.EntityEspModule;
+import io.github.theamethyx.femboyclient.client.modules.GeodeAnalyzerModule;
+import io.github.theamethyx.femboyclient.client.modules.PlayerFinderModule;
+import io.github.theamethyx.femboyclient.client.modules.StorageEspModule;
 import io.github.theamethyx.femboyclient.client.modules.FreeCameraModule;
 import io.github.theamethyx.femboyclient.core.module.Module;
 
@@ -23,7 +25,8 @@ import io.github.theamethyx.femboyclient.core.module.Module;
  */
 @SuppressWarnings("UnstableApiUsage")
 final class MultiplayerRestrictionTest {
-	private static final List<Class<? extends Module>> RESTRICTED = List.of(AmethystGeodeAnalyzerModule.class, FixtureEspModule.class, FreeCameraModule.class);
+	private static final List<Class<? extends Module>> RESTRICTED = List.of(GeodeAnalyzerModule.class, EntityEspModule.class,
+			StorageEspModule.class, FreeCameraModule.class);
 
 	private MultiplayerRestrictionTest() {
 	}
@@ -41,10 +44,14 @@ final class MultiplayerRestrictionTest {
 			context.waitTicks(3);
 			report.check("Restricted modules stay paused on an unauthorized server", context.computeOnClient(client -> RESTRICTED.stream()
 					.map(type -> FemboyClient.get().modules().get(type)).allMatch(m -> m.isEnabled() && !m.isRunning())));
-			String reason = context.computeOnClient(client -> FemboyClient.get().modules().availability(FemboyClient.get().modules().get(FixtureEspModule.class)).reason());
+			String reason = context.computeOnClient(client -> FemboyClient.get().modules().availability(FemboyClient.get().modules().get(EntityEspModule.class)).reason());
 			report.check("The pause reason explains the authorization rule", reason.contains("authorized"), reason);
 			report.check("Unrestricted HUD modules still run on any server",
 					context.computeOnClient(client -> FemboyClient.get().modules().get("coordinates_hud").isRunning()));
+			context.runOnClient(client -> FemboyClient.get().modules().setEnabled(FemboyClient.get().modules().get(PlayerFinderModule.class), true));
+			context.waitTicks(2);
+			report.check("Player Finder runs on any server (it only uses the player list and players in view)",
+					context.computeOnClient(client -> FemboyClient.get().modules().get(PlayerFinderModule.class).isRunning()));
 
 			// Authorize the server through the Settings page, as a user would.
 			context.getInput().pressKey(GLFW.GLFW_KEY_RIGHT_SHIFT);
@@ -53,7 +60,7 @@ final class MultiplayerRestrictionTest {
 				ClientScreen screen = (ClientScreen) client.screen;
 				for (int i = 0; i < screen.pageCount(); i++) {
 					screen.showPage(i);
-					if (screen.currentPage().title().equals("Configuration")) break;
+					if (screen.currentPage().title().equals("Settings")) break;
 				}
 			});
 			context.waitTicks(3);

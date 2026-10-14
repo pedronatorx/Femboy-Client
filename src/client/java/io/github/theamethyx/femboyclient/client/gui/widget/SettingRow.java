@@ -7,6 +7,8 @@ import io.github.theamethyx.femboyclient.client.gui.Icon;
 import io.github.theamethyx.femboyclient.client.gui.Theme;
 import io.github.theamethyx.femboyclient.client.gui.UiContext;
 import io.github.theamethyx.femboyclient.core.setting.BooleanSetting;
+import io.github.theamethyx.femboyclient.core.setting.ColorSetting;
+import io.github.theamethyx.femboyclient.core.setting.IdSetSetting;
 import io.github.theamethyx.femboyclient.core.setting.EnumSetting;
 import io.github.theamethyx.femboyclient.core.setting.NumberSetting;
 import io.github.theamethyx.femboyclient.core.setting.Setting;
@@ -46,6 +48,10 @@ public class SettingRow extends Container {
 			return enumDropdown(enumSetting);
 		}
 
+		if (setting instanceof ColorSetting color) {
+			return new ColorPicker(color);
+		}
+
 		throw new IllegalArgumentException("No control for " + setting.getClass().getSimpleName());
 	}
 
@@ -54,6 +60,7 @@ public class SettingRow extends Container {
 		if (setting instanceof BooleanSetting) return (Boolean) value ? "On" : "Off";
 		if (setting instanceof NumberSetting number) return number.format((Double) value) + (number.unit().isEmpty() ? "" : " " + number.unit());
 		if (value instanceof Enum<?> e) return EnumSetting.labelOf(e);
+		if (setting instanceof ColorSetting) return ColorSetting.hex((Integer) value);
 		return String.valueOf(value);
 	}
 
@@ -88,6 +95,8 @@ public class SettingRow extends Container {
 			control.setBounds(right - RESET - 4 - ToggleSwitch.WIDTH, y + 5, ToggleSwitch.WIDTH, ToggleSwitch.HEIGHT);
 		} else if (setting instanceof NumberSetting) {
 			control.setBounds(x + 7, y + 18, width - 14, 12);
+		} else if (setting instanceof ColorSetting) {
+			control.setBounds(x + 8, y + 17, width - 16, 10);
 		} else {
 			control.setBounds(x + 6, y + 15, width - 12, 14);
 		}
@@ -109,6 +118,9 @@ public class SettingRow extends Container {
 			String value = number.displayValue();
 			ui.textRight(value, labelRight, y + 5, Theme.ACCENT_STRONG);
 			labelRight -= ui.textWidth(value) + 6;
+		} else if (setting instanceof ColorSetting color) {
+			ui.textRight(color.displayValue(), labelRight, y + 5, Theme.TEXT_MUTED);
+			labelRight -= ui.textWidth(color.displayValue()) + 6;
 		}
 
 		ui.textClipped(setting.name(), x + 6, y + 5, labelRight - x - 6, Theme.TEXT);
@@ -138,7 +150,7 @@ public class SettingRow extends Container {
 	/** Builds rows for every setting of a group. */
 	public static List<Widget> rowsFor(List<Setting<?>> settings) {
 		List<Widget> rows = new ArrayList<>();
-		settings.forEach(setting -> rows.add(new SettingRow(setting)));
+		settings.forEach(setting -> rows.add(setting instanceof IdSetSetting ids ? new IdSetRow(ids) : new SettingRow(setting)));
 		return rows;
 	}
 }

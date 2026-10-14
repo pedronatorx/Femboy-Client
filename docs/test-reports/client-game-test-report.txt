@@ -1,77 +1,90 @@
-NOVA client game test report
-Started: 2026-10-14T06:23:46.083774919
+Femboy Client client game test report
+Started: 2026-10-14T17:30:24.378000934
 
-PASS  NOVA entrypoint ran
-PASS  All modules registered
+PASS  Femboy Client entrypoint ran
+PASS  All 10 modules registered
 PASS  Singleplayer counts as an authorized environment
-PASS  Right Shift opens the NOVA screen
+PASS  Right Shift opens the Femboy Client screen
+PASS  Sidebar is exactly Home, Visuals, World, Player, HUD, Settings  -- [Home, Visuals, World, Player, HUD, Settings]
+PASS  No development pages (Scenarios, Analysis, Results, Dashboard) remain
 PASS  Every page rendered at 854x480 and 1280x720
-PASS  Escape closes the NOVA screen
-PASS  Search 'chunk' lists Chunk Borders first, then setting matches  -- listed [chunk_borders, coordinates_hud]
+PASS  Escape closes the Femboy Client screen
+PASS  Home search 'geode' lists the Geode Analyzer  -- [geode_analyzer]
+PASS  Clicking a module on Home opens it on its category page (World)  -- World / geode_analyzer
+PASS  A category page searches only its own modules  -- [chunk_borders]
 PASS  Clicking the switch enables Chunk Borders
 PASS  Key capture binds K to Chunk Borders  -- key=75
 PASS  Pressing K in the world toggles Chunk Borders off and on (keyboard mixin)  -- after first press false, after second true
-PASS  Scenario registered exactly 2 fixture entities  -- registered 2
-PASS  A waypoint can be added at the player position  -- null
-PASS  Fixture ESP highlights exactly the registered entities (decoy excluded)  -- highlighted 2, registered 2
-PASS  Both registered containers observed as present (decoy chest not listed)  -- observed 2, present 2
-PASS  A removed fixture chest is reported as missing  -- [Observed[fixture=ContainerFixture[x=-4, y=-60, z=10, dimension=minecraft:overworld, label=Fixture: chest, world=singleplayer/New World, scenario=visual_fixtures], status=MISSING], Observed[fixture=ContainerFixture[x=4, y=-60, z=10, dimension=minecraft:overworld, label=Fixture: barrel behind wall, world=singleplayer/New World, scenario=visual_fixtures], status=PRESENT]]
+PASS  Entity ESP defaults: hostile mobs highlighted, passive mobs and villagers not  -- [zombie]
+PASS  Entities invisible to the player are skipped by default  -- [zombie]
+PASS  Entities beyond the maximum distance (64) are skipped  -- [zombie]
+PASS  Clicking the type list header expands it
+PASS  Filtering for 'pig' and pressing All selects minecraft:pig (and keeps the stable id)
+PASS  'All' only affects the filtered entries
+PASS  Selected pigs are now highlighted  -- [pig, zombie]
+PASS  Pets: 'Always show pets' highlights the tamed wolf although wolves are not selected  -- [pig, wolf, zombie]
+PASS  Lowering the maximum distance to 8 blocks drops the farther entities  -- [zombie]
+PASS  Disabling Entity ESP clears its highlights
+PASS  Storage ESP defaults highlight chests, copper chests, trapped chests, barrels and shulker boxes  -- [barrel, chest, copper_chest, trapped_chest, white_shulker_box]
+PASS  Furnaces and hoppers are not highlighted until selected  -- [barrel, chest, copper_chest, trapped_chest, white_shulker_box]
+PASS  Selecting minecraft:furnace adds the furnace  -- [barrel, chest, copper_chest, furnace, trapped_chest, white_shulker_box]
+PASS  A removed chest disappears at the next scan  -- [barrel, copper_chest, furnace, trapped_chest, white_shulker_box]
+PASS  Disabling Storage ESP clears its highlights
 PASS  Free camera moves forward with the movement key  -- moved 12.00
 PASS  The player does not move while the free camera is active  -- player moved 0.000
 PASS  Disabling the free camera returns the view to the player
-PASS  Geode fixture scenario built  -- Built at -16, -61, 14. Geode with 30 growth objects (30 clusters) and 54 budding blocks.
-NOTE  Ground truth (server census) for geode_180-20261014-062358-952: StageCounts[small=0, medium=0, large=0, cluster=30]
-PASS  With a 1-chunk radius the fixture geode is reported as incomplete, not as complete or absent  -- StageCounts[small=0, medium=0, large=0, cluster=5] complete=false; Incomplete: 1 chunk column(s) around it were not loaded or not scanned. Counts are a lower bound for the whole geode.
-NOTE  4-chunk scan found 1 geode(s)
-PASS  With a 4-chunk radius the fixture geode is complete  -- Complete: the geode and a 2-block margin were fully readable.
-PASS  Analyzer stage counts equal the server ground truth exactly  -- analyzer StageCounts[small=0, medium=0, large=0, cluster=30] vs ground truth StageCounts[small=0, medium=0, large=0, cluster=30]
+PASS  Geode fixture built with the vanilla feature
+NOTE  Ground truth (server census) after 10 random ticks per budding block: StageCounts[small=6, medium=1, large=4, cluster=2], budding 54
+PASS  With a 1-chunk radius the fixture geode is reported as incomplete, not complete or absent  -- StageCounts[small=1, medium=0, large=0, cluster=0] complete=false
+PASS  Raising the radius to 4 picks the geode up automatically and it is complete  -- Complete: the geode and a 2-block margin were fully readable.
+PASS  Analyzer stage counts equal the server ground truth exactly  -- analyzer StageCounts[small=6, medium=1, large=4, cluster=2] vs ground truth StageCounts[small=6, medium=1, large=4, cluster=2]
 PASS  Budding block count equals ground truth
-PASS  Exactly one geode is linked to the fixture run (no double counting)
-PASS  Save observation button is present
-PASS  Saving stores one observation record  -- records 1
-PASS  'Open report' navigates to the Test Results page  -- Test Results
-PASS  A Markdown report was written with direct observations and labelled estimates  -- /var/home/TheAmethyx/Desktop/Femboy client/build/run/clientGameTest/config/nova/research/reports/obs-20261014-062401-632.md
-PASS  Overworld geode results are cleared after moving to the Nether  -- 1 before, 0 after
+PASS  The fixture geode is counted once (no double counting)
+NOTE  Ground truth after 20 more random ticks: StageCounts[small=14, medium=3, large=2, cluster=6]
+PASS  After growth the analyzer updates by itself (scan interval 2 s) and matches the new census  -- analyzer StageCounts[small=14, medium=3, large=2, cluster=6] vs StageCounts[small=14, medium=3, large=2, cluster=6]
+PASS  While paused nothing is re-read (counts stay at the previous census)  -- paused StageCounts[small=14, medium=3, large=2, cluster=6], server now StageCounts[small=0, medium=2, large=1, cluster=27]
+PASS  After resuming the analyzer catches up with the server census  -- analyzer StageCounts[small=0, medium=2, large=1, cluster=27] vs StageCounts[small=0, medium=2, large=1, cluster=27]
+PASS  The Geode Analyzer's settings panel contains its live geode panel
+PASS  At least one geode card is listed
+PASS  Clicking a geode card shows its exact counts and details
+PASS  A waypoint can be added at the player position  -- null
+PASS  In singleplayer the list has no other players (yourself excluded by default)  -- 0 entries
+PASS  With 'Include yourself' your own entry is listed with a known position  -- [Entry[id=2654e3c3-150d-3857-a426-0b141796a4e0, name=Player0, ping=0, gameMode=Creative, knowledge=VISIBLE, position=(0.5, -60.0, 0.5), seenAt=1791991858469]]
+PASS  The waypoint of this world is offered as a navigation target
+PASS  Clicking the waypoint starts navigation to it  -- Target[name=Spawn, position=(0.5, -59.5, 0.5), note=waypoint, color=-9524993]
+PASS  Stopping navigation clears the target
+PASS  Overworld geode results are not kept in the Nether  -- 1 before, 0 overworld results after
 PASS  Modules keep running after a dimension change
 PASS  Overworld waypoints are not shown in the Nether
 PASS  Overworld waypoints reappear after returning
 PASS  No module errors after the dimension changes  -- 0 errors
-NOTE  Before opening the menu: screen=null, level=minecraft:overworld, openMenu bound to key.keyboard.right.shift
-PASS  Run quick experiment starts the experiment  -- RUNNING
-PASS  The quick experiment finishes and is evaluated  -- Done: 114 observations evaluated.
-PASS  An evaluation report and summary were saved
-NOTE  Quick evaluation: 114 observations
-NOTE    H1 SUPPORTED: Meets all pre-registered criteria on held-out geodes (balanced accuracy 0.94, false-positive rate 0.00, false-negative rate 0.11).
-NOTE    H1b SUPPORTED: Meets all pre-registered criteria on held-out geodes (balanced accuracy 0.89, false-positive rate 0.05, false-negative rate 0.17).
-NOTE    H2 INCONCLUSIVE: The test set is too small (needs 30 samples and 10 per class).
-NOTE    H3 UNSUPPORTED: Performance on held-out geodes is close to chance (balanced accuracy 0.50, false-positive rate 1.00, false-negative rate 0.00).
-PASS  The experiment's stone cube was removed afterwards
-NOTE  Amethyst indicator status after the quick run: Supported in the tested environment only
-PASS  Indicators without experiments stay 'Untested' (no fabricated results)
-PASS  A changed setting survives save and reload
-PASS  Profile file exists on disk  -- /var/home/TheAmethyx/Desktop/Femboy client/build/run/clientGameTest/config/nova/profiles/default.json
+PASS  Number, id-list and color settings survive save and reload  -- ok
+PASS  The profile file stores registry ids and hex colors  -- /var/home/TheAmethyx/Desktop/Femboy client/build/run/clientGameTest/config/femboyclient/profiles/default.json
 PASS  Profiles keep independent module state  -- ok
 PASS  Clicking the right end of the 'Neighbor chunks' slider sets its maximum (4)  -- value 4.0
 PASS  Clicking a dropdown opens its option list
 PASS  Choosing 'Cyan' in the dropdown changes the setting  -- CYAN
+PASS  Clicking a color swatch sets that color  -- #F29E4C
+PASS  Settings has a Diagnostics tab
 PASS  No module errors were logged during the run
-NOTE  Natural world (seed 8675309): 2 geode(s) in the scanned area, 2 complete
+NOTE  Natural world (seed 8675309): 2 geode(s) in the scanned area, 1 complete
 PASS  Naturally generated geodes are found and grouped in a normal world
 PASS  Every natural geode's completeness is stated (complete or incomplete with a reason)
-NOTE  Natural ticking: 2 geode(s) re-observed, 2 within simulation distance, 2 of those grew
+NOTE  Natural ticking: 2 geode(s) re-observed, 2 within simulation distance, 1 of those grew
 PASS  Natural geodes are re-identified by the same id after time passes  -- 2 matched
 PASS  No natural geode lost clusters without block removal  -- 0 lost clusters
-PASS  At least one geode within simulation distance grew under boosted random ticking  -- 2 of 2
+PASS  At least one geode within simulation distance grew under boosted random ticking  -- 1 of 2
 NOTE  Connected to dedicated test server at localhost:25565
 PASS  A dedicated server is not an authorized environment by default
 PASS  Restricted modules stay paused on an unauthorized server
 PASS  The pause reason explains the authorization rule  -- Only runs in singleplayer or on servers listed as authorized test environments.
 PASS  Unrestricted HUD modules still run on any server
+PASS  Player Finder runs on any server (it only uses the player list and players in view)
 PASS  The address typed into Settings is stored as an authorized server  -- localhost:25565
 PASS  After authorizing the server, the restricted modules run
 PASS  Removing the server pauses the restricted modules again
 PASS  Leaving the free camera paused returned the view to the player
 NOTE  Ignored known offline-test noise: missing X11 cursor shapes (Xvfb), anisotropic filtering option, Realms and account-properties requests failing without a real login.
-PASS  No render-thread, server-thread or NOVA-code errors in the client log
+PASS  No render-thread, server-thread or client-code errors in the client log
 
-Result: PASSED (59 checks passed, 74 s)
+Result: PASSED (79 checks passed, 93 s)

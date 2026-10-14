@@ -15,15 +15,12 @@ import net.minecraft.network.chat.Component;
 import io.github.theamethyx.femboyclient.client.GlobalOptions;
 import io.github.theamethyx.femboyclient.client.FemboyClient;
 import io.github.theamethyx.femboyclient.client.ClientKeys;
-import io.github.theamethyx.femboyclient.client.gui.page.ConfigPage;
-import io.github.theamethyx.femboyclient.client.gui.page.DashboardPage;
-import io.github.theamethyx.femboyclient.client.gui.page.DiagnosticsPage;
+import io.github.theamethyx.femboyclient.client.gui.page.HomePage;
 import io.github.theamethyx.femboyclient.client.gui.page.ModulesPage;
 import io.github.theamethyx.femboyclient.client.gui.page.Page;
-import io.github.theamethyx.femboyclient.client.gui.page.ResultsPage;
-import io.github.theamethyx.femboyclient.client.gui.page.ScenariosPage;
-import io.github.theamethyx.femboyclient.client.gui.page.WorldAnalysisPage;
+import io.github.theamethyx.femboyclient.client.gui.page.SettingsPage;
 import io.github.theamethyx.femboyclient.client.gui.widget.Widget;
+import io.github.theamethyx.femboyclient.core.module.Module;
 import io.github.theamethyx.femboyclient.core.module.ModuleCategory;
 
 /**
@@ -61,14 +58,15 @@ public class ClientScreen extends Screen {
 	protected void init() {
 		if (ui == null) {
 			ui = new UiContext(font);
-			pages.add(new DashboardPage(ui, () -> pages.stream().map(Page::navLabel).toList(), this::showPage));
-			pages.add(new ModulesPage(ui, "Modules", "Modules", "HUD elements, world overlays and utilities. Select a module to edit it.",
-					Icon.VISUAL, ModuleCategory.HUD, ModuleCategory.VISUAL, ModuleCategory.UTILITY));
-			pages.add(new WorldAnalysisPage(ui, this::openResult));
-			pages.add(new ScenariosPage(ui));
-			pages.add(new ResultsPage(ui));
-			pages.add(new DiagnosticsPage(ui));
-			pages.add(new ConfigPage(ui));
+			pages.add(new HomePage(ui, this::openModule));
+			for (ModuleCategory category : ModuleCategory.values()) {
+				if (!femboy.modules().byCategory(category).isEmpty()) {
+					// Only categories with actual modules get a sidebar entry.
+					pages.add(new ModulesPage(ui, category.label(), category.label(), category.description(), Icon.byName(category.icon()), category));
+				}
+			}
+
+			pages.add(new SettingsPage(ui));
 			current = Math.max(0, Math.min(pages.size() - 1, GuiState.page));
 			navHighlight.snap(current);
 			pages.get(current).onShow();
@@ -135,15 +133,31 @@ public class ClientScreen extends Screen {
 		layoutPage();
 	}
 
-	/** Shows a saved result on the Test Results page. */
-	public void openResult(String recordId) {
-		GuiState.selectedResult = recordId;
+	/** Shows a module on its category page, selected. */
+	public void openModule(Module module) {
+		GuiState.selectedModule = module.id();
 		for (int i = 0; i < pages.size(); i++) {
-			if (pages.get(i) instanceof ResultsPage) {
-				showPage(i);
+			if (pages.get(i) instanceof ModulesPage modulesPage && modulesPage.categories().contains(module.category())) {
+				if (i == current) {
+					modulesPage.onShow();
+				} else {
+					showPage(i);
+				}
+
 				return;
 			}
 		}
+	}
+
+	/** Index of the first page of a type, or -1 (used by automated UI tests). */
+	public int pageIndex(java.util.function.Predicate<Page> test) {
+		for (int i = 0; i < pages.size(); i++) {
+			if (test.test(pages.get(i))) {
+				return i;
+			}
+		}
+
+		return -1;
 	}
 
 	public UiContext uiContext() {
@@ -245,7 +259,7 @@ public class ClientScreen extends Screen {
 	private void renderSidebar() {
 		int x = panelX + 1;
 		ui.icon(Icon.STAR, x + 9, panelY + 9, 10, Theme.ACCENT);
-		ui.text("Femboy Client", x + 23, panelY + 10, Theme.TEXT);
+		ui.textClipped("Femboy Client", x + 23, panelY + 10, sidebar - 28, Theme.TEXT);
 
 		int top = navTop();
 		float highlight = navHighlight.update(current, ui.frameSeconds(), ui.animate());
@@ -280,7 +294,8 @@ public class ClientScreen extends Screen {
 		ui.textClipped(authorized ? "Authorized" : "Restricted", x + 20, footerY + 11, sidebar - 26, authorized ? Theme.SUCCESS : Theme.TEXT_MUTED);
 		if (ui.hovered(x + 4, footerY - 2, sidebar - 8, 24)) {
 			ui.tooltip("footer", "Profile: " + femboy.config().activeProfile() + "\nEnvironment: " + femboy.modules().environment().describe()
-					+ (authorized ? "" : "\nResearch modules are paused here. They run in singleplayer or on authorized test servers (Settings)."));
+					+ (authorized ? "" : "\nEntity ESP, Storage ESP, the Geode Analyzer and Free Camera are paused here. They run in "
+					+ "singleplayer and on servers you authorize under Settings."));
 		}
 	}
 

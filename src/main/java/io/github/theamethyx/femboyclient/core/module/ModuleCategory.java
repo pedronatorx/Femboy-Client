@@ -1,10 +1,11 @@
 package io.github.theamethyx.femboyclient.core.module;
 
+/** The sidebar sections of the ClickGUI, in display order. Each section lists its modules. */
 public enum ModuleCategory {
-	HUD("HUD", "hud", "On-screen information such as coordinates and performance."),
-	VISUAL("Visual", "visual", "World overlays such as waypoints, chunk borders and test-fixture highlights."),
-	WORLD_ANALYSIS("World Analysis", "analysis", "Research tools that read block states in controlled test worlds."),
-	UTILITY("Utility", "utility", "Camera and testing helpers.");
+	VISUALS("Visuals", "visual", "Entity and storage highlights, chunk borders."),
+	WORLD("World", "analysis", "World information: geode analysis and waypoints."),
+	PLAYER("Player", "player", "Player list, navigation and camera."),
+	HUD("HUD", "hud", "On-screen information such as coordinates and performance.");
 
 	private final String label;
 	private final String icon;

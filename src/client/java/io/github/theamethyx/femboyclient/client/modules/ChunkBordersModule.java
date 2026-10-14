@@ -30,7 +30,7 @@ public final class ChunkBordersModule extends Module implements ClientHooks.Worl
 
 	public ChunkBordersModule() {
 		super("chunk_borders", "Chunk Borders", "Outlines the chunk you are standing in and its neighbors.",
-				ModuleCategory.VISUAL, false, NO_KEY);
+				ModuleCategory.VISUALS, false, NO_KEY);
 	}
 
 	@Override

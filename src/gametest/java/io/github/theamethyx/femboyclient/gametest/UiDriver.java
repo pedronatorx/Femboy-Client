@@ -45,12 +45,10 @@ final class UiDriver {
 		context.runOnClient(client -> {
 			if (client.screen instanceof ClientScreen screen) {
 				for (io.github.theamethyx.femboyclient.client.gui.widget.ScrollList list : screen.currentPage().descendants(io.github.theamethyx.femboyclient.client.gui.widget.ScrollList.class)) {
-					for (Widget child : list.children()) {
-						if (child == widget || (child instanceof io.github.theamethyx.femboyclient.client.gui.widget.Container c && c.descendants(Widget.class).contains(widget))) {
-							list.reveal(child);
-						}
-					}
+					list.revealDescendant(widget);
 				}
+
+				// Children of dynamic panels are positioned while rendering; let one frame pass.
 			}
 		});
 		context.waitTick();

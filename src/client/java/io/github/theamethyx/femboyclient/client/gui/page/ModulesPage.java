@@ -24,7 +24,8 @@ import io.github.theamethyx.femboyclient.core.module.ModuleManager;
 
 /**
  * Searchable module list on the left; the selected module's status, key bind and settings on the
- * right. Optionally restricted to a fixed set of categories (used by the World Analysis page).
+ * right. Each sidebar category (Visuals, World, Player, HUD) is one instance restricted to its category;
+ * the category filter only appears when a page shows more than one category.
  */
 public class ModulesPage extends Page {
 	/** Filter choice; {@code category == null} means all categories shown on this page. */
@@ -45,6 +46,8 @@ public class ModulesPage extends Page {
 	private final ScrollList list;
 	private final ScrollList details;
 	private String lastSelection;
+	private String selectedId;
+	private String searchText = "";
 
 	public ModulesPage(UiContext ui, String title, String navLabel, String subtitle, Icon icon, ModuleCategory... categories) {
 		super(ui);
@@ -56,7 +59,7 @@ public class ModulesPage extends Page {
 		this.modules = femboy.modules();
 
 		search = add(new TextField("Search", 40).icon(Icon.SEARCH).onChange(text -> {
-			GuiState.moduleSearch = text;
+			searchText = text;
 			rebuildList();
 		}));
 		search.tooltip("Type to filter by module name, description or setting name. All words must match.");
@@ -69,6 +72,9 @@ public class ModulesPage extends Page {
 			rebuildList();
 		}, CategoryChoice::label));
 		filter.tooltip("Show only modules of one category.");
+		if (this.categories.size() == 1) {
+			children.remove(filter);
+		}
 
 		list = add(new ScrollList(ui, 3, 0));
 		details = add(new ScrollList(ui, 4, 0));
@@ -98,9 +104,19 @@ public class ModulesPage extends Page {
 		return icon;
 	}
 
+	/** The categories this page lists. */
+	public List<ModuleCategory> categories() {
+		return categories;
+	}
+
 	@Override
 	public void onShow() {
-		search.setText(GuiState.moduleSearch);
+		Module requested = GuiState.selectedModule == null ? null : modules.get(GuiState.selectedModule);
+		if (requested != null && categories.contains(requested.category())) {
+			selectedId = requested.id();
+		}
+
+		search.setText(searchText);
 		rebuildList();
 		rebuildDetails();
 	}
@@ -108,8 +124,8 @@ public class ModulesPage extends Page {
 	@Override
 	protected void onLayout() {
 		int listWidth = Math.max(120, Math.min(170, (width - Theme.GAP) * 9 / 20));
-		int filterWidth = Math.min(96, listWidth / 2);
-		search.setBounds(x, y, listWidth - filterWidth - Theme.GAP, 15);
+		int filterWidth = categories.size() == 1 ? 0 : Math.min(96, listWidth / 2);
+		search.setBounds(x, y, listWidth - filterWidth - (filterWidth == 0 ? 0 : Theme.GAP), 15);
 		filter.setBounds(x + listWidth - filterWidth, y, filterWidth, 15);
 		list.setBounds(x, y + 15 + Theme.GAP, listWidth, height - 15 - Theme.GAP);
 		details.setBounds(x + listWidth + Theme.PAD, y, width - listWidth - Theme.PAD, height);
@@ -120,7 +136,7 @@ public class ModulesPage extends Page {
 	private List<Module> visibleModules() {
 		ModuleCategory chosen = effectiveFilter();
 		List<Module> result = new ArrayList<>();
-		for (Module module : modules.search(GuiState.moduleSearch, chosen)) {
+		for (Module module : modules.search(searchText, chosen)) {
 			if (categories.contains(module.category())) {
 				result.add(module);
 			}
@@ -133,11 +149,11 @@ public class ModulesPage extends Page {
 		List<Module> visible = visibleModules();
 		List<Widget> rows = new ArrayList<>();
 		for (Module module : visible) {
-			rows.add(new ModuleRow(module, modules, () -> GuiState.selectedModule, this::select));
+			rows.add(new ModuleRow(module, modules, () -> selectedId, this::select));
 		}
 
 		if (rows.isEmpty()) {
-			String message = GuiState.moduleSearch.isBlank() ? "No modules in this category yet." : "No modules match \"" + GuiState.moduleSearch + "\".";
+			String message = searchText.isBlank() ? "No modules in this category yet." : "No modules match \"" + searchText + "\".";
 			rows.add(new Message(message));
 		}
 
@@ -147,12 +163,18 @@ public class ModulesPage extends Page {
 		}
 	}
 
+	/** The module whose settings are shown, or null (used by automated UI tests). */
+	public Module selected() {
+		return selectedModule();
+	}
+
 	private Module selectedModule() {
-		Module module = GuiState.selectedModule == null ? null : modules.get(GuiState.selectedModule);
+		Module module = selectedId == null ? null : modules.get(selectedId);
 		return module != null && categories.contains(module.category()) ? module : null;
 	}
 
 	private void select(Module module) {
+		selectedId = module.id();
 		GuiState.selectedModule = module.id();
 		if (!module.id().equals(lastSelection)) {
 			rebuildDetails();
@@ -208,7 +230,7 @@ public class ModulesPage extends Page {
 			ui.roundRect(x, y, width, height, Theme.SURFACE);
 			ui.icon(Icon.byName(module.category().icon()), x + 6, y + 6, 9, Theme.ACCENT);
 			ui.textClipped(module.name(), x + 19, y + 7, width - 25, Theme.TEXT);
-			ui.text(module.category().label() + (module.isRestricted() ? "  ·  Test environments only" : ""), x + 6, y + 18, Theme.TEXT_MUTED);
+			ui.text(module.category().label() + (module.isRestricted() ? "  ·  Singleplayer and authorized servers" : ""), x + 6, y + 18, Theme.TEXT_MUTED);
 			int used = ui.wrapped(module.description(), x + 6, y + 30, width - 12, Theme.TEXT_SECONDARY);
 
 			ModuleRow.StatusView status = ModuleRow.status(module, modules);

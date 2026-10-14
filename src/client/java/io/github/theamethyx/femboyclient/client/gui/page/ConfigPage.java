@@ -33,7 +33,7 @@ public class ConfigPage extends Page {
 
 	@Override
 	public String title() {
-		return "Configuration";
+		return "Settings";
 	}
 
 	@Override
@@ -43,7 +43,7 @@ public class ConfigPage extends Page {
 
 	@Override
 	public String subtitle() {
-		return "Profiles, client options and where research modules are allowed to run.";
+		return "Profiles, client options and authorized servers.";
 	}
 
 	@Override
@@ -82,7 +82,7 @@ public class ConfigPage extends Page {
 		rows.add(new SectionTitle("Client options", "Apply to every profile."));
 		rows.addAll(SettingRow.rowsFor(femboy.options().settings.all()));
 
-		rows.add(new SectionTitle("Authorized test servers", "World analysis, fixture highlighting and the free camera only run in "
+		rows.add(new SectionTitle("Authorized test servers", "Entity ESP, Storage ESP, the Geode Analyzer and Free Camera only run in "
 				+ "singleplayer and on servers listed here. Only add servers you own or have permission to test on."));
 		List<String> servers = config.authorizedServers();
 		if (servers.isEmpty()) {

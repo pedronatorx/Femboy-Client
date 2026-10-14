@@ -210,7 +210,7 @@ class ModuleManagerTest {
 		assertEquals(List.of(coords), manager.search("coord", null));
 		assertEquals(List.of(coords, other), manager.search("", null));
 		assertEquals(List.of(coords, other), manager.search("details", null), "matches a setting name");
-		assertTrue(manager.search("coord", ModuleCategory.VISUAL).isEmpty());
+		assertTrue(manager.search("coord", ModuleCategory.VISUALS).isEmpty());
 		assertTrue(manager.search("coord zzz", null).isEmpty(), "all terms must match");
 	}
 

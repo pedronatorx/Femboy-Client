@@ -41,7 +41,7 @@ public final class FreeCameraModule extends Module implements ClientHooks.HudBlo
 	public FreeCameraModule() {
 		super("free_camera", "Free Camera",
 				"Fly the camera away from your player to inspect a test area. Your player stays still; disable to snap back.",
-				ModuleCategory.UTILITY, false, NO_KEY);
+				ModuleCategory.PLAYER, false, NO_KEY);
 	}
 
 	@Override

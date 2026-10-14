@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.2.0 - 2026-10-14: Femboy Client
+
+### Changed
+- **Renamed to Femboy Client.**
+  - Mod id `femboyclient`, package `io.github.theamethyx.femboyclient`, jar `femboy-client-<version>.jar`.
+  - The config folder moved to `config/femboyclient/`. On first launch, settings from `config/nova/` are copied there; the old folder is kept.
+- **New navigation: Home, Visuals, World, Player, HUD, Settings.**
+  - The development pages Dashboard, World Analysis, Test Scenarios and Test Results were removed.
+  - Diagnostics is now a tab under Settings.
+  - Each category page searches its own modules; Home searches all modules with a category filter and opens a module on its page.
+- **Geode Analyzer (World), replacing the Amethyst Geode Analyzer.**
+  - Every control lives in the module's own panel: status, Pause / Read again, one card per geode, details on click, and a reference card quoting the controlled-test results.
+  - It now runs automatically:
+    - New chunks are read as they load, and read chunks are re-read after the scan interval.
+    - Unchanged data is not re-analyzed.
+    - Unloaded chunks are dropped and reported as unavailable.
+  - New settings: scan interval, list incomplete geodes, progress on HUD, debug information.
+  - Removed: the test-fixture filter, saving observations to files, and the in-game research experiment. The research engine and its experiments still run headless in `./gradlew runGameTest`.
+- **Categories reassigned.**
+  - Waypoints moved to World and Free Camera to Player.
+  - Restricted modules now say "Singleplayer and authorized servers" instead of "Test environments only".
+
+### Added
+- **Entity ESP (Visuals).**
+  - Entity types are chosen by registry id in a searchable checklist grouped into players, hostile, passive, villagers and other.
+  - Pets can follow the type selection, always show, or never show.
+  - Options: outline, fill, through walls, names, distance, invisible entities, a color per group, maximum distance, highlights and labels.
+- **Storage ESP (Visuals).**
+  - Storage blocks are chosen by block id, so copper chests and each shulker box color are separate choices.
+  - Options: outline, fill, through walls, labels, built-in or custom group colors, maximum distance, scan interval, maximum highlights.
+- **Player Finder (Player).**
+  - Player list with search and sorting by name, distance or ping, plus navigation to visible players and your waypoints, with a HUD arrow.
+  - Positions are shown only when legitimately available. Otherwise the list says "position unknown", or shows a last-seen position marked as stale.
+- **New setting types.**
+  - A color setting (swatches; saved as `#RRGGBB`).
+  - An id-list setting (grouped, searchable checklist; saved as registry ids, so unknown ids from removed mods are kept).
+- **Shared ESP renderer** used by both highlight modules.
+- **Icons:** home, player, storage, navigate, pause.
+
+### Removed
+- Fixture ESP, Fixture Containers, the client-side test scenarios, the fixture registry and the in-game experiment runner. The automated tests now build their fixtures directly on the integrated server.
+
+### Fixed
+- Unit tests wrote Minecraft's `logs/` folder into the project directory. They now run in `build/test-run/`.
+
 ## 0.1.0 - 2026-10-14
 
 First version. Built in stages; each stage is a git commit.

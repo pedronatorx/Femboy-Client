@@ -1,127 +1,125 @@
-# NOVA
+# Femboy Client
 
-A client-side Fabric mod for **Minecraft Java Edition 1.21.11**, built in two parts:
+A client-side Fabric mod for **Minecraft Java Edition 1.21.11**: a clean ClickGUI with configurable visual, world, player and HUD modules.
 
-- **The client:** a module system with a ClickGUI, HUD and world overlays.
-- **A research lab:** controlled experiments on whether amethyst growth stages tell you anything about how long a chunk was simulated.
+Highlighting entities and storage through walls, the Geode Analyzer and the free camera only run in **singleplayer and on servers you explicitly authorize** (Settings → Authorized test servers). On any other server they pause. Femboy Client contains nothing that hides it from anti-cheat systems.
 
-Research and visualization tools are limited to **singleplayer worlds and servers you explicitly authorize** (Settings → Authorized test servers). NOVA does not locate other players' bases and contains nothing that hides it from anti-cheat systems.
-
-![ClickGUI dashboard](docs/screenshots/0007_gui-1280x720-0-dashboard.png)
+![Home page](docs/screenshots/0006_gui-1280x720-0-home.png)
 
 ## Versions
 
-Verified 2026-10-13 against meta.fabricmc.net and the official `fabric-example-mod` 1.21.11 branch.
-
 | Component | Version |
 |---|---|
-| Minecraft | 1.21.11 (the last release that still needs remapping) |
+| Minecraft | 1.21.11 |
 | Fabric Loader | 0.19.5 |
 | Fabric API | 0.141.6+1.21.11 |
-| Fabric Loom | `net.fabricmc.fabric-loom-remap` 1.18.4 (the template's `1.18-SNAPSHOT` line, pinned to its newest release) |
-| Mappings | Mojang official mappings (same as the template) |
+| Fabric Loom | `net.fabricmc.fabric-loom-remap` 1.18.4 |
+| Mappings | Mojang official mappings |
 | Gradle | 9.7.1 (wrapper and distribution checksums pinned) |
 | Java | 21 for compiling and running the game; Gradle itself needs **JDK 25+** (a Loom 1.18 requirement) |
 
-## Requirements
+## Installation (normal Minecraft launcher)
 
-- A JDK 25 or newer to run Gradle. The build uses a Java 21 toolchain for compiling and for the game.
-  - Gradle finds an installed JDK 21 on its own, or downloads one automatically through the foojay toolchain resolver.
-  - On the development machine both JDKs are in `~/.local/share/jdks/`. `~/.gradle/gradle.properties` points Gradle at the JDK 21 there with `org.gradle.java.installations.paths=...`.
-- For headless in-game tests on Linux: `xvfb-run` (Xvfb with Mesa).
+1. Install Fabric Loader 0.19.5 for Minecraft 1.21.11.
+2. Put `femboy-client-0.2.0.jar` (from `build/libs/`) and Fabric API 0.141.6+1.21.11 into the profile's `mods` folder.
+3. Start the game and press **Right Shift** to open the menu. You can rebind it under Options → Controls → Key Binds → Femboy Client.
+
+Settings live in `config/femboyclient/`:
+- `femboyclient.json`: client options, active profile, authorized servers
+- `profiles/*.json`: modules, keys and settings per profile
+
+Every file is written atomically with a `.bak` copy. An unreadable file is moved aside as `*.corrupt-<time>`, never deleted, and the client falls back to the backup or to defaults.
+
+**Upgrading from NOVA:** on first launch, settings from `config/nova/` are copied to `config/femboyclient/`. The old folder is left untouched.
+
+## Building
+
+You need a JDK 25 or newer to run Gradle. The build uses a Java 21 toolchain for compiling and for the game: Gradle finds an installed JDK 21 or downloads one through the foojay resolver.
 
 ```bash
 export JAVA_HOME=$HOME/.local/share/jdks/jdk-25.0.4.1+1   # any JDK 25+
 ```
 
-## Commands
-
 | Task | Command |
 |---|---|
-| Build the mod jar (also runs unit tests) | `./gradlew build` → `build/libs/nova-0.1.0.jar` |
-| Unit tests only (49 tests) | `./gradlew test` |
-| Server GameTests, headless (6 tests, includes the full research experiment) | `./gradlew runGameTest` |
-| In-game client tests, headless (59 checks, screenshots) | `./scripts/run-client-tests.sh` |
+| Build the mod jar (also runs the unit tests) | `./gradlew build` → `build/libs/femboy-client-0.2.0.jar` |
+| Unit tests only | `./gradlew test` |
+| Server GameTests, headless (includes the research experiment) | `./gradlew runGameTest` |
+| In-game client tests, headless (needs `xvfb-run`), with screenshots | `./scripts/run-client-tests.sh` |
 | Same, in a visible window | `./scripts/run-client-tests.sh --visible` |
 | Launch a development client to play | `./gradlew runClient` |
-| Copy the latest screenshots and reports into `docs/` | `./scripts/collect-artifacts.sh` |
+| Copy the latest screenshots and reports into `docs/` | `./scripts/collect-artifacts.sh` (run directly after the client tests: other Gradle tasks clear the client run folder) |
 
-Where the results go:
-- **Client tests:** the check list is in `build/run/clientGameTest/nova-test-report.txt` and screenshots are in `build/run/clientGameTest/screenshots/`. The full Gradle log of each run is in `build-logs/`.
-- **Server GameTests:** the research report goes to `build/run/gameTest/nova-research/`.
+## Using the menu
 
-## Installation (normal Minecraft launcher)
+The sidebar has six sections. Every module has an on/off switch, a key bind (click it and press a key; Backspace clears it), settings with tooltips and per-setting reset, and a module reset.
 
-1. Install Fabric Loader 0.19.5 for Minecraft 1.21.11.
-2. Put `nova-0.1.0.jar` from `build/libs/` and Fabric API 0.141.6+1.21.11 into the `mods` folder.
-3. Start the game and press **Right Shift** to open NOVA. You can rebind it under Options → Controls → Key Binds → NOVA.
-
-Settings live in `config/nova/`:
-- `nova.json`
-- `profiles/*.json`
-- `fixtures.json`
-- `research/` (observations, ground truth and reports)
-
-Every file is written atomically with a `.bak` copy. An unreadable file is moved aside as `*.corrupt-<time>`, never deleted, and NOVA falls back to the backup or to defaults.
-
-## Using NOVA
-
-| Page | What it does |
+| Section | Contents |
 |---|---|
-| Dashboard | Session status (environment, profile, menu key), module counts, health, testing summary, shortcuts |
-| Modules | Search and category filter; per-module on/off switch, key bind (click and press a key; Backspace clears), settings with tooltips and per-setting reset, module reset |
-| Analysis | Amethyst Geode Analyzer: scan with progress and cancel, geode list, growth-stage chart, observation details, statistical estimates, save observation and open its report |
-| Scenarios | Build or remove reproducible test fixtures in a singleplayer world |
-| Results | Saved observations, research evaluations (with an in-world quick experiment) and the indicator registry |
-| Diagnostics | FPS, frame-time graph, per-module time cost, message log with filter |
-| Settings | Profiles (create, switch, delete with confirmation), client options (menu scale, animations, tooltips), authorized test servers, config folder |
+| **Home** | Search across all modules with a category filter (click a module to open it), session status, module health, frame rate |
+| **Visuals** | Entity ESP, Storage ESP, Chunk Borders |
+| **World** | Geode Analyzer, Waypoints |
+| **Player** | Player Finder, Free Camera |
+| **HUD** | Coordinates, Performance, Module List |
+| **Settings** | General tab: profiles, client options (menu scale, animations, tooltips), authorized servers, config folder. Diagnostics tab: frame timing, time per module, message log |
 
-| Module | Category | Runs |
+### Modules
+
+| Module | What it does | Where it runs |
 |---|---|---|
-| Coordinates, Performance, Module List | HUD | everywhere |
-| Waypoints, Chunk Borders | Visual | everywhere (your own data only) |
-| Fixture ESP, Fixture Containers | Visual | singleplayer / authorized servers; only fixtures that NOVA's scenarios registered |
-| Free Camera | Utility | singleplayer / authorized servers |
-| Amethyst Geode Analyzer | World Analysis | singleplayer / authorized servers |
+| **Entity ESP** | Highlights the entity types you choose. Types are picked by registry id (e.g. `minecraft:zombie`) in a searchable checklist grouped into players, hostile mobs, passive mobs, villagers and other. Pets can follow the type selection, always show, or never show. Options: outline, fill, through walls, names, distance, colors per group, maximum distance, maximum highlights and labels. Entities invisible to you are skipped unless you turn that on. | Singleplayer, authorized servers |
+| **Storage ESP** | Highlights storage blocks you choose by block id: chests and copper chests, trapped chests, ender chests, barrels, shulker boxes, hoppers, dispensers/droppers/crafters, furnaces, and other storage. Options: outline, fill, through walls, labels, built-in or custom colors per group, maximum distance, scan interval, maximum highlights. Reads only block entities your client has already received. | Singleplayer, authorized servers |
+| **Chunk Borders** | Chunk boundary lines around you. | Everywhere |
+| **Geode Analyzer** | Finds amethyst geodes in loaded chunks and keeps exact growth-stage counts up to date as chunks load and buds grow. See below. | Singleplayer, authorized servers |
+| **Waypoints** | Save positions; see them as markers with names and distances. | Everywhere (your own data) |
+| **Player Finder** | Online players from the server's player list (name, game mode, ping) with search and sorting, plus navigation to players you can see and to your waypoints. See below. | Everywhere |
+| **Free Camera** | Detach the camera and fly it while your player stays put. | Singleplayer, authorized servers |
+| **Coordinates, Performance, Module List** | HUD panels. | Everywhere |
 
-An enabled module **pauses** when its environment doesn't allow it (for example, no world is loaded or the server isn't authorized), and resumes automatically. If a module throws an error, it is turned off and reported under Diagnostics; other modules keep running.
+An enabled module **pauses** when its environment doesn't allow it (no world loaded, or the server isn't authorized), and resumes on its own. If a module throws an error, it is turned off and reported under Settings → Diagnostics; other modules keep running.
 
-## Research summary
+### Geode Analyzer
 
-Full report: [docs/research/evaluation.md](docs/research/evaluation.md). It was produced headlessly by `./gradlew runGameTest`.
+- **Reads only what your client has.** It never loads chunks or asks the server for anything. Chunks in range that aren't loaded are reported as unavailable, never treated as empty.
+- **Updates automatically.** New chunks are read when they load; already-read chunks are re-read after the scan interval; grouping into geodes runs in the background and only when the data actually changed. Reading is limited to a few milliseconds per tick. **Pause** stops reading and analysis while keeping the last results; **Read again** forces a fresh read.
+- **Per geode:** distance and direction, completeness, a stage bar, counts per stage (with percentages of the geode's total buds and clusters), the sample size `n`, when the data was read, and an evidence-quality rating (based on completeness and sample size; it is *not* a probability). Click a geode for exact counts, budding faces, unavailable positions and Wilson intervals.
+- **Settings:** analysis radius, scan interval, minimum observations, percentage display, listing incomplete geodes, growth-stage display in the world, progress on HUD, debug information, time per tick.
+- **Interpretation:** the panel quotes what controlled tests showed (below) and states that growth stages are not evidence of player activity. It never labels a geode as "visited" or similar.
 
-- **Data:** 606 observations (596 complete) of 52 vanilla geodes built with Minecraft's own worldgen feature.
-- **Growth:** applied with the game's own random-tick code.
-- **Scoring:** on held-out geodes, against criteria fixed in code before any experiment ran.
+### Player Finder
 
-| Hypothesis | Verdict (tested environment only) |
-|---|---|
-| H1: the share of clusters among all growth objects separates under 2 h from 2 h+ of random ticking | Supported: precision 97.1%, recall 96.1%, false-positive rate 3.3%, false-negative rate 3.9% (194 held-out samples) |
-| H1b: same, using clusters / (large buds + clusters) | Supported |
-| H2: the share separates 5–24 h from 24 h+ | Unsupported (chance level: the share saturates near 100% after about 6 h) |
-| H3: "any cluster means at least 30 minutes" | Unsupported (false-positive rate 87%: world generation already places clusters) |
+- The list comes from the server's player list. Positions are shown **only when you have them legitimately**: on ordinary servers for players in your direct line of sight; in singleplayer and on authorized servers also for other players your client has loaded.
+- Players out of view show **"Position unknown"**, or, if you saw them earlier, **"Last seen … ago"** with that old position, clearly marked as stale. Nothing is inferred or invented. Last-seen positions are forgotten when you change world or dimension.
+- Click a player with a known position, or one of your waypoints, to navigate: the HUD shows the target, distance and an arrow relative to where you're looking.
+- Not implemented: integration with a server-side API. The spec allows it for servers you control, but nothing like it exists yet.
 
-Findings computed from the data:
-- **The share is not monotonic.** It *drops* during the first 10–20 random ticks, as new small buds dilute it.
-- **Harvesting misleads.** Harvesting plus 30 minutes of regrowth makes long-exposed geodes look young.
-- **Ticking ≠ inhabited time.** In a live world, random ticks and a chunk's inhabited time are counted under different conditions.
+## Research background
 
-An earlier run at a different test position gave the same verdicts with slightly different rates (H1: 6.6% false positives, 4.9% false negatives). Geode shapes depend on position, so every run is a new sample.
+The Geode Analyzer grew out of controlled experiments run by `./gradlew runGameTest`. Full report: [docs/research/evaluation.md](docs/research/evaluation.md).
 
-None of this identifies players. It shows what the statistic can and cannot support.
+- **Setup:** vanilla geodes in a flat test world, growth simulated with the game's own random-tick code, scored on held-out geodes against criteria fixed before the experiment.
+- **Results:**
+  - The cluster share separated under 2 h from 2 h+ of simulated ticking. The current report shows 2.2% false positives and 2.9% false negatives on 194 held-out samples; across three runs, the ranges were 2–7% and 3–5%.
+  - It cannot separate 5–24 h from longer: the share saturates near 100% after about 6 h.
+  - World generation already places clusters, so "any cluster" is not informative (87% false positives).
+  - Harvesting resets the share.
+
+None of this identifies players. It describes simulated ticking in test worlds.
 
 ## Project layout
 
 ```
-src/main/java/.../nova/core/      plain Java: settings, modules, config, diagnostics, research (unit-tested)
-src/main/java/.../nova/world/     shared Minecraft code: geode fixtures, census, server scan, experiment generator
-src/client/java/.../nova/client/  client: entrypoint, GUI, HUD, rendering, modules, analysis, scenarios, mixins
-src/gametest/java/                server GameTests and client game tests
-src/test/java/                    JUnit tests
-tools/make_icons.py               generates the GUI icon atlas
-scripts/                          test runner and artifact collection
-docs/                             screenshots, test reports, research reports, verification report
+src/main/java/.../femboyclient/core/     plain Java: settings, modules, config, diagnostics, research (unit-tested)
+src/main/java/.../femboyclient/world/    shared Minecraft code: geode fixtures, census, server scan, experiment generator
+src/client/java/.../femboyclient/client/ client: entrypoint, GUI, HUD, rendering, modules, mixins
+src/gametest/java/                       server GameTests and in-game client tests
+src/test/java/                           JUnit tests
+tools/make_icons.py                      generates the GUI icon atlas
+scripts/                                 test runner and artifact collection
+docs/                                    screenshots, test reports, research reports, verification report
 ```
+
+Adding a module means writing one class (settings are declared as fields) and one line in `ModuleRegistry`. The GUI builds its page entry, settings panel and persistence from the module's category and settings.
 
 Mixins (two, each documented in its source file):
 - **`KeyboardHandlerMixin`:** module key binds. Fabric API has no in-world key event, and polling once per tick misses short taps.
@@ -129,8 +127,8 @@ Mixins (two, each documented in its source file):
 
 ## Documentation
 
-- [docs/VERIFICATION.md](docs/VERIFICATION.md): per-feature status with evidence.
-- [KNOWN_ISSUES.md](KNOWN_ISSUES.md): known bugs, limitations and unverified assumptions.
+- [docs/VERIFICATION.md](docs/VERIFICATION.md): what was verified, how, and what wasn't.
+- [KNOWN_ISSUES.md](KNOWN_ISSUES.md): known limitations and unverified assumptions.
 - [CHANGELOG.md](CHANGELOG.md)
 
 ## License

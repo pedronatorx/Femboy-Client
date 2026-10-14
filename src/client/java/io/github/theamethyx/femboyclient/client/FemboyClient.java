@@ -13,12 +13,9 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.fabricmc.loader.api.FabricLoader;
 
-import io.github.theamethyx.femboyclient.client.fixture.FixtureRegistry;
 import io.github.theamethyx.femboyclient.client.gui.ClientScreen;
 import io.github.theamethyx.femboyclient.client.hud.HudManager;
 import io.github.theamethyx.femboyclient.client.render.WorldRenderDispatcher;
-import io.github.theamethyx.femboyclient.client.scenario.TestScenarioManager;
-import io.github.theamethyx.femboyclient.client.scenario.VisualFixtureScenario;
 import io.github.theamethyx.femboyclient.core.config.ConfigurationManager;
 import io.github.theamethyx.femboyclient.core.config.LegacyConfigMigration;
 import io.github.theamethyx.femboyclient.core.diag.DiagnosticLogger;
@@ -38,12 +35,7 @@ public final class FemboyClient implements ClientModInitializer {
 	private KeybindManager keybinds;
 	private ConfigurationManager config;
 	private GlobalOptions options;
-	private FixtureRegistry fixtures;
-	private TestScenarioManager scenarios;
 	private WorldRenderDispatcher worldRender;
-	private io.github.theamethyx.femboyclient.core.research.GroundTruthManager groundTruth;
-	private io.github.theamethyx.femboyclient.core.research.TestResultStore results;
-	private io.github.theamethyx.femboyclient.client.research.ExperimentRunner experiments;
 
 	public static FemboyClient get() {
 		return instance;
@@ -72,24 +64,6 @@ public final class FemboyClient implements ClientModInitializer {
 
 		config =new ConfigurationManager(configDir, modules, options.settings, diagnostics, System::currentTimeMillis);
 		modules.setEnvironment(new ClientEnvironment(client, config));
-
-		fixtures = new FixtureRegistry(configDir.resolve("fixtures.json"), diagnostics);
-		fixtures.load();
-		Path research = configDir.resolve("research");
-		groundTruth = new io.github.theamethyx.femboyclient.core.research.GroundTruthManager(research.resolve("ground_truth.json"), diagnostics);
-		groundTruth.load();
-		results = new io.github.theamethyx.femboyclient.core.research.TestResultStore(research, diagnostics);
-		results.load();
-		experiments = new io.github.theamethyx.femboyclient.client.research.ExperimentRunner(results, diagnostics);
-
-		scenarios = new TestScenarioManager(fixtures, diagnostics);
-		scenarios.setGroundTruth(groundTruth);
-		scenarios.register(new VisualFixtureScenario());
-		// Same feature seed for all four: one geode shape, four documented growth histories.
-		scenarios.register(new io.github.theamethyx.femboyclient.client.scenario.GeodeFixtureScenario("geode_fresh", "Geode: freshly generated", 1001, 0));
-		scenarios.register(new io.github.theamethyx.femboyclient.client.scenario.GeodeFixtureScenario("geode_60", "Geode: 60 random ticks", 1001, 60));
-		scenarios.register(new io.github.theamethyx.femboyclient.client.scenario.GeodeFixtureScenario("geode_180", "Geode: 180 random ticks", 1001, 180));
-		scenarios.register(new io.github.theamethyx.femboyclient.client.scenario.GeodeFixtureScenario("geode_1500", "Geode: 1,500 random ticks (saturated)", 1001, 1500));
 
 		ModuleRegistry.registerAll(modules);
 
@@ -158,26 +132,6 @@ public final class FemboyClient implements ClientModInitializer {
 
 	public GlobalOptions options() {
 		return options;
-	}
-
-	public FixtureRegistry fixtures() {
-		return fixtures;
-	}
-
-	public TestScenarioManager scenarios() {
-		return scenarios;
-	}
-
-	public io.github.theamethyx.femboyclient.core.research.GroundTruthManager groundTruth() {
-		return groundTruth;
-	}
-
-	public io.github.theamethyx.femboyclient.core.research.TestResultStore results() {
-		return results;
-	}
-
-	public io.github.theamethyx.femboyclient.client.research.ExperimentRunner experiments() {
-		return experiments;
 	}
 
 	/** Placeholder policy used only until the config (and therefore the server list) exists. */

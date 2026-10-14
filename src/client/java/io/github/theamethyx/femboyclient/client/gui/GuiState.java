@@ -5,13 +5,10 @@ import io.github.theamethyx.femboyclient.core.module.ModuleCategory;
 /** UI choices remembered while the game runs (not saved to disk): last page, selection, filters. */
 public final class GuiState {
 	public static int page;
+	/** Module to select when a category page is shown next (set when a module is opened from Home). */
 	public static String selectedModule;
 	public static ModuleCategory moduleFilter;
-	public static String moduleSearch = "";
-	public static String selectedResult;
-	public static int resultsTab;
-	public static String selectedEvaluation;
-	public static String selectedIndicator;
+	public static int settingsTab;
 
 	private GuiState() {
 	}

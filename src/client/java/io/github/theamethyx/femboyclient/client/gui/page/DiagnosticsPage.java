@@ -55,7 +55,7 @@ public class DiagnosticsPage extends Page {
 
 	@Override
 	public String title() {
-		return "Performance & Diagnostics";
+		return "Diagnostics";
 	}
 
 	@Override
