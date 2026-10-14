@@ -1,5 +1,5 @@
 Femboy Client client game test report
-Started: 2026-10-14T17:30:24.378000934
+Started: 2026-10-14T17:37:14.633894538
 
 PASS  Femboy Client entrypoint ran
 PASS  All 10 modules registered
@@ -49,11 +49,11 @@ PASS  At least one geode card is listed
 PASS  Clicking a geode card shows its exact counts and details
 PASS  A waypoint can be added at the player position  -- null
 PASS  In singleplayer the list has no other players (yourself excluded by default)  -- 0 entries
-PASS  With 'Include yourself' your own entry is listed with a known position  -- [Entry[id=2654e3c3-150d-3857-a426-0b141796a4e0, name=Player0, ping=0, gameMode=Creative, knowledge=VISIBLE, position=(0.5, -60.0, 0.5), seenAt=1791991858469]]
+PASS  With 'Include yourself' your own entry is listed with a known position  -- [Entry[id=2654e3c3-150d-3857-a426-0b141796a4e0, name=Player0, ping=0, gameMode=Creative, knowledge=VISIBLE, position=(0.5, -60.0, 0.5), seenAt=1791992268918]]
 PASS  The waypoint of this world is offered as a navigation target
 PASS  Clicking the waypoint starts navigation to it  -- Target[name=Spawn, position=(0.5, -59.5, 0.5), note=waypoint, color=-9524993]
 PASS  Stopping navigation clears the target
-PASS  Overworld geode results are not kept in the Nether  -- 1 before, 0 overworld results after
+PASS  Overworld geode results are dropped in the Nether, even while the analyzer is paused  -- 1 before, 0 overworld results after
 PASS  Modules keep running after a dimension change
 PASS  Overworld waypoints are not shown in the Nether
 PASS  Overworld waypoints reappear after returning
@@ -62,12 +62,15 @@ PASS  Number, id-list and color settings survive save and reload  -- ok
 PASS  The profile file stores registry ids and hex colors  -- /var/home/TheAmethyx/Desktop/Femboy client/build/run/clientGameTest/config/femboyclient/profiles/default.json
 PASS  Profiles keep independent module state  -- ok
 PASS  Clicking the right end of the 'Neighbor chunks' slider sets its maximum (4)  -- value 4.0
+PASS  A setting's reset button restores its default
+PASS  Hovering a setting shows its description as a tooltip  -- How many chunks around yours also get their corners marked. 0 shows only your chunk.
 PASS  Clicking a dropdown opens its option list
 PASS  Choosing 'Cyan' in the dropdown changes the setting  -- CYAN
+PASS  The module Reset button restores all of a module's settings
 PASS  Clicking a color swatch sets that color  -- #F29E4C
 PASS  Settings has a Diagnostics tab
 PASS  No module errors were logged during the run
-NOTE  Natural world (seed 8675309): 2 geode(s) in the scanned area, 1 complete
+NOTE  Natural world (seed 8675309): 2 geode(s) in the scanned area, 0 complete
 PASS  Naturally generated geodes are found and grouped in a normal world
 PASS  Every natural geode's completeness is stated (complete or incomplete with a reason)
 NOTE  Natural ticking: 2 geode(s) re-observed, 2 within simulation distance, 1 of those grew
@@ -87,4 +90,4 @@ PASS  Leaving the free camera paused returned the view to the player
 NOTE  Ignored known offline-test noise: missing X11 cursor shapes (Xvfb), anisotropic filtering option, Realms and account-properties requests failing without a real login.
 PASS  No render-thread, server-thread or client-code errors in the client log
 
-Result: PASSED (79 checks passed, 93 s)
+Result: PASSED (82 checks passed, 93 s)

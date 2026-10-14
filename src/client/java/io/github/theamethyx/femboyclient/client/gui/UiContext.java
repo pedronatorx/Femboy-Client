@@ -43,6 +43,8 @@ public final class UiContext {
 	private int screenWidth = 10_000;
 	private int screenHeight = 10_000;
 
+	private String shownTooltip;
+
 	public UiContext(Font font) {
 		this.font = font;
 	}
@@ -69,9 +71,11 @@ public final class UiContext {
 			tooltipHoverStart = System.currentTimeMillis();
 		}
 
+		shownTooltip = null;
 		if (tooltipsEnabled && tooltip != null && System.currentTimeMillis() - tooltipHoverStart >= TOOLTIP_DELAY_MS) {
 			graphics.nextStratum();
 			drawTooltip(tooltip, screenWidth, screenHeight);
+			shownTooltip = tooltip;
 		}
 
 		if (cursor != null) {
@@ -224,6 +228,11 @@ public final class UiContext {
 
 	public void closeOverlay() {
 		overlay = null;
+	}
+
+	/** Text of the tooltip drawn in the last frame, or null (used by automated UI tests). */
+	public String shownTooltip() {
+		return shownTooltip;
 	}
 
 	/** Requests a tooltip for this frame; {@code owner} identifies the hovered element for the delay. */

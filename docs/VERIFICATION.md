@@ -40,7 +40,7 @@ Date: 2026-10-14.
 | Sliders, dropdowns | Verified in the running Minecraft client | Slider end click sets 4; dropdown opens and selects Cyan |
 | Color setting (swatches, `#RRGGBB` in file) | Verified in the running Minecraft client | Swatch click sets #F29E4C; value survives save/reload; hex in profile file; `CollectionSettingsTest` |
 | Id-list setting (grouped, searchable checklist, registry ids) | Verified in the running Minecraft client | Expanded the list, typed "pig", pressed All: `minecraft:pig` added, other ids kept; screenshots `visuals-entity-esp-types`, `...-filter-pig`; unit tests for validation, unknown ids, malformed JSON |
-| Per-setting reset, module reset, tooltips | Implemented, not tested | Present (existing code); not clicked or hovered by the tests |
+| Per-setting reset, module reset, tooltips | Verified in the running Minecraft client | Reset button restores the default; module Reset restores all settings; hovering a setting shows its description after the delay (screenshot `visuals-tooltip`) |
 | Profiles, save and reload, malformed-config recovery | Automated tests passed and verified in the running Minecraft client | In-game: settings of every type survive save/reload; profiles keep independent state. Recovery: unit tests |
 | Adding a module needs no GUI changes | Compiled successfully | The new modules use only settings fields and `ModuleRegistry`; pages are built from categories |
 | Error isolation (a failing module is turned off) | Automated tests passed | `ModuleManagerTest`; in game, no module errors during the run |
@@ -73,11 +73,11 @@ Date: 2026-10-14.
 | Unchanged data is not re-analyzed; distant chunks evicted | Automated tests passed | `ChunkObservationCacheTest` (version only changes on content change, eviction) |
 | Pause and resume | Verified in the running Minecraft client | While paused, counts stayed at the old census although the server changed; after resuming, they caught up |
 | No double counting | Verified in the running Minecraft client | The fixture geode appears once |
-| Results cleared on world or dimension change (also while paused) | Verified in the running Minecraft client (not paused) | Overworld results not shown in the Nether. The paused case was fixed after code review and is not covered by a test |
+| Results cleared on world or dimension change (also while paused) | Verified in the running Minecraft client | Analyzer paused before travelling: overworld results dropped in the Nether |
 | Panel: status, coverage, Pause / Read again, cards, details on click | Verified in the running Minecraft client | Panel, cards and details found; screenshots `world-geode-analyzer-panel` and `-details` |
 | Explicit denominators, Wilson intervals, evidence quality (not a probability) | Automated tests passed and verified in the running Minecraft client | `StatisticsTest`; the card shows `n = 30` and "Evidence: Limited" (screenshot) |
 | Growth-stage display in the world | Verified in the running Minecraft client | Screenshot `world-geode-stage-overlay` |
-| Interpretation card quoting controlled tests, with limits | Verified in the running Minecraft client | Rendered in the panel. Its error-rate wording was changed to the range across three runs after the last in-game run (text only; compiled, not re-run) |
+| Interpretation card quoting controlled tests, with limits | Verified in the running Minecraft client | Rendered in the panel; error rates quoted as the range across three research runs |
 | Natural geodes in a normal world | Verified in the running Minecraft client | Seed 8675309: geodes found, re-identified, grew under boosted ticking (`docs/research/natural-world.md`) |
 | Research engine and experiment (headless) | Automated tests passed | `./gradlew runGameTest` |
 

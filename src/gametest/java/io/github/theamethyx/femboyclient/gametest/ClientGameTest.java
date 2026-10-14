@@ -576,6 +576,8 @@ public class ClientGameTest implements FabricClientGameTest {
 	/** Travelling to the Nether and back must not break modules or show stale results. */
 	private static void dimensionChange(ClientGameTestContext context, TestSingleplayerContext singleplayer, TestReport report) {
 		int resultsBefore = context.computeOnClient(client -> femboy().modules().get(GeodeAnalyzerModule.class).allGeodes().size());
+		// Paused on purpose: results from the old world must be dropped even while the analyzer is paused.
+		context.runOnClient(client -> femboy().modules().get(GeodeAnalyzerModule.class).setPaused(true));
 		enable(context, ChunkBordersModule.class, true);
 		singleplayer.getServer().runCommand("execute in minecraft:the_nether run tp @a 0.5 128 0.5");
 		context.waitFor(client -> client.level != null && client.level.dimension().identifier().getPath().equals("the_nether"), 400);
@@ -583,8 +585,9 @@ public class ClientGameTest implements FabricClientGameTest {
 		context.waitTicks(40);
 		int resultsAfter = context.computeOnClient(client -> (int) femboy().modules().get(GeodeAnalyzerModule.class).allGeodes().stream()
 				.filter(g -> g.dimension().endsWith("overworld")).count());
-		report.check("Overworld geode results are not kept in the Nether", resultsBefore > 0 && resultsAfter == 0,
+		report.check("Overworld geode results are dropped in the Nether, even while the analyzer is paused", resultsBefore > 0 && resultsAfter == 0,
 				resultsBefore + " before, " + resultsAfter + " overworld results after");
+		context.runOnClient(client -> femboy().modules().get(GeodeAnalyzerModule.class).setPaused(false));
 		report.check("Modules keep running after a dimension change", context.computeOnClient(client ->
 				femboy().modules().get(WaypointsModule.class).isRunning() && femboy().modules().get(ChunkBordersModule.class).isRunning()
 						&& femboy().modules().get(GeodeAnalyzerModule.class).isRunning()));
@@ -659,6 +662,21 @@ public class ClientGameTest implements FabricClientGameTest {
 		double radius = context.computeOnClient(client -> (Double) femboy().modules().get("chunk_borders").settings().get("radius").get());
 		report.check("Clicking the right end of the 'Neighbor chunks' slider sets its maximum (4)", radius == 4.0, "value " + radius);
 
+		// The reset button appears once the value differs from the default; clicking it restores the default.
+		Button resetButton = context.computeOnClient(client -> radiusRow.descendants(Button.class).stream()
+				.filter(b -> b.label().isEmpty()).findFirst().orElse(null));
+		ui.click(resetButton);
+		boolean restored = context.computeOnClient(client -> femboy().modules().get("chunk_borders").settings().get("radius").isDefault());
+		report.check("A setting's reset button restores its default", restored);
+
+		// Hovering a setting shows its description as a tooltip after the hover delay.
+		ui.hoverVirtual(radiusRow.x() + 20, radiusRow.y() + 6);
+		context.waitTicks(15);
+		String tooltip = context.computeOnClient(client -> ((ClientScreen) client.screen).uiContext().shownTooltip());
+		String description = context.computeOnClient(client -> femboy().modules().get("chunk_borders").settings().get("radius").description());
+		report.check("Hovering a setting shows its description as a tooltip", description.equals(tooltip), String.valueOf(tooltip));
+		context.takeScreenshot("visuals-tooltip");
+
 		SettingRow colorRow = ui.find(SettingRow.class, row -> row.setting().id().equals("color"));
 		ui.click(colorRow.control());
 		boolean open = context.computeOnClient(client -> ((Dropdown<?>) colorRow.control()).isOpen(((ClientScreen) client.screen).uiContext()));
@@ -670,6 +688,10 @@ public class ClientGameTest implements FabricClientGameTest {
 		report.check("Choosing 'Cyan' in the dropdown changes the setting", String.valueOf(color).equals("CYAN"), String.valueOf(color));
 
 		openModule(context, EntityEspModule.class);
+		context.runOnClient(client -> ((NumberSetting) femboy().modules().get(EntityEspModule.class).settings().get("max_labels")).set(5.0));
+		ui.click(ui.find(Button.class, b -> b.label().equals("Reset")));
+		boolean moduleReset = context.computeOnClient(client -> femboy().modules().get(EntityEspModule.class).settings().allDefault());
+		report.check("The module Reset button restores all of a module's settings", moduleReset);
 		SettingRow hostile = ui.find(SettingRow.class, row -> row.setting().id().equals("color_hostile"));
 		ui.click(hostile);
 		ColorPicker picker = (ColorPicker) hostile.control();

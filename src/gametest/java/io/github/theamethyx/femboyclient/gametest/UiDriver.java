@@ -55,6 +55,22 @@ final class UiDriver {
 		clickVirtual(widget.x() + widget.width() / 2.0, widget.y() + widget.height() / 2.0);
 	}
 
+	/** Moves the mouse to a position in the menu's coordinate space without clicking. */
+	void hoverVirtual(double vx, double vy) {
+		double[] windowPos = toWindow(vx, vy);
+		context.getInput().setCursorPos(windowPos[0], windowPos[1]);
+		context.waitTick();
+	}
+
+	private double[] toWindow(double vx, double vy) {
+		return context.computeOnClient(client -> {
+			ClientScreen screen = (ClientScreen) client.screen;
+			Window window = client.getWindow();
+			return new double[] {screen.toGui(vx) * window.getScreenWidth() / window.getGuiScaledWidth(),
+					screen.toGui(vy) * window.getScreenHeight() / window.getGuiScaledHeight()};
+		});
+	}
+
 	/** Clicks at a position in the menu's own coordinate space. */
 	void clickVirtual(double vx, double vy) {
 		double[] windowPos = context.computeOnClient(client -> {

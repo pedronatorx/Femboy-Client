@@ -6,8 +6,8 @@ Condition between the two observations: random_tick_speed 300 for 600 game ticks
 
 | Geode | Complete | Chunk distance | Inhabited ticks before/after | Before (S/M/L/C) | After (S/M/L/C) | Clusters before/after |
 |---|---|---:|---:|---|---|---:|
-| minecraft:overworld@34,14,143 | no/no | 4 | 59 / 694 | 0/0/0/0 | 0/0/0/0 | 0 / 0 |
-| minecraft:overworld@71,-7,40 | yes/yes | 3 | 94 / 729 | 2/1/1/1 | 4/3/7/5 | 1 / 5 |
+| minecraft:overworld@34,14,143 | no/no | 4 | 55 / 693 | 0/0/0/0 | 0/0/0/0 | 0 / 0 |
+| minecraft:overworld@71,-7,40 | no/no | 4 | 61 / 699 | 2/1/1/1 | 4/11/1/5 | 1 / 5 |
 
 Notes:
 
