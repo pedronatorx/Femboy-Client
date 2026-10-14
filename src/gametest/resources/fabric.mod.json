@@ -1,19 +1,19 @@
 {
 	"schemaVersion": 1,
-	"id": "nova-gametest",
+	"id": "femboyclient-gametest",
 	"version": "1.0.0",
-	"name": "NOVA automated tests",
-	"description": "Server GameTests and client game tests for NOVA. Development only; never shipped.",
+	"name": "Femboy Client automated tests",
+	"description": "Server GameTests and client game tests for Femboy Client. Development only; never shipped.",
 	"environment": "*",
 	"entrypoints": {
 		"fabric-client-gametest": [
-			"io.github.theamethyx.nova.gametest.NovaClientGameTest"
+			"io.github.theamethyx.femboyclient.gametest.ClientGameTest"
 		],
 		"fabric-gametest": [
-			"io.github.theamethyx.nova.gametest.NovaServerGameTest"
+			"io.github.theamethyx.femboyclient.gametest.ServerGameTest"
 		]
 	},
 	"depends": {
-		"nova": "*"
+		"femboyclient": "*"
 	}
 }

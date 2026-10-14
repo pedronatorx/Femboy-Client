@@ -1,0 +1,52 @@
+package io.github.theamethyx.femboyclient.world;
+
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.AmethystClusterBlock;
+import net.minecraft.world.level.block.BuddingAmethystBlock;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+
+import io.github.theamethyx.femboyclient.core.research.GrowthStage;
+import io.github.theamethyx.femboyclient.core.research.geode.ScanData;
+
+/** Maps Minecraft block states to the analyzer's categories. Uses block identity only. */
+public final class AmethystBlocks {
+	private AmethystBlocks() {
+	}
+
+	/** Growth stage of a bud or cluster block, or {@code null} for anything else. */
+	public static GrowthStage stageOf(BlockState state) {
+		if (state.is(Blocks.SMALL_AMETHYST_BUD)) return GrowthStage.SMALL_BUD;
+		if (state.is(Blocks.MEDIUM_AMETHYST_BUD)) return GrowthStage.MEDIUM_BUD;
+		if (state.is(Blocks.LARGE_AMETHYST_BUD)) return GrowthStage.LARGE_BUD;
+		if (state.is(Blocks.AMETHYST_CLUSTER)) return GrowthStage.CLUSTER;
+		return null;
+	}
+
+	/** Blocks that make up a geode's inner layer or grow from it. */
+	public static boolean isGeodeBlock(BlockState state) {
+		return state.is(Blocks.AMETHYST_BLOCK) || state.is(Blocks.BUDDING_AMETHYST) || stageOf(state) != null;
+	}
+
+	/** Direction index (Direction ordinal) a growth object points to. */
+	public static int facing(BlockState state) {
+		return state.getValue(AmethystClusterBlock.FACING).ordinal();
+	}
+
+	/**
+	 * Classifies the neighbor of a budding amethyst block in {@code direction}, using the same rules
+	 * as {@code BuddingAmethystBlock.randomTick}: air or a water source can grow a new bud; a bud
+	 * facing {@code direction} belongs to this budding block; anything else blocks growth.
+	 */
+	public static ScanData.FaceState faceState(BlockState neighbor, Direction direction) {
+		if (BuddingAmethystBlock.canClusterGrowAtState(neighbor)) {
+			return ScanData.FaceState.FREE;
+		}
+
+		if (stageOf(neighbor) != null && neighbor.getValue(AmethystClusterBlock.FACING) == direction) {
+			return ScanData.FaceState.OWN_GROWTH;
+		}
+
+		return ScanData.FaceState.BLOCKED;
+	}
+}

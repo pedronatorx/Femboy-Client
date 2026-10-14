@@ -10,11 +10,11 @@ if [[ -d build/run/clientGameTest/screenshots ]]; then
 	rm -f docs/screenshots/*.png
 	cp build/run/clientGameTest/screenshots/*.png docs/screenshots/
 fi
-[[ -f build/run/clientGameTest/nova-test-report.txt ]] && cp build/run/clientGameTest/nova-test-report.txt docs/test-reports/client-game-test-report.txt
-[[ -f build/run/clientGameTest/nova-research/natural-world.md ]] && cp build/run/clientGameTest/nova-research/natural-world.md docs/research/natural-world.md
-if [[ -d build/run/gameTest/nova-research ]]; then
-	cp build/run/gameTest/nova-research/evaluation.md build/run/gameTest/nova-research/evaluation-including-incomplete.md \
-		build/run/gameTest/nova-research/evaluation-summary.json build/run/gameTest/nova-research/dataset.csv docs/research/
+[[ -f build/run/clientGameTest/test-report.txt ]] && cp build/run/clientGameTest/test-report.txt docs/test-reports/client-game-test-report.txt
+[[ -f build/run/clientGameTest/femboyclient-research/natural-world.md ]] && cp build/run/clientGameTest/femboyclient-research/natural-world.md docs/research/natural-world.md
+if [[ -d build/run/gameTest/femboyclient-research ]]; then
+	cp build/run/gameTest/femboyclient-research/evaluation.md build/run/gameTest/femboyclient-research/evaluation-including-incomplete.md \
+		build/run/gameTest/femboyclient-research/evaluation-summary.json build/run/gameTest/femboyclient-research/dataset.csv docs/research/
 fi
 if [[ -d build/test-results/test ]]; then
 	python3 - <<'PY' > docs/test-reports/unit-tests.txt

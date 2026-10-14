@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Runs the NOVA client game tests in a real Minecraft client.
+# Runs the Femboy Client client game tests in a real Minecraft client.
 #
 # By default the client renders into a virtual X display (Xvfb + Mesa llvmpipe), so nothing
 # appears on your desktop. Pass --visible to use your real display instead.
 #
-# Results: build/run/clientGameTest/nova-test-report.txt, screenshots in .../screenshots,
+# Results: build/run/clientGameTest/test-report.txt, screenshots in .../screenshots,
 # full log in build-logs/client-gametest-<timestamp>.log
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -29,5 +29,5 @@ fi
 status=${PIPESTATUS[0]}
 echo
 echo "Log: $log"
-[[ -f build/run/clientGameTest/nova-test-report.txt ]] && cat build/run/clientGameTest/nova-test-report.txt
+[[ -f build/run/clientGameTest/test-report.txt ]] && cat build/run/clientGameTest/test-report.txt
 exit "$status"

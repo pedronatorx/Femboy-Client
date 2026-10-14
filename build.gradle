@@ -14,7 +14,7 @@ loom {
 	splitEnvironmentSourceSets()
 
 	mods {
-		"nova" {
+		"femboyclient" {
 			sourceSet sourceSets.main
 			sourceSet sourceSets.client
 		}
@@ -43,7 +43,7 @@ fabricApi {
 		// Creates the "gametest" source set with its own fabric.mod.json, plus the
 		// runGameTest (headless server) and runClientGameTest (real client) tasks.
 		createSourceSet = true
-		modId = "nova-gametest"
+		modId = "femboyclient-gametest"
 		enableGameTests = true
 		enableClientGameTests = true
 		eula = true // Accepts the Minecraft EULA for the throwaway test server/worlds.
@@ -56,7 +56,7 @@ test {
 	def testRunDir = layout.buildDirectory.dir("test-run").get().asFile
 	workingDir = testRunDir
 	doFirst { testRunDir.mkdirs() }
-	systemProperty "nova.projectDir", projectDir.absolutePath
+	systemProperty "femboyclient.projectDir", projectDir.absolutePath
 	testLogging {
 		events "passed", "skipped", "failed"
 		exceptionFormat "full"

@@ -1,18 +1,18 @@
 {
 	"schemaVersion": 1,
-	"id": "nova",
+	"id": "femboyclient",
 	"version": "${version}",
-	"name": "NOVA",
+	"name": "Femboy Client",
 	"description": "Client-side development and research framework: module system, ClickGUI, HUD, and controlled-world block-state research tools.",
 	"authors": [
 		"TheAmethyx"
 	],
 	"license": "All-Rights-Reserved",
-	"icon": "assets/nova/icon.png",
+	"icon": "assets/femboyclient/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"client": [
-			"io.github.theamethyx.nova.client.NovaClient"
+			"io.github.theamethyx.femboyclient.client.FemboyClient"
 		]
 	},
 	"depends": {
@@ -23,7 +23,7 @@
 	},
 	"mixins": [
 		{
-			"config": "nova.client.mixins.json",
+			"config": "femboyclient.client.mixins.json",
 			"environment": "client"
 		}
 	]

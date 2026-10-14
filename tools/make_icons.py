@@ -1,6 +1,6 @@
-"""Generates the NOVA GUI icon atlas (white glyphs, tinted at draw time).
+"""Generates the Femboy Client GUI icon atlas (white glyphs, tinted at draw time).
 
-Usage: python3 tools/make_icons.py src/client/resources/assets/nova/textures/gui/icons.png
+Usage: python3 tools/make_icons.py src/client/resources/assets/femboyclient/textures/gui/icons.png
 Each icon is a 16x16 cell; the order below must match Icon.java.
 """
 import math, struct, sys, zlib
