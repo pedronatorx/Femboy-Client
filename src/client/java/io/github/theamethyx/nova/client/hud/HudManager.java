@@ -126,7 +126,7 @@ public final class HudManager {
 
 		void draw(UiContext ui, int x, int y, int width, boolean alignRight, boolean dimmed) {
 			if (panel) {
-				ui.roundRect(x, y, width, height(), dimmed ? 0x60101014 : 0xA8101014);
+				ui.roundRect(x, y, width, height(), dimmed ? 0x70101014 : 0xC8101014);
 				ui.rect(alignRight ? x + width - 1 : x, y + 2, 1, height() - 4, Theme.ACCENT_DIM);
 			}
 
@@ -140,7 +140,7 @@ public final class HudManager {
 					// List style: each row gets its own tight background, aligned to the edge.
 					int rowWidth = valueWidth + labelWidth + 6 + (line.accent() != 0 ? 2 : 0);
 					int rowX = alignRight ? x + width - rowWidth : x;
-					ui.rect(rowX, rowY - 1, rowWidth, LINE, dimmed ? 0x50101014 : 0x90101014);
+					ui.rect(rowX, rowY - 1, rowWidth, LINE, dimmed ? 0x60101014 : 0xB8101014);
 					if (line.accent() != 0) {
 						ui.rect(alignRight ? rowX + rowWidth - 2 : rowX, rowY - 1, 2, LINE, line.accent());
 					}
@@ -156,7 +156,7 @@ public final class HudManager {
 
 		private static void drawRow(UiContext ui, HudLine line, int x, int y, int labelWidth) {
 			if (labelWidth > 0) {
-				ui.text(line.label(), x, y, Theme.TEXT_MUTED);
+				ui.text(line.label(), x, y, Theme.TEXT_SECONDARY);
 			}
 
 			ui.text(line.value(), x + labelWidth, y, line.valueColor());

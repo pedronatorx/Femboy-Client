@@ -47,6 +47,7 @@ final class TestReport {
 
 	void note(String text) {
 		lines.add("NOTE  " + text);
+		write("IN PROGRESS");
 	}
 
 	void finish() {

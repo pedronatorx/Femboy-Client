@@ -55,7 +55,7 @@ public class ModulesPage extends Page {
 		this.categories = Arrays.asList(categories);
 		this.modules = nova.modules();
 
-		search = add(new TextField("Search modules and settings", 40).icon(Icon.SEARCH).onChange(text -> {
+		search = add(new TextField("Search", 40).icon(Icon.SEARCH).onChange(text -> {
 			GuiState.moduleSearch = text;
 			rebuildList();
 		}));

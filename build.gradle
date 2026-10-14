@@ -52,6 +52,11 @@ fabricApi {
 
 test {
 	useJUnitPlatform()
+	// fabric-loader-junit starts Minecraft's logging, which writes logs/ and mods/ into the working directory.
+	def testRunDir = layout.buildDirectory.dir("test-run").get().asFile
+	workingDir = testRunDir
+	doFirst { testRunDir.mkdirs() }
+	systemProperty "nova.projectDir", projectDir.absolutePath
 	testLogging {
 		events "passed", "skipped", "failed"
 		exceptionFormat "full"

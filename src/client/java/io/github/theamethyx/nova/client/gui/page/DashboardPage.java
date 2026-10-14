@@ -53,6 +53,7 @@ public class DashboardPage extends Page {
 		cards.add(new InfoCard("Session", Icon.INFO, this::sessionLines));
 		cards.add(new InfoCard("Modules", Icon.VISUAL, this::moduleLines));
 		cards.add(new InfoCard("Health", Icon.PERFORMANCE, this::healthLines));
+		cards.add(new InfoCard("Testing", Icon.SCENARIOS, this::testingLines));
 		cards.add(new Shortcuts());
 		content.setChildren(cards);
 	}
@@ -104,6 +105,36 @@ public class DashboardPage extends Page {
 				new InfoCard.Line("Warnings / errors", warnings + " / " + errors, errors > 0 ? Theme.ERROR : warnings > 0 ? Theme.WARNING : Theme.SUCCESS),
 				new InfoCard.Line("Unsaved changes", nova.config().isDirty() ? "Saving shortly" : "All saved",
 						nova.config().isDirty() ? Theme.WARNING : Theme.TEXT_SECONDARY));
+	}
+
+	private List<InfoCard.Line> testingLines() {
+		long built = nova.scenarios().scenarios().stream()
+				.filter(s -> nova.scenarios().run(s.id()).state() == io.github.theamethyx.nova.client.scenario.TestScenarioManager.State.BUILT).count();
+		var evaluations = nova.results().evaluations();
+		String latest = "None yet";
+		int latestColor = Theme.TEXT_SECONDARY;
+		if (!evaluations.isEmpty()) {
+			var summary = evaluations.getFirst().summary();
+			StringBuilder verdicts = new StringBuilder();
+			for (var h : summary.getAsJsonArray("hypotheses")) {
+				var o = h.getAsJsonObject();
+				if (!verdicts.isEmpty()) verdicts.append(", ");
+				verdicts.append(o.get("id").getAsString()).append(' ').append(o.get("verdict").getAsString().charAt(0))
+						.append(o.get("verdict").getAsString().substring(1).toLowerCase(java.util.Locale.ROOT));
+			}
+
+			latest = verdicts.toString();
+			latestColor = Theme.TEXT;
+		}
+
+		return List.of(
+				new InfoCard.Line("Scenarios built in this world", built + " of " + nova.scenarios().scenarios().size(), Theme.TEXT,
+						"Test scenarios currently standing in this world (Test Scenarios page)."),
+				new InfoCard.Line("Saved observations", String.valueOf(nova.results().all().size())),
+				new InfoCard.Line("Evaluations", String.valueOf(evaluations.size())),
+				new InfoCard.Line("Latest verdicts", latest, latestColor,
+						"Hypothesis verdicts of the most recent evaluation, judged on held-out geodes with criteria fixed in advance. "
+								+ "'Supported' applies only to the tested environment."));
 	}
 
 	/** Buttons that jump to the other pages. */

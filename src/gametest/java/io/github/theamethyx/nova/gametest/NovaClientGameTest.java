@@ -60,6 +60,8 @@ public class NovaClientGameTest implements FabricClientGameTest {
 
 		try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
 			singleplayer.getClientWorld().waitForChunksRender();
+			// Creative mode: test travel (Nether, teleports into terrain) must not kill the player.
+			singleplayer.getServer().runCommand("gamemode creative @a");
 			singleplayer.getServer().runCommand("tp @a " + PLAYER.getX() + ".5 " + PLAYER.getY() + " " + PLAYER.getZ() + ".5 0 15");
 			context.waitTicks(5);
 			report.check("Singleplayer counts as an authorized environment",
@@ -70,6 +72,7 @@ public class NovaClientGameTest implements FabricClientGameTest {
 			fixturesAndOverlays(context, singleplayer, report);
 			freeCamera(context, report);
 			geodeAnalysis(context, ui, singleplayer, report);
+			dimensionChange(context, singleplayer, report);
 			researchRun(context, ui, report);
 			configAndProfiles(context, report);
 
@@ -80,6 +83,7 @@ public class NovaClientGameTest implements FabricClientGameTest {
 		}
 
 		NaturalWorldTest.run(context, report);
+		MultiplayerRestrictionTest.run(context, ui, report);
 		inspectLog(report);
 		report.finish();
 	}
@@ -330,8 +334,42 @@ public class NovaClientGameTest implements FabricClientGameTest {
 		context.waitForScreen(null);
 	}
 
+	/** Travelling to the Nether and back must not break modules or show stale results. */
+	private static void dimensionChange(ClientGameTestContext context, TestSingleplayerContext singleplayer, TestReport report) {
+		int resultsBefore = context.computeOnClient(client -> NovaClient.get().modules().get(AmethystGeodeAnalyzerModule.class).results().size());
+		context.runOnClient(client -> {
+			var modules = NovaClient.get().modules();
+			modules.setEnabled(modules.get(WaypointsModule.class), true);
+			modules.setEnabled(modules.get(ChunkBordersModule.class), true);
+		});
+		singleplayer.getServer().runCommand("execute in minecraft:the_nether run tp @a 0.5 128 0.5");
+		context.waitFor(client -> client.level != null && client.level.dimension().identifier().getPath().equals("the_nether"), 400);
+		context.waitForScreen(null); // the vanilla level-loading screen closes first
+		context.waitTicks(40);
+		var analyzerResults = context.computeOnClient(client -> NovaClient.get().modules().get(AmethystGeodeAnalyzerModule.class).results().size());
+		report.check("Overworld geode results are cleared after moving to the Nether", resultsBefore > 0 && analyzerResults == 0,
+				resultsBefore + " before, " + analyzerResults + " after");
+		report.check("Modules keep running after a dimension change", context.computeOnClient(client ->
+				NovaClient.get().modules().get(WaypointsModule.class).isRunning() && NovaClient.get().modules().get(ChunkBordersModule.class).isRunning()));
+		report.check("Overworld waypoints are not shown in the Nether",
+				context.computeOnClient(client -> NovaClient.get().modules().get(WaypointsModule.class).visibleHere().isEmpty()));
+		context.takeScreenshot("world-nether-after-transition");
+		singleplayer.getServer().runCommand("execute in minecraft:overworld run tp @a 0.5 -60 0.5 0 0");
+		context.waitFor(client -> client.level != null && client.level.dimension().identifier().getPath().equals("overworld"), 400);
+		context.waitForScreen(null);
+		context.waitTicks(20);
+		report.check("Overworld waypoints reappear after returning",
+				!context.computeOnClient(client -> NovaClient.get().modules().get(WaypointsModule.class).visibleHere().isEmpty()));
+		context.runOnClient(client -> NovaClient.get().modules().setEnabled(NovaClient.get().modules().get(ChunkBordersModule.class), false));
+		int errors = context.computeOnClient(client -> NovaClient.get().diagnostics().errorCount());
+		report.check("No module errors after the dimension changes", errors == 0, errors + " errors");
+	}
+
 	/** Runs the quick research experiment from the Results page and checks the stored evaluation. */
 	private static void researchRun(ClientGameTestContext context, UiDriver ui, TestReport report) {
+		report.note("Before opening the menu: screen=" + context.computeOnClient(client -> String.valueOf(client.screen))
+				+ ", level=" + context.computeOnClient(client -> client.level == null ? "none" : client.level.dimension().identifier().toString())
+				+ ", openMenu bound to " + context.computeOnClient(client -> io.github.theamethyx.nova.client.NovaKeys.openMenu.saveString()));
 		context.getInput().pressKey(GLFW.GLFW_KEY_RIGHT_SHIFT);
 		context.waitForScreen(NovaScreen.class);
 		context.runOnClient(client -> ((NovaScreen) client.screen).openResult(null));

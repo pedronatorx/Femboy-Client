@@ -87,6 +87,7 @@ public final class AmethystGeodeAnalyzerModule extends Module implements ClientH
 	private final WorldScanner scanner = new WorldScanner();
 	private List<GeodeObservation> results = List.of();
 	private String resultsWorld;
+	private String resultsDimension;
 	private String selectedId;
 
 	public AmethystGeodeAnalyzerModule() {
@@ -104,6 +105,7 @@ public final class AmethystGeodeAnalyzerModule extends Module implements ClientH
 
 	public void startScan() {
 		resultsWorld = WorldIdentity.current();
+		resultsDimension = WorldIdentity.dimension();
 		scanner.start(radius.intValue(), this::onScanDone);
 	}
 
@@ -130,12 +132,14 @@ public final class AmethystGeodeAnalyzerModule extends Module implements ClientH
 	@Override
 	protected void onTick() {
 		String world = WorldIdentity.current();
-		if (resultsWorld != null && !resultsWorld.equals(world)) {
-			// Results belong to another world: never show them here.
+		boolean otherDimension = resultsDimension != null && !resultsDimension.equals(WorldIdentity.dimension());
+		if (resultsWorld != null && (!resultsWorld.equals(world) || otherDimension)) {
+			// Results belong to another world or dimension: never draw or list them here.
 			scanner.clear();
 			results = List.of();
 			selectedId = null;
 			resultsWorld = null;
+			resultsDimension = null;
 		}
 
 		scanner.tick((long) (budget.get() * 1_000_000));
