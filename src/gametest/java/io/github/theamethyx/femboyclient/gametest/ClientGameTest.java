@@ -33,7 +33,10 @@ import io.github.theamethyx.femboyclient.client.gui.widget.ModuleRow;
 import io.github.theamethyx.femboyclient.client.gui.widget.SettingRow;
 import io.github.theamethyx.femboyclient.client.gui.widget.TextField;
 import io.github.theamethyx.femboyclient.client.gui.widget.Widget;
+import io.github.theamethyx.femboyclient.client.modules.AutoAttributeSwapModule;
 import io.github.theamethyx.femboyclient.client.modules.ChunkBordersModule;
+import io.github.theamethyx.femboyclient.client.modules.JavaRunnerModule;
+import io.github.theamethyx.femboyclient.client.modules.TrackersModule;
 import io.github.theamethyx.femboyclient.client.modules.EntityEspModule;
 import io.github.theamethyx.femboyclient.client.modules.FreeCameraModule;
 import io.github.theamethyx.femboyclient.client.modules.GeodeAnalyzerModule;
@@ -59,7 +62,7 @@ public class ClientGameTest implements FabricClientGameTest {
 	static final BlockPos PLAYER = new BlockPos(0, -60, 0);
 	/** Center of the geode fixture's stone cube; the cube spans chunks x -1..1, z 0..2. */
 	static final BlockPos GEODE_CENTER = new BlockPos(0, -41, 30);
-	static final List<String> NAVIGATION = List.of("Home", "Visuals", "World", "Player", "HUD", "Settings");
+	static final List<String> NAVIGATION = List.of("Home", "Combat", "Visuals", "World", "Player", "HUD", "Developer", "Settings");
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
@@ -67,7 +70,7 @@ public class ClientGameTest implements FabricClientGameTest {
 		UiDriver ui = new UiDriver(context);
 
 		report.check("Femboy Client entrypoint ran", context.computeOnClient(client -> FemboyClient.get() != null && FemboyClient.get().modules() != null));
-		report.check("All 11 modules registered", context.computeOnClient(client -> FemboyClient.get().modules().all().size()) == 11);
+		report.check("All 15 modules registered", context.computeOnClient(client -> FemboyClient.get().modules().all().size()) == 15);
 		// Deterministic screenshots: no easing between frames.
 		context.runOnClient(client -> FemboyClient.get().options().animations.set(false));
 
@@ -88,6 +91,12 @@ public class ClientGameTest implements FabricClientGameTest {
 			dimensionChange(context, singleplayer, report);
 			configAndProfiles(context, report);
 			controlInteractions(context, ui, report);
+			AdvancedFeaturesTest.pages(context, ui, report);
+			AdvancedFeaturesTest.espOverhaul(context, singleplayer, report);
+			AdvancedFeaturesTest.trackers(context, singleplayer, report);
+			AdvancedFeaturesTest.fullbright(context, singleplayer, report);
+			AdvancedFeaturesTest.freeCamera(context, ui, singleplayer, report);
+			AdvancedFeaturesTest.javaRunner(context, ui, report);
 
 			int errors = context.computeOnClient(client -> FemboyClient.get().diagnostics().errorCount());
 			report.check("No module errors were logged during the run", errors == 0, errors == 0 ? ""
@@ -211,7 +220,7 @@ public class ClientGameTest implements FabricClientGameTest {
 			screen.showPage(0);
 			return list;
 		});
-		report.check("Sidebar is exactly Home, Visuals, World, Player, HUD, Settings", titles.equals(NAVIGATION), titles.toString());
+		report.check("Sidebar is exactly Home, Combat, Visuals, World, Player, HUD, Developer, Settings", titles.equals(NAVIGATION), titles.toString());
 		report.check("No development pages (Scenarios, Analysis, Results, Dashboard) remain",
 				titles.stream().noneMatch(t -> Set.of("Scenarios", "Analysis", "Results", "Dashboard", "Test Results", "World Analysis").contains(t)));
 
@@ -261,7 +270,11 @@ public class ClientGameTest implements FabricClientGameTest {
 		context.waitTicks(2);
 		List<String> visuals = context.computeOnClient(client -> ((ClientScreen) client.screen).currentPage().descendants(ModuleRow.class)
 				.stream().map(r -> r.module().id()).toList());
-		report.check("A category page searches only its own modules", visuals.equals(List.of("chunk_borders")), visuals.toString());
+		boolean allVisuals = context.computeOnClient(client -> ((ClientScreen) client.screen).currentPage().descendants(ModuleRow.class)
+				.stream().allMatch(r -> r.module().category() == io.github.theamethyx.femboyclient.core.module.ModuleCategory.VISUALS));
+		// Geode Analyzer mentions chunks too, but it lives on World, so it must not appear here.
+		report.check("A category page searches only its own modules", visuals.contains("chunk_borders") && allVisuals
+				&& !visuals.contains("geode_analyzer"), visuals.toString());
 
 		ModuleRow chunkRow = ui.find(ModuleRow.class, r -> r.module().id().equals("chunk_borders"));
 		ui.click(chunkRow.toggle());
@@ -454,6 +467,8 @@ public class ClientGameTest implements FabricClientGameTest {
 	/** The analyzer must match the server's exact census, flag partial views, update itself, and pause. */
 	private static void geodeAnalyzer(ClientGameTestContext context, UiDriver ui, TestSingleplayerContext singleplayer, TestReport report) {
 		var server = singleplayer.getServer();
+		// Only the growth the test applies may happen: natural random ticks would make the census stale.
+		server.runCommand("gamerule random_tick_speed 0");
 		server.runCommand("tp @a 0.5 -60 0.5 0 0");
 		context.waitTicks(5);
 		GeodeFixtureBuilder.Result built = server.computeOnServer(s -> GeodeFixtureBuilder.build(s.overworld(), GEODE_CENTER, 1001, 10));
@@ -577,6 +592,9 @@ public class ClientGameTest implements FabricClientGameTest {
 		// Paused on purpose: results from the old world must be dropped even while the analyzer is paused.
 		context.runOnClient(client -> femboy().modules().get(GeodeAnalyzerModule.class).setPaused(true));
 		enable(context, ChunkBordersModule.class, true);
+		enable(context, FreeCameraModule.class, true);
+		enable(context, TrackersModule.class, true);
+		enable(context, io.github.theamethyx.femboyclient.client.modules.FullbrightModule.class, true);
 		singleplayer.getServer().runCommand("execute in minecraft:the_nether run tp @a 0.5 128 0.5");
 		context.waitFor(client -> client.level != null && client.level.dimension().identifier().getPath().equals("the_nether"), 400);
 		context.waitForScreen(null); // the vanilla level-loading screen closes first
@@ -591,6 +609,17 @@ public class ClientGameTest implements FabricClientGameTest {
 						&& femboy().modules().get(GeodeAnalyzerModule.class).isRunning()));
 		report.check("Overworld waypoints are not shown in the Nether",
 				context.computeOnClient(client -> femboy().modules().get(WaypointsModule.class).visibleHere().isEmpty()));
+		report.check("Free camera re-attaches in the new dimension", context.computeOnClient(client -> {
+			FreeCameraModule camera = femboy().modules().get(FreeCameraModule.class);
+			return camera.isActive() && client.getCameraEntity() != client.player && client.getCameraEntity().level() == client.level;
+		}));
+		report.check("Trackers show no overworld waypoints in the Nether", context.computeOnClient(client ->
+				femboy().modules().get(TrackersModule.class).lastIndicators().stream().noneMatch(i -> i.source() == TrackersModule.Source.WAYPOINT)));
+		report.check("Fullbright keeps running in the Nether", context.computeOnClient(client ->
+				femboy().modules().get(io.github.theamethyx.femboyclient.client.modules.FullbrightModule.class).isRunning()));
+		enable(context, FreeCameraModule.class, false);
+		enable(context, TrackersModule.class, false);
+		enable(context, io.github.theamethyx.femboyclient.client.modules.FullbrightModule.class, false);
 		context.takeScreenshot("world-nether-after-transition");
 		singleplayer.getServer().runCommand("execute in minecraft:overworld run tp @a 0.5 -60 0.5 0 0");
 		context.waitFor(client -> client.level != null && client.level.dimension().identifier().getPath().equals("overworld"), 400);
@@ -625,6 +654,33 @@ public class ClientGameTest implements FabricClientGameTest {
 					: "radius " + chunkRadius.get() + ", cow " + types.contains("minecraft:cow") + ", color " + ColorSetting.hex(color.get());
 		});
 		report.check("Number, id-list and color settings survive save and reload", persisted.equals("ok"), persisted);
+
+		String persistedNew = context.computeOnClient(client -> {
+			FemboyClient femboy = femboy();
+			var key = (io.github.theamethyx.femboyclient.core.setting.KeySetting) femboy.modules().get(FreeCameraModule.class).settings().get("key_up");
+			var javaPath = (io.github.theamethyx.femboyclient.core.setting.StringSetting) femboy.modules().get(JavaRunnerModule.class).settings().get("java_path");
+			var maceFall = (NumberSetting) femboy.modules().get(AutoAttributeSwapModule.class).settings().get("mace_min_fall");
+			var runner = femboy.modules().get(JavaRunnerModule.class);
+			key.set(GLFW.GLFW_KEY_R);
+			javaPath.set("/opt/jdk/bin/java");
+			maceFall.set(3.0);
+			runner.setSource("System.out.println(\"saved\");");
+			femboy.config().saveNow();
+			key.reset();
+			javaPath.reset();
+			maceFall.reset();
+			runner.setSource("changed");
+			femboy.config().load();
+			String result = key.get() == GLFW.GLFW_KEY_R && javaPath.get().equals("/opt/jdk/bin/java") && maceFall.get() == 3.0
+					&& runner.source().equals("System.out.println(\"saved\");") ? "ok"
+					: "key " + key.get() + ", java " + javaPath.get() + ", mace " + maceFall.get() + ", source " + runner.source();
+			key.reset();
+			javaPath.reset();
+			maceFall.reset();
+			femboy.config().saveNow();
+			return result;
+		});
+		report.check("Key, text and panel settings and the Java Runner program survive save and reload", persistedNew.equals("ok"), persistedNew);
 
 		Path profileFile = context.computeOnClient(client -> femboy().config().root().resolve("profiles").resolve("default.json"));
 		String json = readQuietly(profileFile);

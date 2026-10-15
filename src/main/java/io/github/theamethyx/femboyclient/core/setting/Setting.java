@@ -24,6 +24,8 @@ public abstract class Setting<T> {
 	private final T defaultValue;
 	private final List<Consumer<T>> listeners = new ArrayList<>();
 	private BooleanSupplier visibleWhen = () -> true;
+	private String section;
+	private boolean listed = true;
 	private T value;
 
 	protected Setting(String id, String name, String description, T defaultValue) {
@@ -137,6 +139,26 @@ public abstract class Setting<T> {
 
 	public final boolean isVisible() {
 		return visibleWhen.getAsBoolean();
+	}
+
+	/** Leaves the setting out of the generic settings list; for settings a module shows in its own panel. */
+	@SuppressWarnings("unchecked")
+	public final <S extends Setting<T>> S panelOnly() {
+		this.listed = false;
+		return (S) this;
+	}
+
+	public final boolean isListed() {
+		return listed;
+	}
+
+	/** Heading this setting is listed under in the GUI, or {@code null}. Set by {@link ModuleSettings#section}. */
+	public final String section() {
+		return section;
+	}
+
+	final void setSection(String section) {
+		this.section = section;
 	}
 
 	public final String id() {

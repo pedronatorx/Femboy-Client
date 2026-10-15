@@ -1,4 +1,4 @@
-# Verification report: Femboy Client 0.3.0
+# Verification report: Femboy Client 0.4.0
 
 Date: 2026-10-14.
 
@@ -25,7 +25,7 @@ Date: 2026-10-14.
 |---|---|---|
 | Renamed to Femboy Client (name, mod id `femboyclient`, package, lang, menu title, docs) | Verified in the running Minecraft client | Client starts with the new mod id; sidebar title in screenshots; `ResourceFilesTest` checks the metadata |
 | Settings copied from `config/nova/` on first launch, old folder kept | Automated tests passed | `LegacyConfigMigrationTest` (3 tests). Not exercised with a real NOVA install |
-| Navigation is exactly Home, Visuals, World, Player, HUD, Settings | Verified in the running Minecraft client | Check "Sidebar is exactly ..."; screenshots `gui-*` |
+| Navigation is exactly Home, Combat, Visuals, World, Player, HUD, Developer, Settings | Verified in the running Minecraft client | Check "Sidebar is exactly ..."; screenshots `gui-*` |
 | Development pages removed (Dashboard, World Analysis, Test Scenarios, Test Results) | Verified in the running Minecraft client | Check "No development pages remain" |
 | Only categories with modules get a sidebar entry | Implemented, not tested | All four categories have modules, so the rule never triggered |
 | Diagnostics as a tab under Settings | Verified in the running Minecraft client | Check "Settings has a Diagnostics tab"; screenshot `settings-diagnostics` |
@@ -56,6 +56,20 @@ Date: 2026-10-14.
 | Maximum distance | Verified in the running Minecraft client | At 8 blocks, wolf and pig drop out and the zombie stays |
 | Names, distance labels, colors per group, outline | Verified in the running Minecraft client | Screenshot `world-entity-esp`: red zombie, green pig, pink pet wolf, labels with distances |
 | Fill, through-walls toggle, label limit, "Include invisible" | Implemented, not tested | Settings exist; not changed by the tests |
+| Outline thickness changes the drawn outline | Verified in the running Minecraft client | Magenta pixels in screenshots: 2354 at 1x, 7968 at 5x |
+| Outline opacity | Verified in the running Minecraft client | Strongly magenta pixels: 7968 at 100%, 36 at 20% |
+| Per-category outline switch | Verified in the running Minecraft client | Hostile outline off: 2354 -> 0 pixels |
+| Tracer lines | Verified in the running Minecraft client | 750 magenta pixels without, 2900 with |
+| Label sizes (name, distance, padding) change the drawn label | Verified in the running Minecraft client | Drawn label rectangles: name 0.75x -> 1.5x width 30 -> 55; distance 0.65x -> 1.6x height 16 -> 24; padding 2 -> 6 adds 8 px each way |
+| Distance can be turned off independently of the name | Verified in the running Minecraft client | Label height 16 -> 10 |
+| Health indicator: off by default, bar / bar and number, size, per category | Verified in the running Minecraft client | Drawn label flags and sizes; screenshot `world-esp-overhaul` |
+| Long names shortened; labels at the same spot don't overlap; labels at 854x480 | Verified in the running Minecraft client | Long-name label 112 px wide (limit 110 + padding); no intersecting label rectangles; screenshot `world-esp-overhaul-854x480` |
+| Old underline under labels removed | Verified in the running Minecraft client | Screenshots `world-esp-overhaul`, `world-storage-esp` |
+| ESP with many entities | Verified in the running Minecraft client | 254 zombies: highlights capped at 64; 22.5 ms vs 21.3 ms average frame with/without ESP and Trackers (Mesa software rendering); no errors |
+| Color override for chosen types, text color, background opacity | Implemented, not tested | Settings exist; not changed by the tests |
+| Trackers: on-screen marker, edge arrow for targets behind, waypoints labelled, stale targets removed, nothing after disabling | Verified in the running Minecraft client | Indicator data; screenshot `visuals-trackers` |
+| Trackers: last-seen player labelled with its age, dropped after logging off; no overworld waypoints in the Nether | Verified in the running Minecraft client | Dedicated server with a second (fake) player; dimension test |
+| Fullbright: brightens, intensity, restores exactly, never writes the video setting, runs in the Nether | Verified in the running Minecraft client | Mean screen brightness in a closed stone room: 9.1 off, 86.2 at 100%, 35.6 at 30%, 9.1 off again; gamma option 0.5 -> 0.5 |
 | Storage ESP default selection by block id (chests, copper chests, trapped chests, barrels, shulker boxes) | Verified in the running Minecraft client | Check lists all five; furnace and hopper not highlighted |
 | Storage ESP: adding a block type, removal noticed at the next scan | Verified in the running Minecraft client | Furnace added after selection; removed chest gone after the next scan |
 | Storage ESP custom colors, labels, limits | Implemented, not tested | Settings exist; not changed by the tests |
@@ -94,10 +108,47 @@ Date: 2026-10-14.
 | Player Alert: warning when they leave (setting on) | Verified in the running Minecraft client | "Alice left your range" |
 | Player Alert: sound, pop-up, repeat delay, ignore NPCs, "logged off" note | Implemented, not tested | Not changed or triggered by the tests |
 | Server API integration for servers you control | Not implemented | Optional in the spec; documented in KNOWN_ISSUES.md |
-| Free Camera in singleplayer | Verified in the running Minecraft client | Camera moved 12 blocks, player 0; view returns to the player |
+| Free Camera in singleplayer | Verified in the running Minecraft client | Camera moved 11.8 blocks, player 0; view returns to the player |
+| Free Camera: own rotation (mouse turns the camera, not the player) | Verified in the running Minecraft client | Simulated mouse movement: camera yaw 0 -> 45, player yaw 0 -> 0 |
+| Free Camera: up key rebound in the menu and used | Verified in the running Minecraft client | Rebound to R through the key button; holding R raised the camera 8 blocks |
+| Free Camera: edge of loaded chunks shown; "Stay inside loaded chunks" stops there | Verified in the running Minecraft client | HUD warning (screenshot `visuals-free-camera-edge`); with the setting the camera stopped at z 105.5 |
+| Free Camera: occlusion culling off while detached, restored afterwards; re-attaches after a dimension change | Verified in the running Minecraft client | Checks in singleplayer and in the Nether trip |
 | Free Camera on a dedicated server | Verified in the running Minecraft client | Camera flies 12 blocks; player moved 0.000 on server and client; a rotation made meanwhile reaches the server (yaw 90.0); after returning, server and client positions differ by 0.000. Screenshot `multiplayer-free-camera` |
 | Free Camera blocks attacks aimed from the camera | Verified in the running Minecraft client | Crosshair on a block under the camera, left click: no arm swing and the block stays. Control after returning: swing, block broken |
 | Both Free Camera mixins are needed | Verified in the running Minecraft client | Run without `LocalPlayerMixin`: "server keeps receiving updates" fails (server yaw 0.0). Run without `MinecraftMixin`: "does not attack" fails (swung=true) |
+
+## Combat
+
+| Feature | Status | Evidence |
+|---|---|---|
+| Auto Attribute Swap: the server applies the hit with the swapped item | Verified in the running Minecraft client | Dedicated server, survival: sword in slot 1, axe in slot 2; after the hit the axe lost 2 durability, the sword none |
+| Switches back in the same tick, on client and server | Verified in the running Minecraft client | Selected slot 0 on client and server right after; swap record "held during the hit", "switched back" |
+| Default axe condition (only against a raised shield) | Verified in the running Minecraft client | Normal mob: no swap (sword used) |
+| Axe against a mob that is actually blocking with a shield | Implemented, not tested | No blocking target in the test |
+| Per-item cooldowns | Verified in the running Minecraft client | 1 s: no second swap ("Axe on cooldown"); 3 s: a hit 1.5 s later still not swapped |
+| Swap-back delay | Verified in the running Minecraft client | Delay 3: axe selected right after the hit, sword again later on client and server |
+| Missing item skipped safely | Verified in the running Minecraft client | Axe removed: "no axe in hotbar", slot unchanged |
+| Mace, spear, sword, trident and custom rules; player/mob filter | Implemented, not tested | Same code path as the axe rule; not exercised |
+| Item cards (icon, toggle, cooldown, conditions, reset) | Verified in the running Minecraft client | Screenshot `combat-auto-attribute-swap` |
+
+## Developer: Java Runner
+
+| Feature | Status | Evidence |
+|---|---|---|
+| Typing in the editor and pressing Run | Verified in the running Minecraft client | Typed program printed "answer 42" |
+| Separate process, time limit, Stop, output limit, missing Java, System.exit, compile errors with line numbers, exceptions | Automated tests passed and verified in the running Minecraft client | `JavaRunnerTest` (13 tests, real worker processes); in game: timeout, Stop and output limit with the worker process gone afterwards |
+| The game keeps running while a program runs | Verified in the running Minecraft client | 20 ticks took 1.00 s while the worker looped |
+| Minecraft not reachable from snippets | Verified in the running Minecraft client | "package net.minecraft.client does not exist" |
+| Snapshot API reads real client values | Verified in the running Minecraft client | Printed the Free Camera speed as set in the menu |
+| Risky code needs confirmation; Cancel runs nothing | Verified in the running Minecraft client | "deletes files"; no run started; screenshot `developer-java-runner-confirm` |
+| Copy and Clear | Verified in the running Minecraft client | Clipboard "answer 42"; output cleared |
+| Runner with the Minecraft launcher's own Java | Not verified | Tested with a JDK; the launcher's Java may lack a compiler (documented) |
+
+## Settings framework
+
+| Feature | Status | Evidence |
+|---|---|---|
+| Key, text and panel-only settings, sections | Automated tests passed and verified in the running Minecraft client | `KeyAndTextSettingsTest`; key, text, panel settings and the runner program survive save and reload in game; Entity ESP shows 7 sections |
 
 ## Servers and stability
 
@@ -110,7 +161,7 @@ Date: 2026-10-14.
 
 ## Not verified
 
-- **Visible window on the NVIDIA GPU:** all rendering was checked with Mesa llvmpipe under Xvfb.
+- **Visible window on the NVIDIA GPU:** all rendering was checked with Mesa llvmpipe under Xvfb. Real keyboard shortcuts in the code editor were not tried in a visible window.
 - **A second real client:** the other player in the tests is a server-side fake player; real movement and latency were not tested.
 - **Other server software:** Paper, proxies and anti-xray servers.
 - **Performance at scale:** very many entities or storage blocks, or a 16-chunk radius in a busy world.

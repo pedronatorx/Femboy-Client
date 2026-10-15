@@ -9,6 +9,8 @@ import io.github.theamethyx.femboyclient.client.gui.UiContext;
 import io.github.theamethyx.femboyclient.core.setting.BooleanSetting;
 import io.github.theamethyx.femboyclient.core.setting.ColorSetting;
 import io.github.theamethyx.femboyclient.core.setting.IdSetSetting;
+import io.github.theamethyx.femboyclient.core.setting.KeySetting;
+import io.github.theamethyx.femboyclient.core.setting.StringSetting;
 import io.github.theamethyx.femboyclient.core.setting.EnumSetting;
 import io.github.theamethyx.femboyclient.core.setting.NumberSetting;
 import io.github.theamethyx.femboyclient.core.setting.Setting;
@@ -19,6 +21,7 @@ import io.github.theamethyx.femboyclient.core.setting.Setting;
  */
 public class SettingRow extends Container {
 	private static final int RESET = 11;
+	private static final int KEY_WIDTH = 74;
 
 	private final Setting<?> setting;
 	private final Widget control;
@@ -52,6 +55,14 @@ public class SettingRow extends Container {
 			return new ColorPicker(color);
 		}
 
+		if (setting instanceof KeySetting key) {
+			return new KeybindButton(key::get, key::set);
+		}
+
+		if (setting instanceof StringSetting text) {
+			return new SettingTextField(text);
+		}
+
 		throw new IllegalArgumentException("No control for " + setting.getClass().getSimpleName());
 	}
 
@@ -61,6 +72,8 @@ public class SettingRow extends Container {
 		if (setting instanceof NumberSetting number) return number.format((Double) value) + (number.unit().isEmpty() ? "" : " " + number.unit());
 		if (value instanceof Enum<?> e) return EnumSetting.labelOf(e);
 		if (setting instanceof ColorSetting) return ColorSetting.hex((Integer) value);
+		if (setting instanceof KeySetting) return KeybindButton.keyName((Integer) value);
+		if (setting instanceof StringSetting) return ((String) value).isEmpty() ? "empty" : "\"" + value + "\"";
 		return String.valueOf(value);
 	}
 
@@ -74,7 +87,7 @@ public class SettingRow extends Container {
 
 	private boolean stacked() {
 		// Sliders and dropdowns get their own line so labels are never squeezed.
-		return !(setting instanceof BooleanSetting);
+		return !(setting instanceof BooleanSetting || setting instanceof KeySetting);
 	}
 
 	@Override
@@ -93,6 +106,8 @@ public class SettingRow extends Container {
 
 		if (setting instanceof BooleanSetting) {
 			control.setBounds(right - RESET - 4 - ToggleSwitch.WIDTH, y + 5, ToggleSwitch.WIDTH, ToggleSwitch.HEIGHT);
+		} else if (setting instanceof KeySetting) {
+			control.setBounds(right - RESET - 4 - KEY_WIDTH, y + 3, KEY_WIDTH, 14);
 		} else if (setting instanceof NumberSetting) {
 			control.setBounds(x + 7, y + 18, width - 14, 12);
 		} else if (setting instanceof ColorSetting) {
@@ -114,6 +129,8 @@ public class SettingRow extends Container {
 		int labelRight = x + width - 4 - RESET - 6;
 		if (setting instanceof BooleanSetting) {
 			labelRight -= ToggleSwitch.WIDTH + 4;
+		} else if (setting instanceof KeySetting) {
+			labelRight -= KEY_WIDTH + 4;
 		} else if (setting instanceof NumberSetting number) {
 			String value = number.displayValue();
 			ui.textRight(value, labelRight, y + 5, Theme.ACCENT_STRONG);
@@ -147,10 +164,82 @@ public class SettingRow extends Container {
 		return control.mouseClicked(ui, mouseX, mouseY, button);
 	}
 
-	/** Builds rows for every setting of a group. */
-	public static List<Widget> rowsFor(List<Setting<?>> settings) {
+	/** Builds rows for every setting of a group, with a heading wherever a new section starts. */
+	public static List<Widget> rowsFor(List<Setting<?>> all) {
+		List<Setting<?>> settings = all.stream().filter(Setting::isListed).toList();
 		List<Widget> rows = new ArrayList<>();
-		settings.forEach(setting -> rows.add(setting instanceof IdSetSetting ids ? new IdSetRow(ids) : new SettingRow(setting)));
+		String section = null;
+		for (int i = 0; i < settings.size(); i++) {
+			Setting<?> setting = settings.get(i);
+			if (setting.section() != null && !setting.section().equals(section)) {
+				section = setting.section();
+				List<Setting<?>> members = new ArrayList<>();
+				for (int j = i; j < settings.size() && section.equals(settings.get(j).section()); j++) {
+					members.add(settings.get(j));
+				}
+
+				rows.add(new SectionHeader(section, members));
+			}
+
+			rows.add(setting instanceof IdSetSetting ids ? new IdSetRow(ids) : new SettingRow(setting));
+		}
+
 		return rows;
+	}
+
+	/** Heading above a section of settings; hidden while none of its settings is visible. */
+	public static final class SectionHeader extends Widget {
+		private final String title;
+		private final List<Setting<?>> members;
+
+		SectionHeader(String title, List<Setting<?>> members) {
+			this.title = title;
+			this.members = members;
+		}
+
+		public String title() {
+			return title;
+		}
+
+		private boolean anyVisible() {
+			return members.stream().anyMatch(Setting::isVisible);
+		}
+
+		@Override
+		public int preferredHeight(UiContext ui, int width) {
+			return anyVisible() ? 15 : 0;
+		}
+
+		@Override
+		public void render(UiContext ui) {
+			if (!anyVisible()) {
+				return;
+			}
+
+			ui.text(title.toUpperCase(java.util.Locale.ROOT), x + 2, y + 5, Theme.ACCENT);
+			int lineX = x + 8 + ui.textWidth(title.toUpperCase(java.util.Locale.ROOT));
+			ui.rect(lineX, y + 9, x + width - lineX - 2, 1, Theme.BORDER);
+		}
+	}
+
+	/** Text input bound to a {@link StringSetting}; follows the setting when it changes elsewhere (e.g. reset). */
+	private static final class SettingTextField extends TextField {
+		private final StringSetting setting;
+
+		SettingTextField(StringSetting setting) {
+			super(setting.placeholder(), setting.maxLength());
+			this.setting = setting;
+			setText(setting.get());
+			onChange(text -> setting.set(text));
+		}
+
+		@Override
+		public void render(UiContext ui) {
+			if (!ui.isFocused(this) && !text().equals(setting.get())) {
+				setText(setting.get());
+			}
+
+			super.render(ui);
+		}
 	}
 }

@@ -127,6 +127,16 @@ def _(): return union(outline(rrect(1.5,3.5,14.5,13.5,1.2), rrect(3.1,5.1,12.9,1
 def _(): return poly([(8,1.2),(14.2,14.6),(8,10.8),(1.8,14.6)])
 @icon("pause")
 def _(): return union(rrect(3.8,2.8,6.6,13.2,0.8), rrect(9.4,2.8,12.2,13.2,0.8))
+@icon("combat")  # sword
+def _(): return union(line(3.2,12.8,12.6,3.4,2.2), poly([(11.2,2.2),(14,2),(13.8,4.8)]), line(2.6,9.4,6.6,13.4,1.8), line(2,14,4,12,2.0))
+@icon("code")  # </>
+def _(): return union(line(5.5,4,2,8,W), line(2,8,5.5,12,W), line(10.5,4,14,8,W), line(14,8,10.5,12,W), line(9.2,3,6.8,13,W))
+@icon("arrow")  # tracker pointer, tip up
+def _(): return poly([(8,1.5),(13.5,13.5),(8,10.5),(2.5,13.5)])
+@icon("sun")
+def _(): return union(circle(8,8,3.2), *[line(8+5*math.cos(a),8+5*math.sin(a),8+7*math.cos(a),8+7*math.sin(a),1.5) for a in [i*math.pi/4 for i in range(8)]])
+@icon("target")
+def _(): return union(ring(8,8,6,W), ring(8,8,2.8,W), circle(8,8,0.9))
 
 def render(path):
     cols = 8; rows = math.ceil(len(ICONS)/cols)

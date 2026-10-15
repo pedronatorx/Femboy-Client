@@ -5,8 +5,12 @@
 	"client": [
 		"GameRendererMixin",
 		"KeyboardHandlerMixin",
+		"LightTextureMixin",
 		"LocalPlayerMixin",
-		"MinecraftMixin"
+		"MinecraftMixin",
+		"MouseHandlerMixin",
+		"MultiPlayerGameModeAccessor",
+		"MultiPlayerGameModeMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

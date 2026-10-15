@@ -21,10 +21,21 @@
 - **Entity ESP pets** are entities with an owner (tamed wolves, cats, parrots, horses...). Other "pet-like" mobs, such as name-tagged ones, count by their type.
 - **World labels** (ESP, waypoints) stack among themselves but can be drawn under HUD panels in the same screen corner.
 - **Free camera.**
-  - Rotation is refreshed once per frame, so it can lag by up to one frame.
   - Attacking, using items and pick-block are disabled while the camera is detached.
-  - Chunks and entities load only around your player, so far away from it the camera shows empty space.
-  - Your player still turns its head with the mouse, so other players can see it look around.
+  - Chunks and entities load only around your player, so far away from it the camera shows empty space (the HUD says so).
+  - Forward, back and sideways use your normal movement keys; only up, down and boost have their own key settings.
+- **Auto Attribute Swap.**
+  - Only hotbar items are used.
+  - Servers don't confirm slot changes; the panel reports what the client selected and sent.
+  - Some servers' anti-cheat flags fast slot switching.
+  - The shield condition (axe only against a raised shield) was not tested against a real blocking target.
+- **Java Runner.**
+  - Not a sandbox: the separate process runs with your normal user permissions. The risky-API confirmation is a speed bump that can be bypassed (e.g. through reflection or obfuscated code).
+  - It needs a Java with a compiler; the Minecraft launcher's Java often has none. Then set "Java for the runner" to a JDK 21+.
+  - Each run starts a new Java process, which takes about half a second.
+  - Snippets only see a snapshot from the moment you press Run.
+- **Entity ESP.** The color override uses one color for all chosen types; there are no per-type outline widths.
+- **Fullbright** raises the lightmap brightness. The darkness effect and blindness still darken the view.
 - **What the research results cover.** The figures quoted in the Geode Analyzer hold only for the tested setup:
   - vanilla geodes in a flat test world;
   - exposure produced by calling the game's random-tick code;
@@ -39,6 +50,8 @@
   - an anisotropic-filtering option warning.
 - A visible-window run (`--visible`) on the NVIDIA GPU was not performed.
 - The second player in the multiplayer test is a Fabric fake player added on the server, not a second real client. The server sends it to the client like any player, but movement over time and real network latency were not tested.
+- The test harness sends key events without modifier flags, so the code editor also checks the keyboard state for Ctrl. Real keyboard shortcuts were not exercised in a visible window.
+- Performance was measured with Mesa software rendering (254 zombies: about 26 ms per frame with ESP, health, tracers and Trackers on vs. 24 ms with them off). Numbers on a real GPU will differ.
 
 ## Unverified assumptions
 

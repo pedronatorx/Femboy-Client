@@ -1,16 +1,16 @@
 Femboy Client client game test report
-Started: 2026-10-14T18:12:17.197324068
+Started: 2026-10-14T20:18:16.086495639
 
 PASS  Femboy Client entrypoint ran
-PASS  All 11 modules registered
+PASS  All 15 modules registered
 PASS  Right Shift opens the Femboy Client screen
-PASS  Sidebar is exactly Home, Visuals, World, Player, HUD, Settings  -- [Home, Visuals, World, Player, HUD, Settings]
+PASS  Sidebar is exactly Home, Combat, Visuals, World, Player, HUD, Developer, Settings  -- [Home, Combat, Visuals, World, Player, HUD, Developer, Settings]
 PASS  No development pages (Scenarios, Analysis, Results, Dashboard) remain
 PASS  Every page rendered at 854x480 and 1280x720
 PASS  Escape closes the Femboy Client screen
 PASS  Home search 'geode' lists the Geode Analyzer  -- [geode_analyzer]
 PASS  Clicking a module on Home opens it on its category page (World)  -- World / geode_analyzer
-PASS  A category page searches only its own modules  -- [chunk_borders]
+PASS  A category page searches only its own modules  -- [chunk_borders, free_camera]
 PASS  Clicking the switch enables Chunk Borders
 PASS  Key capture binds K to Chunk Borders  -- key=75
 PASS  Pressing K in the world toggles Chunk Borders off and on (keyboard mixin)  -- after first press false, after second true
@@ -29,7 +29,7 @@ PASS  Furnaces and hoppers are not highlighted until selected  -- [barrel, chest
 PASS  Selecting minecraft:furnace adds the furnace  -- [barrel, chest, copper_chest, furnace, trapped_chest, white_shulker_box]
 PASS  A removed chest disappears at the next scan  -- [barrel, copper_chest, furnace, trapped_chest, white_shulker_box]
 PASS  Disabling Storage ESP clears its highlights
-PASS  Free camera moves forward with the movement key  -- moved 12.00
+PASS  Free camera moves forward with the movement key  -- moved 11.80
 PASS  The player does not move while the free camera is active  -- player moved 0.000
 PASS  Disabling the free camera returns the view to the player
 PASS  Geode fixture built with the vanilla feature
@@ -48,16 +48,20 @@ PASS  At least one geode card is listed
 PASS  Clicking a geode card shows its exact counts and details
 PASS  A waypoint can be added at the player position  -- null
 PASS  In singleplayer the list has no other players (yourself excluded by default)  -- 0 entries
-PASS  With 'Include yourself' your own entry is listed with a known position  -- [Entry[id=2654e3c3-150d-3857-a426-0b141796a4e0, name=Player0, ping=0, gameMode=Creative, knowledge=IN_RANGE, position=(0.5, -60.0, 0.5), seenAt=1791994369585]]
+PASS  With 'Include yourself' your own entry is listed with a known position  -- [Entry[id=2654e3c3-150d-3857-a426-0b141796a4e0, name=Player0, ping=0, gameMode=Creative, knowledge=IN_RANGE, position=(0.5, -60.0, 0.5), seenAt=1792001931579]]
 PASS  The waypoint of this world is offered as a navigation target
 PASS  Clicking the waypoint starts navigation to it  -- Target[name=Spawn, position=(0.5, -59.5, 0.5), note=waypoint, color=-9524993]
 PASS  Stopping navigation clears the target
 PASS  Overworld geode results are dropped in the Nether, even while the analyzer is paused  -- 1 before, 0 overworld results after
 PASS  Modules keep running after a dimension change
 PASS  Overworld waypoints are not shown in the Nether
+PASS  Free camera re-attaches in the new dimension
+PASS  Trackers show no overworld waypoints in the Nether
+PASS  Fullbright keeps running in the Nether
 PASS  Overworld waypoints reappear after returning
 PASS  No module errors after the dimension changes  -- 0 errors
 PASS  Number, id-list and color settings survive save and reload  -- ok
+PASS  Key, text and panel settings and the Java Runner program survive save and reload  -- ok
 PASS  The profile file stores registry ids and hex colors  -- /var/home/TheAmethyx/Desktop/Femboy client/build/run/clientGameTest/config/femboyclient/profiles/default.json
 PASS  Profiles keep independent module state  -- ok
 PASS  Clicking the right end of the 'Neighbor chunks' slider sets its maximum (4)  -- value 4.0
@@ -68,33 +72,115 @@ PASS  Choosing 'Cyan' in the dropdown changes the setting  -- CYAN
 PASS  The module Reset button restores all of a module's settings
 PASS  Clicking a color swatch sets that color  -- #F29E4C
 PASS  Settings has a Diagnostics tab
+PASS  Auto Attribute Swap is on the Combat page
+PASS  Entity ESP settings are grouped into sections  -- [Targets, Boxes, Colors, Labels, Health, Tracers, Performance]
+PASS  Free Camera and Fullbright are on the Visuals page
+PASS  Outline thickness changes the rendered outline (magenta pixels at 1x vs 5x)  -- 2354 vs 7968 pixels
+PASS  Outline opacity changes the rendered outline (strongly magenta pixels at 100% vs 20%)  -- 7968 vs 36 pixels
+PASS  Per-category outline switch removes the outline of hostile mobs  -- 2354 vs 0 pixels
+PASS  Tracer lines are drawn when enabled and gone when disabled  -- 750 without, 2900 with
+PASS  Name size changes the drawn label width  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false] -> DrawnLabel[name=Target, x=187, y=80, width=55, height=22, healthBar=false, healthText=false]
+PASS  Distance size changes the drawn label height  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false] -> DrawnLabel[name=Target, x=199, y=78, width=30, height=24, healthBar=false, healthText=false]
+PASS  Background padding changes the drawn label size  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false] -> DrawnLabel[name=Target, x=195, y=78, width=38, height=24, healthBar=false, healthText=false]
+PASS  Distance can be turned off independently of the name  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false] -> DrawnLabel[name=Target, x=199, y=92, width=30, height=10, healthBar=false, healthText=false]
+PASS  Health is not shown by default
+PASS  Health bar is shown for hostile mobs when enabled (bar only by default)  -- DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=false]
+PASS  Health style 'Bar and number' shows both  -- DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true]
+PASS  Health bar size changes the drawn label  -- DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true] -> DrawnLabel[name=Target, x=182, y=78, width=64, height=24, healthBar=true, healthText=true]
+PASS  Health can be limited to chosen categories  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false]
+PASS  Long names are shortened to the maximum name width  -- DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true]
+PASS  Labels of entities at the same spot do not overlap  -- [DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true], DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true], DrawnLabel[name=Stacked A, x=236, y=87, width=41, height=20, healthBar=true, healthText=true], DrawnLabel[name=Stacked B, x=235, y=66, width=41, height=20, healthBar=true, healthText=true]]
+PASS  Labels are drawn at 854x480 as well  -- [DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true], DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true], DrawnLabel[name=Stacked A, x=236, y=87, width=41, height=20, healthBar=true, healthText=true], DrawnLabel[name=Stacked B, x=235, y=66, width=41, height=20, healthBar=true, healthText=true]]
+NOTE  254 zombies in view (Mesa software rendering): average frame 22.5 ms with ESP (labels, health, tracers) and Trackers, 21.3 ms without. Average cost per call: entity_esp/tick 0.119 ms, entity_esp/render_world 0.068 ms, entity_esp/render_hud 0.255 ms, trackers/render_hud 0.099 ms, 
+PASS  With 254 entities, ESP keeps to its highlight limit (64)  -- 64 tracked
+PASS  No module errors with many entities
+PASS  Trackers: a mob in front gets an on-screen marker  -- Indicator[name=Ahead, source=HOSTILE, onScreen=true, x=214, y=134, label=Ahead · 8m]
+PASS  Trackers: a mob behind you gets an arrow at the bottom edge  -- Indicator[name=Behind, source=HOSTILE, onScreen=false, x=214, y=212, label=Behind · 10m], screen height 240
+PASS  Trackers: waypoints are tracked and labelled as waypoints  -- Indicator[name=Tracker test, source=WAYPOINT, onScreen=false, x=214, y=212, label=Tracker test · 1m · waypoint]
+PASS  Trackers: a target that disappears loses its indicator
+PASS  Trackers: no indicators after turning it off
+PASS  Fullbright brightens a dark room  -- brightness off 9.1, 100% 86.2, 30% 35.6, off again 9.1
+PASS  Fullbright intensity changes the brightness  -- brightness off 9.1, 100% 86.2, 30% 35.6, off again 9.1
+PASS  Turning Fullbright off restores the original brightness  -- brightness off 9.1, 100% 86.2, 30% 35.6, off again 9.1
+PASS  Fullbright never changes the brightness video setting  -- 0.5 -> 0.5
+PASS  Occlusion culling is off while the camera is detached
+PASS  Mouse movement turns the free camera  -- grabbed true, camera yaw 0.0 -> 45.000008
+PASS  Mouse movement leaves the player's rotation alone  -- 0.0 -> 0.0
+PASS  The up key can be rebound in the menu
+PASS  The rebound up key raises the camera; the player stays  -- camera -58.38 -> -50.38
+PASS  Flying past the loaded chunks is detected and shown on the HUD  -- (15.64717495877948, -50.38156096935272, 85.35280244354936)
+PASS  'Stay inside loaded chunks' stops the camera at the edge  -- (100.5, -58.37999999523163, 105.5)
+PASS  Disabling restores the view, occlusion culling and the player's camera
+PASS  Typing in the code editor updates the program  -- int answer = 6 * 7;
+System.out.println("answer " + answer);
+PASS  Java Runner: Run compiles and runs in a separate process and shows the output  -- FINISHED: answer 42
+PASS  Java Runner: Copy puts the output on the clipboard  -- answer 42
+PASS  Java Runner: Clear empties the output
+PASS  Java Runner: snippets read the client's real settings through Femboy.*  -- FINISHED: 1.7 blocks/tick
+true
+PASS  Java Runner: compile errors are shown with the line number  -- COMPILE_ERROR: Line 2: incompatible types: int cannot be converted to java.lang.String
+PASS  Java Runner: runtime exceptions are shown  -- FAILED: Exception: java.lang.IllegalStateException: boom
+    at run (line 1)
+PASS  Java Runner: the game itself is not reachable (compile error)  -- COMPILE_ERROR: Line 1: package net.minecraft.client does not exist
+PASS  Minecraft keeps ticking while a program runs (20 ticks while the worker loops)  -- 20 ticks took 1.00 s, still running: true
+PASS  Java Runner: an endless loop is stopped at the time limit  -- TIMED_OUT, pid 36060
+PASS  Java Runner: Stop kills the program  -- STOPPED
+PASS  Java Runner: excessive output is cut off  -- OUTPUT_LIMIT, 163 lines
+PASS  Java Runner: code that deletes files asks for confirmation and does not run yet  -- [deletes files]
+PASS  Java Runner: Cancel runs nothing
+PASS  Java Runner: the 'Module overview' example runs  -- FINISHED: Module               Enabled  Running
+-------------------  -------  -------
+Auto Attribute Swap  off      -
+Entity ESP           off      -
+Storage ESP          off      -
+Trackers             off      -
+Fullbright           off      -
+Free Camera          off      -
+Chunk Borders        off      -
+Geode Analyzer       off      -
+Waypoints            on       running
+Player Finder        on       running
+Player Alert         off      -
+Coordinates          on       running
+Performance          on       running
+Module List          on       running
+Java Runner          on       running
 PASS  No module errors were logged during the run
-NOTE  Natural world (seed 8675309): 2 geode(s) in the scanned area, 0 complete
+NOTE  Natural world (seed 8675309): 2 geode(s) in the scanned area, 1 complete
 PASS  Naturally generated geodes are found and grouped in a normal world
 PASS  Every natural geode's completeness is stated (complete or incomplete with a reason)
-NOTE  Natural ticking: 2 geode(s) re-observed, 2 within simulation distance, 1 of those grew
+NOTE  Natural ticking: 2 geode(s) re-observed, 2 within simulation distance, 2 of those grew
 PASS  Natural geodes are re-identified by the same id after time passes  -- 2 matched
 PASS  No natural geode lost clusters without block removal  -- 0 lost clusters
-PASS  At least one geode within simulation distance grew under boosted random ticking  -- 1 of 2
+PASS  At least one geode within simulation distance grew under boosted random ticking  -- 2 of 2
 NOTE  Connected to dedicated test server at localhost:25565
 PASS  Every module runs on a dedicated server (no server list, no pausing)
 PASS  A second player on the server reaches the client
 PASS  Player Alert warns when the player comes into range  -- [Alice (5 m ↑) is in range]
-PASS  Player Finder lists the player in range with their real position  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=IN_RANGE, position=(15.5, -29.0, 3.5), seenAt=1791994428330]
+PASS  Player Finder lists the player in range with their real position  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=IN_RANGE, position=(-0.5, -29.0, -8.5), seenAt=1792002039480]
 PASS  Entity ESP highlights the other player
 PASS  Player Alert reports when the player leaves range (setting on)  -- [Alice left your range, Alice (5 m ↑) is in range]
-PASS  Player Finder keeps the last seen position once the player is out of range  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=LAST_SEEN, position=(15.5, -29.0, 3.5), seenAt=1791994428435]
+PASS  Player Finder keeps the last seen position once the player is out of range  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=LAST_SEEN, position=(-0.5, -29.0, -8.5), seenAt=1792002039694]
+PASS  Trackers point to the last seen position, labelled with its age  -- [Indicator[name=Alice, source=LAST_SEEN, onScreen=true, x=214, y=114, label=Alice · 5m · last seen 0 s ago]]
 PASS  A player who logs off disappears from Player Finder
+PASS  Trackers drop a player who logged off
+PASS  Attribute swap: by default the axe is only used against a raised shield (no swap on a normal mob)  -- sword 0->1, axe 0->0
+PASS  Attribute swap: the server applied the hit with the axe (axe lost durability, sword did not)  -- sword 1->1, axe 0->2
+PASS  Attribute swap: switched back to the sword in the same tick, on client and server  -- client 0, server 0, SwapRecord[rule=AXE, item=Iron Axe, fromSlot=0, toSlot=1, target=Dummy, at=1792002043026, usedForHit=true, restored=true, note=switched back in the same tick]
+PASS  Attribute swap: no second swap during the axe's cooldown (1 s)  -- sword 1->2, axe 2->2, skip: Axe on cooldown
+PASS  Attribute swap: a longer per-item cooldown (3 s) blocks swaps for longer  -- axe 2->4->4
+PASS  Attribute swap: with a swap-back delay the axe stays selected for those ticks, then the sword returns  -- right after 1, later 0, server 0
+PASS  Attribute swap: a missing item is skipped safely  -- no axe in hotbar
 PASS  Free Camera runs on a dedicated server
-PASS  The free camera flies on the server  -- moved 12.00
+PASS  The free camera flies on the server  -- moved 11.80
 PASS  The crosshair aims at the block under the camera
 PASS  Clicking in free camera does not attack (no swing, the block stays)  -- swung=false
 PASS  The server keeps receiving the player's updates during free camera  -- server yaw 90.0
 PASS  The player stays put on the server and on the client  -- server moved 0.000, client moved 0.000
 PASS  Disabling the free camera returns the view to the player
 PASS  No rubber-band: server and client agree on the position after the camera returns  -- server-client difference 0.000
-PASS  After the camera returns, clicking works again (control: swing, block broken)  -- swung=true
+PASS  After the camera returns, clicking works again (control: swing, block broken)  -- swung=true, aimed=true (BlockPos{x=-6, y=-34, z=-9} pitch 90.0, expected BlockPos{x=-6, y=-30, z=-9}), server: Block{minecraft:air}, held 0 minecraft:air, mode CREATIVE, at (-5.5, -30.14510670065164, -8.5)
 NOTE  Ignored known offline-test noise: missing X11 cursor shapes (Xvfb), anisotropic filtering option, Realms and account-properties requests failing without a real login.
 PASS  No render-thread, server-thread or client-code errors in the client log
 
-Result: PASSED (89 checks passed, 94 s)
+Result: PASSED (155 checks passed, 157 s)

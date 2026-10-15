@@ -23,7 +23,10 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import io.github.theamethyx.femboyclient.client.FemboyClient;
+import io.github.theamethyx.femboyclient.client.modules.AutoAttributeSwapModule;
 import io.github.theamethyx.femboyclient.client.modules.EntityEspModule;
+import io.github.theamethyx.femboyclient.client.modules.FullbrightModule;
+import io.github.theamethyx.femboyclient.client.modules.TrackersModule;
 import io.github.theamethyx.femboyclient.client.modules.FreeCameraModule;
 import io.github.theamethyx.femboyclient.client.modules.GeodeAnalyzerModule;
 import io.github.theamethyx.femboyclient.client.modules.PlayerAlertModule;
@@ -40,7 +43,7 @@ import io.github.theamethyx.femboyclient.core.setting.BooleanSetting;
 @SuppressWarnings("UnstableApiUsage")
 final class MultiplayerTest {
 	private static final List<Class<? extends Module>> MODULES = List.of(GeodeAnalyzerModule.class, EntityEspModule.class,
-			StorageEspModule.class, PlayerFinderModule.class, PlayerAlertModule.class);
+			StorageEspModule.class, PlayerFinderModule.class, PlayerAlertModule.class, TrackersModule.class, FullbrightModule.class);
 	private static final UUID ALICE = UUID.nameUUIDFromBytes("femboyclient-test-alice".getBytes());
 
 	private MultiplayerTest() {
@@ -52,6 +55,11 @@ final class MultiplayerTest {
 
 	private static ServerPlayer serverPlayer(net.minecraft.server.MinecraftServer server) {
 		return server.getPlayerList().getPlayers().stream().filter(p -> !(p instanceof FakePlayer)).findFirst().orElseThrow();
+	}
+
+	/** "x y z" of the bottom center of a block; correct for negative coordinates too (-4 -> -3.5, not -4.5). */
+	private static String center(BlockPos pos) {
+		return String.format(java.util.Locale.ROOT, "%.1f %d %.1f", pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
 	}
 
 	static void run(ClientGameTestContext context, UiDriver ui, TestReport report) {
@@ -76,10 +84,11 @@ final class MultiplayerTest {
 					}
 				}
 			});
-			server.runCommand(String.format("tp @a %d.5 %d %d.5 -90 20", base.getX(), base.getY() + 1, base.getZ()));
+			server.runCommand("tp @a " + center(base.above()) + " -90 20");
 			context.waitTicks(20);
 
 			secondPlayer(context, server, base, report);
+			attributeSwap(context, server, base, report);
 			freeCamera(context, server, base, report);
 
 			context.runOnClient(client -> MODULES.forEach(type -> femboy().modules().setEnabled(femboy().modules().get(type), false)));
@@ -126,15 +135,125 @@ final class MultiplayerTest {
 				.filter(e -> e.id().equals(ALICE)).findFirst().orElse(null));
 		report.check("Player Finder keeps the last seen position once the player is out of range", entry != null
 				&& entry.knowledge() == PlayerFinderModule.Knowledge.LAST_SEEN && entry.position().distanceTo(at) < 0.5, String.valueOf(entry));
+		boolean trackedLastSeen = ClientGameTest.waitUntil(context, () -> context.computeOnClient(client -> femboy().modules().get(TrackersModule.class)
+				.lastIndicators().stream().anyMatch(i -> i.source() == TrackersModule.Source.LAST_SEEN && i.name().equals("Alice")
+						&& i.label().contains("last seen"))), 20);
+		report.check("Trackers point to the last seen position, labelled with its age", trackedLastSeen,
+				context.computeOnClient(client -> femboy().modules().get(TrackersModule.class).lastIndicators().toString()));
 
 		server.runOnServer(s -> s.getPlayerList().broadcastAll(new ClientboundPlayerInfoRemovePacket(List.of(ALICE))));
 		boolean offline = ClientGameTest.waitUntil(context, () -> context.computeOnClient(client -> femboy().modules().get(PlayerFinderModule.class)
 				.entries().stream().noneMatch(e -> e.id().equals(ALICE))), 40);
 		report.check("A player who logs off disappears from Player Finder", offline);
+		context.waitTicks(10);
+		report.check("Trackers drop a player who logged off", context.computeOnClient(client -> femboy().modules().get(TrackersModule.class)
+				.lastIndicators().stream().noneMatch(i -> i.name().equals("Alice"))));
+	}
+
+	private static int damage(TestDedicatedServerContext server, int slot) {
+		return server.computeOnServer(s -> serverPlayer(s).getInventory().getItem(slot).getDamageValue());
+	}
+
+	private static void hit(ClientGameTestContext context) {
+		ClientGameTest.waitUntil(context, () -> context.computeOnClient(client -> client.hitResult instanceof net.minecraft.world.phys.EntityHitResult), 20);
+		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+		context.waitTicks(3);
+	}
+
+	private static <T> void swapSetting(ClientGameTestContext context, String id, T value) {
+		AdvancedFeaturesTest.set(context, AutoAttributeSwapModule.class, id, value);
+	}
+
+	/**
+	 * Durability is the server's own record of which item hit: a hit costs the held weapon durability, so
+	 * a damaged axe and an untouched sword prove the server used the axe for that hit.
+	 */
+	private static void attributeSwap(ClientGameTestContext context, TestDedicatedServerContext server, BlockPos base, TestReport report) {
+		server.runCommand("gamemode survival @a");
+		server.runCommand("item replace entity @a hotbar.0 with minecraft:diamond_sword");
+		server.runCommand("item replace entity @a hotbar.1 with minecraft:iron_axe");
+		server.runCommand("summon zombie " + center(base.offset(0, 1, 2)) + " {NoAI:1b,NoGravity:1b,Silent:1b,PersistenceRequired:1b,CustomName:'Dummy',"
+				+ "attributes:[{id:\"minecraft:max_health\",base:1000.0}],Health:1000.0f}");
+		server.runCommand("tp @a " + center(base.above()) + " 0 15");
+		context.runOnClient(client -> client.player.getInventory().setSelectedSlot(0));
+		context.waitTicks(20);
+		context.runOnClient(client -> femboy().modules().get(AutoAttributeSwapModule.class).settings().resetAll());
+		context.runOnClient(client -> femboy().modules().setEnabled(femboy().modules().get(AutoAttributeSwapModule.class), true));
+		context.waitTicks(2);
+
+		int sword0 = damage(server, 0);
+		int axe0 = damage(server, 1);
+		hit(context);
+		int sword1 = damage(server, 0);
+		int axe1 = damage(server, 1);
+		report.check("Attribute swap: by default the axe is only used against a raised shield (no swap on a normal mob)",
+				sword1 > sword0 && axe1 == axe0, "sword " + sword0 + "->" + sword1 + ", axe " + axe0 + "->" + axe1);
+
+		swapSetting(context, "axe_shield_only", false);
+		context.waitTicks(25);
+		hit(context);
+		int sword2 = damage(server, 0);
+		int axe2 = damage(server, 1);
+		var record = context.computeOnClient(client -> femboy().modules().get(AutoAttributeSwapModule.class).lastSwap());
+		int clientSlot = context.computeOnClient(client -> client.player.getInventory().getSelectedSlot());
+		int serverSlot = server.computeOnServer(s -> serverPlayer(s).getInventory().getSelectedSlot());
+		report.check("Attribute swap: the server applied the hit with the axe (axe lost durability, sword did not)",
+				axe2 > axe1 && sword2 == sword1, "sword " + sword1 + "->" + sword2 + ", axe " + axe1 + "->" + axe2);
+		report.check("Attribute swap: switched back to the sword in the same tick, on client and server", clientSlot == 0 && serverSlot == 0
+				&& record != null && record.usedForHit() && record.restored() && record.toSlot() == 1, "client " + clientSlot + ", server " + serverSlot + ", " + record);
+		context.takeScreenshot("combat-attribute-swap-hud");
+
+		// Past the target's 10-tick damage immunity (so the hit lands), but within the axe's 1 s cooldown.
+		context.waitTicks(10);
+		hit(context);
+		int sword3 = damage(server, 0);
+		int axe3 = damage(server, 1);
+		String skip = context.computeOnClient(client -> femboy().modules().get(AutoAttributeSwapModule.class).lastSkip());
+		report.check("Attribute swap: no second swap during the axe's cooldown (1 s)", axe3 == axe2 && sword3 > sword2 && "Axe on cooldown".equals(skip),
+				"sword " + sword2 + "->" + sword3 + ", axe " + axe2 + "->" + axe3 + ", skip: " + skip);
+
+		swapSetting(context, "axe_cooldown", 3000.0);
+		context.waitTicks(25);
+		hit(context);
+		int axe4 = damage(server, 1);
+		hit(context);
+		context.waitTicks(25);
+		hit(context);
+		int axe5 = damage(server, 1);
+		report.check("Attribute swap: a longer per-item cooldown (3 s) blocks swaps for longer", axe4 > axe3 && axe5 == axe4,
+				"axe " + axe3 + "->" + axe4 + "->" + axe5);
+
+		swapSetting(context, "axe_cooldown", 0.0);
+		swapSetting(context, "swap_back_delay", 3.0);
+		context.waitTicks(25);
+		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+		context.waitTick();
+		int heldRightAfter = context.computeOnClient(client -> client.player.getInventory().getSelectedSlot());
+		context.waitTicks(6);
+		int heldLater = context.computeOnClient(client -> client.player.getInventory().getSelectedSlot());
+		int serverLater = server.computeOnServer(s -> serverPlayer(s).getInventory().getSelectedSlot());
+		report.check("Attribute swap: with a swap-back delay the axe stays selected for those ticks, then the sword returns",
+				heldRightAfter == 1 && heldLater == 0 && serverLater == 0, "right after " + heldRightAfter + ", later " + heldLater + ", server " + serverLater);
+
+		server.runCommand("item replace entity @a hotbar.1 with minecraft:air");
+		swapSetting(context, "swap_back_delay", 0.0);
+		context.waitTicks(25);
+		hit(context);
+		String missing = context.computeOnClient(client -> femboy().modules().get(AutoAttributeSwapModule.class).lastSkip());
+		report.check("Attribute swap: a missing item is skipped safely", "no axe in hotbar".equals(missing)
+				&& context.computeOnClient(client -> client.player.getInventory().getSelectedSlot()) == 0, String.valueOf(missing));
+
+		context.runOnClient(client -> femboy().modules().setEnabled(femboy().modules().get(AutoAttributeSwapModule.class), false));
+		context.runOnClient(client -> femboy().modules().get(AutoAttributeSwapModule.class).settings().resetAll());
+		server.runCommand("kill @e[type=minecraft:zombie,name=Dummy]");
+		// Creative players cannot break blocks while holding a sword; later tests break blocks.
+		server.runCommand("clear @a");
+		server.runCommand("gamemode creative @a");
+		context.waitTicks(5);
 	}
 
 	private static void freeCamera(ClientGameTestContext context, TestDedicatedServerContext server, BlockPos base, TestReport report) {
-		server.runCommand(String.format("tp @a %d.5 %d %d.5 0 90", base.getX(), base.getY() + 1, base.getZ()));
+		server.runCommand("tp @a " + center(base.above()) + " 0 90");
 		context.waitTicks(10);
 		Vec3 serverBefore = server.computeOnServer(s -> serverPlayer(s).position());
 		Vec3 clientBefore = context.computeOnClient(client -> client.player.position());
@@ -192,7 +311,12 @@ final class MultiplayerTest {
 		context.waitTick();
 		boolean swungAfter = context.computeOnClient(client -> client.player.swinging);
 		context.waitTicks(4);
+		String state = server.computeOnServer(s -> s.overworld().getBlockState(underPlayer) + ", held " + serverPlayer(s).getMainHandItem()
+				+ ", mode " + serverPlayer(s).gameMode() + ", at " + serverPlayer(s).position());
+		String aim = context.computeOnClient(client -> String.valueOf(client.hitResult instanceof BlockHitResult hit ? hit.getBlockPos() : client.hitResult)
+				+ " pitch " + client.player.getXRot());
 		report.check("After the camera returns, clicking works again (control: swing, block broken)", aimedAtFeet && swungAfter
-				&& server.computeOnServer(s -> s.overworld().getBlockState(underPlayer).isAir()), "swung=" + swungAfter);
+				&& server.computeOnServer(s -> s.overworld().getBlockState(underPlayer).isAir()),
+				"swung=" + swungAfter + ", aimed=" + aimedAtFeet + " (" + aim + ", expected " + underPlayer + "), server: " + state);
 	}
 }

@@ -18,6 +18,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 
+import io.github.theamethyx.femboyclient.client.world.LoadedChunks;
 import io.github.theamethyx.femboyclient.core.research.GrowthStage;
 import io.github.theamethyx.femboyclient.core.research.geode.BlockKey;
 import io.github.theamethyx.femboyclient.core.research.geode.ChunkObservationCache;
@@ -220,7 +221,7 @@ public final class GeodeScanner {
 			BlockPos neighbor = origin.relative(direction);
 			if (level.isOutsideBuildHeight(neighbor)) {
 				faces[direction.ordinal()] = ScanData.FaceState.BLOCKED;
-			} else if (!level.hasChunk(neighbor.getX() >> 4, neighbor.getZ() >> 4)) {
+			} else if (!LoadedChunks.isLoaded(level, neighbor.getX() >> 4, neighbor.getZ() >> 4)) {
 				faces[direction.ordinal()] = ScanData.FaceState.UNAVAILABLE;
 			} else {
 				faces[direction.ordinal()] = AmethystBlocks.faceState(level.getBlockState(neighbor), direction);

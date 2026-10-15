@@ -78,9 +78,9 @@ class ResourceFilesTest {
 	void texturesArePngsWithTheExpectedSize() throws IOException {
 		int[] icon = pngSize("src/main/resources/assets/femboyclient/icon.png");
 		assertArrayEquals(new int[] {128, 128}, icon);
-		// The icon atlas holds 8 x 4 cells of 16 px; Icon.java uses the same layout.
+		// The icon atlas holds 8 x 5 cells of 16 px; Icon.java uses the same layout.
 		int[] atlas = pngSize("src/client/resources/assets/femboyclient/textures/gui/icons.png");
-		assertArrayEquals(new int[] {128, 64}, atlas);
+		assertArrayEquals(new int[] {128, 80}, atlas);
 	}
 
 	private static int[] pngSize(String path) throws IOException {

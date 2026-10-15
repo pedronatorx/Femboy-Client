@@ -12,13 +12,23 @@ import com.google.gson.JsonObject;
 /** The ordered, validated settings of one module. */
 public final class ModuleSettings {
 	private final Map<String, Setting<?>> settings = new LinkedHashMap<>();
+	private String section;
 
 	public <S extends Setting<?>> S add(S setting) {
 		if (settings.putIfAbsent(setting.id(), setting) != null) {
 			throw new IllegalArgumentException("Duplicate setting id: " + setting.id());
 		}
 
+		setting.setSection(section);
 		return setting;
+	}
+
+	/**
+	 * Starts a named section: settings added afterwards are shown under this heading in the GUI.
+	 * Modules call it from instance initializer blocks between their setting fields.
+	 */
+	public void section(String title) {
+		this.section = title;
 	}
 
 	public List<Setting<?>> all() {

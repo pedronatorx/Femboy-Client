@@ -336,22 +336,29 @@ public final class UiContext {
 		return font.width(text);
 	}
 
+	/** Draws text scaled around its top-left corner; {@code scale} 1 is the normal GUI font size. */
+	public void textScaled(String text, float x, float y, float scale, int color) {
+		var pose = graphics.pose();
+		pose.pushMatrix();
+		pose.translate(x, y);
+		pose.scale(scale, scale);
+		graphics.drawString(font, text, 0, 0, color, false);
+		pose.popMatrix();
+	}
+
 	/**
-	 * Draws a world label (text in a small dark box with a colored underline) centered on
-	 * {@code centerX} with its bottom at {@code bottomY}. Labels placed earlier in the same frame are
-	 * avoided by moving this one upwards, so nearby labels stack instead of overlapping.
+	 * Reserves room for a world label so labels placed later in the same frame avoid it. If the box
+	 * overlaps an earlier label it is moved upwards, so nearby labels stack instead of overlapping.
+	 *
+	 * @return the (possibly moved) top edge
 	 */
-	public void worldLabel(String text, int centerX, int bottomY, int accent) {
-		int w = textWidth(text) + 8;
-		int h = 12;
-		int x = centerX - w / 2;
-		int y = bottomY - h;
+	public int placeLabel(int x, int y, int width, int height) {
 		for (int attempt = 0; attempt < 8; attempt++) {
 			boolean overlaps = false;
 			for (int[] r : placedLabels) {
-				if (x < r[0] + r[2] && x + w > r[0] && y < r[1] + r[3] && y + h > r[1]) {
+				if (x < r[0] + r[2] && x + width > r[0] && y < r[1] + r[3] && y + height > r[1]) {
 					overlaps = true;
-					y = r[1] - h - 1;
+					y = r[1] - height - 1;
 				}
 			}
 
@@ -360,9 +367,20 @@ public final class UiContext {
 			}
 		}
 
-		placedLabels.add(new int[] {x, y, w, h});
-		roundRect(x, y, w, h, 0xB0101014);
-		rect(x + 1, y + h - 1, w - 2, 1, accent);
-		textCentered(text, centerX, y + 2, Theme.TEXT);
+		placedLabels.add(new int[] {x, y, width, height});
+		return y;
+	}
+
+	/**
+	 * Draws a simple world label: text in the given color in a small dark box, centered on
+	 * {@code centerX} with its bottom at {@code bottomY}, stacked above earlier labels.
+	 */
+	public void worldLabel(String text, int centerX, int bottomY, int color) {
+		int w = textWidth(text) + 8;
+		int h = 12;
+		int x = centerX - w / 2;
+		int y = placeLabel(x, bottomY - h, w, h);
+		roundRect(x, y, w, h, 0xA0101014);
+		textCentered(text, centerX, y + 2, color | 0xFF000000);
 	}
 }

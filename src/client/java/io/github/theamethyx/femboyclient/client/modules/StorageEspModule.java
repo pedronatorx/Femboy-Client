@@ -264,7 +264,8 @@ public final class StorageEspModule extends Module implements ClientHooks.WorldR
 	private List<EspRenderer.Target> targets(Vec3 camera, boolean withLabels) {
 		List<EspRenderer.Target> targets = new ArrayList<>(found.size());
 		for (Found f : found) {
-			String label = withLabels ? f.name() + String.format(Locale.ROOT, "  %.0fm", Vec3.atCenterOf(f.pos()).distanceTo(camera)) : null;
+			EspRenderer.Label label = withLabels
+					? EspRenderer.Label.of(f.name(), String.format(Locale.ROOT, "%.0fm", Vec3.atCenterOf(f.pos()).distanceTo(camera))) : null;
 			targets.add(new EspRenderer.Target(f.box(), colorOf(f.group()), label));
 		}
 
@@ -273,14 +274,14 @@ public final class StorageEspModule extends Module implements ClientHooks.WorldR
 
 	@Override
 	public void renderWorld(RenderingUtilities render) {
-		EspRenderer.drawBoxes(render, targets(render.camera(), false), new EspRenderer.Style(outline.get(), fill.get(), throughWalls.get(), 1.5f));
+		EspRenderer.drawBoxes(render, targets(render.camera(), false), EspRenderer.Style.simple(outline.get(), fill.get(), throughWalls.get(), 1.5f));
 	}
 
 	@Override
 	public void renderOverlay(UiContext ui, int screenWidth, int screenHeight, float partialTick) {
 		if (labels.get()) {
 			Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().position();
-			EspRenderer.drawLabels(ui, targets(camera, true), screenWidth, screenHeight, 24);
+			EspRenderer.drawLabels(ui, targets(camera, true), screenWidth, screenHeight, 24, EspRenderer.LabelStyle.DEFAULT);
 		}
 	}
 }

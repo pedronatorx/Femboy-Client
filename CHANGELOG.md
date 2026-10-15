@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.4.0 - 2026-10-14
+
+### Added
+- **Combat page with Auto Attribute Swap.**
+  - Switches to an axe, mace, spear, sword, trident or custom items for a single hit, then switches back in the same tick.
+  - Each rule has its own card: item icon, on/off switch, cooldown, target filter, item-specific conditions and a reset button.
+  - Status of the last swap in the panel and on the HUD.
+- **Trackers (Visuals).** Screen-edge arrows and on-screen markers for players, mobs, waypoints and Player Finder's last-seen positions. Labels show the source and age.
+- **Fullbright (Visuals).** Adjustable intensity; your video settings are never changed.
+- **Developer page with Java Runner.**
+  - Code editor with syntax highlighting.
+  - Each run happens in a separate Java process with time, memory and output limits.
+  - Stop, Clear, Copy and examples.
+  - A read-only snapshot of the client through `Femboy.*`.
+  - Confirmation before running code that changes files, starts programs or uses the network.
+- **Settings framework:** key settings, text settings, section headings, and settings shown only in a module's own panel.
+- **Icons:** combat, code, arrow, sun and target.
+
+### Changed
+- **Entity ESP overhaul.**
+  - Smaller labels without the underline; name, distance and health each with their own switch and size.
+  - Optional health bar and/or number, per category.
+  - Outline thickness, opacity and per-category switches.
+  - Tracer lines, a color override for chosen types, an update interval, and settings grouped into sections.
+- **Storage ESP** and waypoint labels use the new label style.
+- **Free Camera (now on Visuals).**
+  - Its own rotation, so the mouse no longer turns your player.
+  - Configurable up, down and boost keys; boost multiplier, smoothing and "fly where you look".
+  - A HUD warning beyond the loaded chunks, and "Stay inside loaded chunks".
+  - Occlusion culling is off while detached and restored afterwards.
+- **Player Alert** stays on Player; Free Camera moved from Player to Visuals.
+
+### Fixed
+- **`ClientLevel.hasChunk` always returns true on the client.**
+  - Free Camera's edge detection and the Geode Analyzer's budding-face check relied on it.
+  - Both now ask the chunk cache, so faces next to unloaded chunks are reported as unavailable instead of open.
+- **Test fixes:**
+  - The geode test turns off natural random ticks; growth during the check could make its census stale.
+  - The multiplayer test computes block centres correctly at negative coordinates.
+
 ## 0.3.0 - 2026-10-14
 
 ### Removed
