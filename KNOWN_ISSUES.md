@@ -53,6 +53,13 @@
   - Bow, trident and thrown items inherit your movement on the server from its own record of your motion, which can differ slightly from the client's.
 - **Automatic profile switching** saves and loads profile files on the game thread. A switch takes a few milliseconds; scrolling quickly through many weapons switches several times.
 - **Presets** describe starting setups, not a best way to play. They depend only on modules that exist; nothing in them claims to do automation.
+- **Test environments.** The private-address check is a guard against using automation on public servers, not a security boundary: a local proxy that forwards to a public server would also count as local.
+- **KillAura / Trigger Bot / Aim Assist** turn your real view; they target one entity at a time. There is no multi-target or switch mode.
+- **Reach** beyond what the server accepts (+3 entity, +1 block on vanilla) makes the server ignore the attack or click.
+- **Velocity** changes knockback that arrives while you are taking damage, plus explosions. Knockback from other sources (wind charges, riptide) stays normal unless "Only knockback from damage" is off.
+- **Flight** cannot avoid a dedicated server's flying kick (`allow-flight=false`) and does not prevent fall damage after descending.
+- **Auto StunSlam** needs an axe and a mace in the hotbar; it starts when you fall at least the minimum distance onto a target with a raised shield within normal reach.
+- **AutoTotem** only works with no container open (the inventory screen is fine).
 - **Entity ESP.** The color override uses one color for all chosen types; there are no per-type outline widths.
 - **Fullbright** raises the lightmap brightness. The darkness effect and blindness still darken the view.
 - **What the research results cover.** The figures quoted in the Geode Analyzer hold only for the tested setup:
@@ -68,6 +75,7 @@
   - Realms and account-property requests failing without a real login;
   - an anisotropic-filtering option warning.
 - A visible-window run (`--visible`) on the NVIDIA GPU was not performed.
+- Automation was tested in singleplayer (and the localhost test server counts as a test environment); a server on a real LAN or VPN address was not tried. Flight was not tried on a dedicated server.
 - Not tested in game in 0.5.0: Elytra Info in flight, the spear charge windows and Lunge (no spear test), bow and crossbow paths (only a thrown snowball was compared with a real throw), anchor explosions, armored or enchanted targets in damage estimates, the lock key pressed on a real keyboard (the test calls the same method).
 - The second player in the multiplayer test is a Fabric fake player added on the server, not a second real client. The server sends it to the client like any player, but movement over time and real network latency were not tested.
 - The test harness sends key events without modifier flags, so the code editor also checks the keyboard state for Ctrl. Real keyboard shortcuts were not exercised in a visible window.

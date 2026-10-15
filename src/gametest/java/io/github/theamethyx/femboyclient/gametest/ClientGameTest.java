@@ -62,7 +62,7 @@ public class ClientGameTest implements FabricClientGameTest {
 	static final BlockPos PLAYER = new BlockPos(0, -60, 0);
 	/** Center of the geode fixture's stone cube; the cube spans chunks x -1..1, z 0..2. */
 	static final BlockPos GEODE_CENTER = new BlockPos(0, -41, 30);
-	static final List<String> NAVIGATION = List.of("Home", "Combat", "Movement", "Visuals", "Inventory", "Trackers", "World", "HUD", "Developer", "Profiles",
+	static final List<String> NAVIGATION = List.of("Home", "Combat", "Automation", "Movement", "Visuals", "Inventory", "Trackers", "World", "HUD", "Developer", "Profiles",
 			"Settings");
 
 	@Override
@@ -72,7 +72,7 @@ public class ClientGameTest implements FabricClientGameTest {
 
 		report.check("Femboy Client entrypoint ran", context.computeOnClient(client -> FemboyClient.get() != null && FemboyClient.get().modules() != null));
 		int moduleCount = context.computeOnClient(client -> FemboyClient.get().modules().all().size());
-		report.check("All 26 modules registered", moduleCount == 26, String.valueOf(moduleCount));
+		report.check("All 34 modules registered", moduleCount == 34, String.valueOf(moduleCount));
 		FoundationTest.firstLaunch(context, report);
 		// Deterministic screenshots: no easing between frames.
 		context.runOnClient(client -> FemboyClient.get().options().animations.set(false));
@@ -103,6 +103,7 @@ public class ClientGameTest implements FabricClientGameTest {
 			InfoModulesTest.inventory(context, singleplayer, report);
 			InfoModulesTest.visuals(context, singleplayer, report);
 			InfoModulesTest.explosions(context, singleplayer, report);
+			AutomationTest.run(context, singleplayer, report);
 			AdvancedFeaturesTest.pages(context, ui, report);
 			AdvancedFeaturesTest.espOverhaul(context, singleplayer, report);
 			AdvancedFeaturesTest.trackers(context, singleplayer, report);

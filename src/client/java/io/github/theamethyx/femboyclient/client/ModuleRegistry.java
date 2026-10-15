@@ -1,6 +1,9 @@
 package io.github.theamethyx.femboyclient.client;
 
+import io.github.theamethyx.femboyclient.client.modules.AimAssistModule;
 import io.github.theamethyx.femboyclient.client.modules.AutoAttributeSwapModule;
+import io.github.theamethyx.femboyclient.client.modules.AutoStunSlamModule;
+import io.github.theamethyx.femboyclient.client.modules.AutoTotemModule;
 import io.github.theamethyx.femboyclient.client.modules.ChunkBordersModule;
 import io.github.theamethyx.femboyclient.client.modules.CombatInfoModule;
 import io.github.theamethyx.femboyclient.client.modules.CoordinatesHudModule;
@@ -8,6 +11,7 @@ import io.github.theamethyx.femboyclient.client.modules.EffectsModule;
 import io.github.theamethyx.femboyclient.client.modules.ElytraInfoModule;
 import io.github.theamethyx.femboyclient.client.modules.EntityEspModule;
 import io.github.theamethyx.femboyclient.client.modules.ExplosionInfoModule;
+import io.github.theamethyx.femboyclient.client.modules.FlightModule;
 import io.github.theamethyx.femboyclient.client.modules.FreeCameraModule;
 import io.github.theamethyx.femboyclient.client.modules.FullbrightModule;
 import io.github.theamethyx.femboyclient.client.modules.GeodeAnalyzerModule;
@@ -15,15 +19,19 @@ import io.github.theamethyx.femboyclient.client.modules.HealthArmorModule;
 import io.github.theamethyx.femboyclient.client.modules.HitboxesModule;
 import io.github.theamethyx.femboyclient.client.modules.ItemCountersModule;
 import io.github.theamethyx.femboyclient.client.modules.JavaRunnerModule;
+import io.github.theamethyx.femboyclient.client.modules.KillAuraModule;
 import io.github.theamethyx.femboyclient.client.modules.ModuleListHudModule;
 import io.github.theamethyx.femboyclient.client.modules.MovementInfoModule;
 import io.github.theamethyx.femboyclient.client.modules.PerformanceHudModule;
 import io.github.theamethyx.femboyclient.client.modules.PlayerAlertModule;
 import io.github.theamethyx.femboyclient.client.modules.PlayerFinderModule;
+import io.github.theamethyx.femboyclient.client.modules.ReachModule;
 import io.github.theamethyx.femboyclient.client.modules.StorageEspModule;
 import io.github.theamethyx.femboyclient.client.modules.TargetHudModule;
 import io.github.theamethyx.femboyclient.client.modules.TrackersModule;
 import io.github.theamethyx.femboyclient.client.modules.TrajectoriesModule;
+import io.github.theamethyx.femboyclient.client.modules.TriggerBotModule;
+import io.github.theamethyx.femboyclient.client.modules.VelocityModule;
 import io.github.theamethyx.femboyclient.client.modules.WaypointsModule;
 import io.github.theamethyx.femboyclient.client.modules.WeaponInfoModule;
 import io.github.theamethyx.femboyclient.core.module.ModuleManager;
@@ -44,8 +52,18 @@ public final class ModuleRegistry {
 		modules.register(new WeaponInfoModule());
 		modules.register(new ExplosionInfoModule());
 
+		// Automation (test environments only)
+		modules.register(new KillAuraModule());
+		modules.register(new TriggerBotModule());
+		modules.register(new AimAssistModule());
+		modules.register(new ReachModule());
+		modules.register(new VelocityModule());
+		modules.register(new AutoStunSlamModule());
+		modules.register(new AutoTotemModule());
+
 		// Movement
 		modules.register(new FreeCameraModule());
+		modules.register(new FlightModule());
 		modules.register(new MovementInfoModule());
 		modules.register(new ElytraInfoModule());
 

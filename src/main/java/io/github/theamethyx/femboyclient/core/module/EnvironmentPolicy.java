@@ -8,6 +8,14 @@ public interface EnvironmentPolicy {
 	/** Short description such as "Singleplayer" or "Server example.org:25565". */
 	String describe();
 
+	/**
+	 * Whether this is a test environment: singleplayer, or a server reached at a private address (see
+	 * {@link PrivateNetwork}). Modules that automate combat or movement run only here.
+	 */
+	default boolean testEnvironment() {
+		return false;
+	}
+
 	EnvironmentPolicy IN_WORLD = new EnvironmentPolicy() {
 		@Override
 		public boolean inWorld() {
@@ -17,6 +25,11 @@ public interface EnvironmentPolicy {
 		@Override
 		public String describe() {
 			return "Test environment";
+		}
+
+		@Override
+		public boolean testEnvironment() {
+			return true;
 		}
 	};
 }

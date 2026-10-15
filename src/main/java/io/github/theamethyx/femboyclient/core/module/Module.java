@@ -93,6 +93,16 @@ public abstract class Module {
 
 	// ----- availability ----------------------------------------------------------------------
 
+	public static final String TEST_ENVIRONMENT_ONLY = "Only in singleplayer and on servers in your own network (LAN or VPN).";
+
+	/**
+	 * Whether the module automates combat or movement and therefore runs only in a test environment
+	 * (see {@link EnvironmentPolicy#testEnvironment()}). Elsewhere it stays off and says why.
+	 */
+	public boolean testEnvironmentOnly() {
+		return false;
+	}
+
 	/** Whether the module needs a loaded world to do anything useful. */
 	public boolean requiresWorld() {
 		return true;
@@ -101,6 +111,10 @@ public abstract class Module {
 	public Availability availability(EnvironmentPolicy environment) {
 		if (requiresWorld() && !environment.inWorld()) {
 			return Availability.unavailable("Waiting for a world to load.");
+		}
+
+		if (testEnvironmentOnly() && !environment.testEnvironment()) {
+			return Availability.unavailable(TEST_ENVIRONMENT_ONLY);
 		}
 
 		return Availability.AVAILABLE;

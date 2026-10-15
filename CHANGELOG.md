@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.6.0 - 2026-10-15
+
+### Added
+- **Automation page** (singleplayer and servers in your own network only, no prompts):
+  - **KillAura:** target filters, range, field of view, priority, attack-charge or CPS timing with an extra cooldown, visible turning.
+  - **Trigger Bot**, **Aim Assist**.
+  - **Reach** (+3 entity, +1 block; what vanilla servers accept).
+  - **Velocity** (knockback from hits and explosions).
+  - **Auto StunSlam** (axe, then mace smash, then back; delay, cooldown, minimum fall).
+  - **AutoTotem**.
+- **Flight** (Movement): hover-and-move and creative-style.
+- Presets configure the matching automation modules (left off): KillAura and Trigger Bot in Sword/Axe, Auto StunSlam in Mace and Spear + Mace, AutoTotem in Crystal and Anchor.
+
+### Changed
+- Auto Attribute Swap stays out of the way while Auto StunSlam picks the weapons.
+- The session line shows "(your network)" on servers that count as a test environment.
+
 ## 0.5.0 - 2026-10-15
 
 ### Added

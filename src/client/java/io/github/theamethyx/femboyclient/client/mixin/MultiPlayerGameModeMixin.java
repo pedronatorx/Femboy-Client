@@ -24,7 +24,8 @@ public abstract class MultiPlayerGameModeMixin {
 	private static AutoAttributeSwapModule femboyclient$swap() {
 		FemboyClient femboy = FemboyClient.get();
 		AutoAttributeSwapModule module = femboy == null ? null : femboy.modules().get(AutoAttributeSwapModule.class);
-		return module != null && module.isRunning() ? module : null;
+		// Auto StunSlam picks the axe and the mace itself; swapping on top of that would hit with the wrong item.
+		return module != null && module.isRunning() && !io.github.theamethyx.femboyclient.client.modules.AutoStunSlamModule.sequenceActive ? module : null;
 	}
 
 	@Inject(method = "attack", at = @At("HEAD"))

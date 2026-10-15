@@ -10,8 +10,8 @@ import io.github.theamethyx.femboyclient.core.config.ProfileRule;
 
 /**
  * Ready-made starting profiles for common PvP styles. Installing one creates an ordinary profile that can be
- * edited, copied, exported and reset like any other. They only turn on information and visual modules; Auto
- * Attribute Swap is configured where it fits but left off, so you decide when it runs.
+ * edited, copied, exported and reset like any other. They only turn on information and visual modules; automation
+ * (Auto Attribute Swap, KillAura, Trigger Bot, Auto StunSlam, AutoTotem) is configured where it fits but left off.
  */
 public final class Presets {
 	/** A preset: the profile name it installs as, a title and description, the module data, and the item that suits it. */
@@ -29,6 +29,8 @@ public final class Presets {
 						.on("combat_info", "accuracy", true)
 						.on("weapon_info")
 						.on("health_armor", "only_low", true)
+						.off("kill_aura", "range", 3.0, "timing_mode", "CHARGE", "charge", 100.0)
+						.off("trigger_bot", "charge", 100.0)
 						.build(), ProfileRule.Trigger.SWORD));
 		list.add(new Preset("axe_pvp", "Axe PvP", "Shield state of your target, your own shield cooldown, armor and combat statistics. "
 				+ "Auto Attribute Swap is set up for axe-against-shield but off.",
@@ -38,6 +40,7 @@ public final class Presets {
 						.on("combat_info")
 						.on("health_armor")
 						.off("auto_attribute_swap", "axe_enabled", true, "axe_shield_only", true, "mace_enabled", false)
+						.off("kill_aura", "range", 3.0, "charge", 100.0)
 						.build(), ProfileRule.Trigger.AXE));
 		list.add(new Preset("mace_pvp", "Mace PvP", "Fall distance, smash bonus, vertical speed and wind charges, with your target and totem count. "
 				+ "Auto Attribute Swap is set up for the mace but off. Auto StunSlam is not available.",
@@ -47,6 +50,7 @@ public final class Presets {
 						.on("target_hud")
 						.on("item_counters", "items", ids("wind_charge", "totem_of_undying", "golden_apple", "ender_pearl"))
 						.off("auto_attribute_swap", "mace_enabled", true, "mace_min_fall", 1.5, "axe_enabled", false)
+						.off("auto_stunslam", "min_fall", 2.0, "delay", 0.0, "require_shield", true)
 						.build(), ProfileRule.Trigger.MACE));
 		list.add(new Preset("spear_mace_pvp", "Spear + Mace PvP", "Spear charge windows and Lunge status, mace timing and target distance. "
 				+ "Auto Attribute Swap is set up with separate spear and mace cooldowns but off.",
@@ -57,12 +61,14 @@ public final class Presets {
 						.on("item_counters", "items", ids("wind_charge", "totem_of_undying", "golden_apple"))
 						.off("auto_attribute_swap", "spear_enabled", true, "spear_cooldown", 500.0, "mace_enabled", true, "mace_cooldown", 0.0,
 								"axe_enabled", false)
+						.off("auto_stunslam", "min_fall", 2.0)
 						.build(), ProfileRule.Trigger.SPEAR));
 		list.add(new Preset("crystal_pvp", "Crystal PvP", "Crystal placement preview, explosion damage estimates, totems, crystals and armor durability.",
 				new Builder()
 						.on("explosion_info")
 						.on("item_counters", "items", ids("totem_of_undying", "end_crystal", "obsidian", "golden_apple", "enchanted_golden_apple",
 								"experience_bottle"), "refill_items", ids("totem_of_undying", "end_crystal", "obsidian"))
+						.off("auto_totem", "delay", 0.0)
 						.on("health_armor")
 						.on("target_hud")
 						.build(), ProfileRule.Trigger.END_CRYSTAL));
@@ -71,6 +77,7 @@ public final class Presets {
 						.on("explosion_info", "placements", false)
 						.on("item_counters", "items", ids("respawn_anchor", "glowstone", "totem_of_undying", "golden_apple"),
 								"refill_items", ids("respawn_anchor", "glowstone", "totem_of_undying"))
+						.off("auto_totem", "delay", 0.0)
 						.on("health_armor")
 						.on("target_hud")
 						.build(), ProfileRule.Trigger.RESPAWN_ANCHOR));

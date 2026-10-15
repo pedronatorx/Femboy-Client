@@ -2,9 +2,9 @@
 
 A client-side Fabric mod for **Minecraft Java Edition 1.21.11**: a clean ClickGUI with combat information, movement, visual, inventory, tracking and HUD modules, profiles with automatic switching, and ten ready-made PvP presets.
 
-Every module works everywhere: in singleplayer and on any server. Everything is **off on first start**; nothing runs until you turn it on or install a preset. Femboy Client contains nothing that hides it from anti-cheat systems, and some servers' rules forbid clients like this, so check before you use it there.
+Everything is **off on first start**; nothing runs until you turn it on or install a preset. Information, visual and HUD modules work on every server. The **Automation** modules and Flight work only in a **test environment**: singleplayer, or a server you reach at a private address (your own PC, your LAN, or a VPN such as Tailscale or ZeroTier). There are no prompts or allowlists; elsewhere they simply stay off and say why. Femboy Client contains nothing that hides it from anti-cheat systems, and some servers' rules forbid clients like this, so check before you use it there.
 
-![Home page](docs/screenshots/0011_gui-1280x720-0-home.png)
+![Home page](docs/screenshots/0012_gui-1280x720-0-home.png)
 
 ## Versions
 
@@ -21,7 +21,7 @@ Every module works everywhere: in singleplayer and on any server. Everything is 
 ## Installation (normal Minecraft launcher)
 
 1. Install Fabric Loader 0.19.5 for Minecraft 1.21.11.
-2. Put `femboy-client-0.5.0.jar` (from `build/libs/`) and Fabric API 0.141.6+1.21.11 into the profile's `mods` folder.
+2. Put `femboy-client-0.6.0.jar` (from `build/libs/`) and Fabric API 0.141.6+1.21.11 into the profile's `mods` folder.
 3. Start the game and press **Right Shift** to open the menu. You can rebind it under Options → Controls → Key Binds → Femboy Client.
 
 Settings live in `config/femboyclient/`:
@@ -43,7 +43,7 @@ export JAVA_HOME=$HOME/.local/share/jdks/jdk-25.0.4.1+1   # any JDK 25+
 
 | Task | Command |
 |---|---|
-| Build the mod jar (also runs the unit tests) | `./gradlew build` → `build/libs/femboy-client-0.5.0.jar` |
+| Build the mod jar (also runs the unit tests) | `./gradlew build` → `build/libs/femboy-client-0.6.0.jar` |
 | Unit tests only | `./gradlew test` |
 | Server GameTests, headless (includes the research experiment) | `./gradlew runGameTest` |
 | In-game client tests, headless (needs `xvfb-run`), with screenshots | `./scripts/run-client-tests.sh` |
@@ -53,13 +53,14 @@ export JAVA_HOME=$HOME/.local/share/jdks/jdk-25.0.4.1+1   # any JDK 25+
 
 ## Using the menu
 
-The sidebar has eleven sections. Every module has an on/off switch, a key (click it and press a key; Backspace clears it) that either **toggles** the module or keeps it on only while **held**, settings grouped into sections with tooltips and per-setting reset, and a module reset.
+The sidebar has twelve sections. Every module has an on/off switch, a key (click it and press a key; Backspace clears it) that either **toggles** the module or keeps it on only while **held**, settings grouped into sections with tooltips and per-setting reset, and a module reset.
 
 | Section | Contents |
 |---|---|
 | **Home** | Search across all modules with a category filter (click a module to open it), session status, module health, frame rate |
 | **Combat** | Auto Attribute Swap, Combat Info, Target HUD, Weapon Info, Crystal & Anchor Info |
-| **Movement** | Free Camera, Movement Info, Elytra Info |
+| **Automation** | KillAura, Trigger Bot, Aim Assist, Reach, Velocity, Auto StunSlam, AutoTotem (test environments only) |
+| **Movement** | Free Camera, Flight (test environments only), Movement Info, Elytra Info |
 | **Visuals** | Entity ESP, Storage ESP, Hitboxes, Trajectories, Fullbright, Chunk Borders |
 | **Inventory** | Item Counters, Health & Armor, Effects |
 | **Trackers** | Player Finder, Trackers, Player Alert, Waypoints |
@@ -78,6 +79,14 @@ The sidebar has eleven sections. Every module has an on/off switch, a key (click
 | **Target HUD** | A card with your target's name, health and absorption, armor points, distance, armor and held items, and whether its shield is raised. The target is what you look at, the entity you hit last, or one you lock with the lock key. |
 | **Weapon Info** | Depends on what you hold. **Axe:** target shield state, your own shield cooldown. **Mace:** fall distance, smash ready, base smash bonus (same formula as the server), vertical speed, wind charges. **Spear:** Lunge level and why it can't trigger (riding, gliding, in water); while charging, the damage, knockback and dismount windows with the speed you have and need. **Bow/crossbow/trident:** draw, load and charge progress, Riptide conditions, ammunition. |
 | **Crystal & Anchor Info** | Highlights obsidian and bedrock within reach where an end crystal can be placed; estimates the explosion damage to you and your target from the crystal, spot or anchor under your crosshair (vanilla formula with exposure, difficulty, armor, Resistance and Protection/Blast Protection); anchor charges and whether it explodes here. |
+| **KillAura** | Attacks the best target in range: target filters (players, hostile, passive, teammates, invisible, creative), range, field of view, walls, priority; timing by attack charge or CPS range plus an extra cooldown; turns your view to the target with adjustable speed. |
+| **Trigger Bot** | Attacks when your crosshair is on a matching target, with the same filters and timing. |
+| **Aim Assist** | Turns your view toward the target nearest your crosshair at an adjustable speed; optionally only while holding attack. Never attacks. |
+| **Reach** | Longer attack (+0–3 blocks) and block reach (+0–1). Vanilla servers accept up to +3 and +1; more is rejected by the server. |
+| **Velocity** | Keep 0–100% of horizontal and vertical knockback from hits and explosions. |
+| **Auto StunSlam** | While falling onto a target with a raised shield: axe hit (disables the shield), mace smash, back to your slot. Minimum fall, delay between hits (0 = same tick), cooldown. |
+| **AutoTotem** | Keeps a totem in your offhand, with a delay, a health threshold and whether to replace other offhand items. |
+| **Flight** | Hover-and-move or creative-style flying. Dedicated servers kick flying players unless `allow-flight=true`. |
 | **Free Camera** | Fly the camera with its own rotation while your player stays put. Works on servers. See below. |
 | **Movement Info** | Speed, vertical speed, fall distance and a landing prediction with the fall damage vanilla would deal (landing block included: water, slime, hay, beds...), red when it would kill you. |
 | **Elytra Info** | Speed, height, pitch, elytra durability, rockets, and a warning when your current direction hits a block within a set time. |
@@ -109,16 +118,20 @@ A **profile** stores which modules are on, every setting and every key. Changes 
 - **Create** a profile on the Profiles page: type a name and press Create (it starts as a copy of the current one). **Use** switches to it; the current profile is saved first, and modules that are off in the new profile are turned off.
 - **Copy** duplicates a profile, **Export** copies it to the clipboard and saves it under `config/femboyclient/exports/`, **Import** creates a profile from text on the clipboard. Every imported value is checked; unknown modules and invalid values are dropped and replaced by defaults, and you are told which.
 - **Reset the current profile** turns every module off and restores defaults (two clicks).
-- **Presets:** Sword PvP, Axe PvP, Mace PvP, Spear + Mace PvP, Crystal PvP, Anchor PvP, Pot PvP, UHC / Survival, Elytra PvP and Bow / Crossbow. **Install** creates a normal profile from the preset; edit it like any other. **Reset** puts the preset's settings back. Presets turn on information and visual modules only; where Auto Attribute Swap fits (axe, mace, spear + mace) it is configured but left off.
+- **Presets:** Sword PvP, Axe PvP, Mace PvP, Spear + Mace PvP, Crystal PvP, Anchor PvP, Pot PvP, UHC / Survival, Elytra PvP and Bow / Crossbow. **Install** creates a normal profile from the preset; edit it like any other. **Reset** puts the preset's settings back. Presets turn on information and visual modules only. Automation that fits a style is configured but left off: Auto Attribute Swap (axe, mace, spear + mace), KillAura and Trigger Bot (sword, axe), Auto StunSlam (mace, spear + mace), AutoTotem (crystal, anchor).
 - **Automatic switching:** add rules such as "Mace, any dimension → mace_pvp" (or press **Add rule** next to a preset), then turn on *Switch profiles automatically*. Rules are checked from the top; the first match wins (held item or gliding, optionally a dimension). If nothing matches, the profile stays. A profile you pick by hand stays until your held item changes to something another rule matches. A weapon Auto Attribute Swap holds for a single hit never changes the profile.
 
 ## Emergency off
 
 **Settings → Turn all modules off**, or a key you bind under Options → Controls → Key Binds → Femboy Client ("Turn all modules off (emergency)", unbound by default). Every module is turned off and restores what it changed (Free Camera returns the view, Fullbright the lighting, Auto Attribute Swap the held item), and automatic profile switching is paused.
 
-## Not included
+## Test environments
 
-These spec items are **not built**, and the GUI does not pretend they exist: KillAura, Trigger Bot, automatic aiming, AutoCrystal, AutoAnchor, Auto StunSlam, Auto Lunge Swap, AutoTotem, Auto Armor, Auto Pot, Flight and an Aim Trainer. The first ones fight for you against real players on servers that forbid it, so they are left out on purpose. The others were not built in this round. The presets give the information side of those styles (timing, estimates, counters, reminders) instead.
+Automation modules (KillAura, Trigger Bot, Aim Assist, Reach, Velocity, Auto StunSlam, AutoTotem) and Flight run only in singleplayer or on a server whose address is private: loopback (`127.x`, `::1`), LAN (`10.x`, `172.16–31.x`, `192.168.x`), link-local, the `100.64–127.x` range used by Tailscale and similar VPNs, and IPv6 unique local addresses. The check uses the address actually connected to, not the name in your server list. To use them on remote test servers, put those servers on a VPN with you. On any other server they show "Only in singleplayer and on servers in your own network (LAN or VPN)" and stay off; you never get a prompt.
+
+Nothing here hides anything from anti-cheat or server checks (no fake rotations, no packet tricks, no anti-kick).
+
+**Not built yet:** AutoCrystal, AutoAnchor, Auto Pot, Auto Armor, Auto Lunge Swap and an Aim Trainer.
 
 ### Geode Analyzer
 

@@ -31,6 +31,7 @@ public enum Icon {
 			case "combat" -> COMBAT;
 			case "developer" -> CODE;
 			case "movement" -> ARROW;
+			case "automation" -> LOCK;
 			case "inventory" -> STORAGE;
 			case "trackers" -> TARGET;
 			default -> INFO;

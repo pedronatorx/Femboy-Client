@@ -87,12 +87,20 @@ final class MultiplayerTest {
 			server.runCommand("tp @a " + center(base.above()) + " -90 20");
 			context.waitTicks(20);
 
+			testEnvironment(context, report);
 			secondPlayer(context, server, base, report);
 			attributeSwap(context, server, base, report);
 			freeCamera(context, server, base, report);
 
 			context.runOnClient(client -> MODULES.forEach(type -> femboy().modules().setEnabled(femboy().modules().get(type), false)));
 		}
+	}
+
+	/** The local test server at localhost counts as a test environment. */
+	static void testEnvironment(ClientGameTestContext context, TestReport report) {
+		String describe = context.computeOnClient(client -> femboy().modules().environment().describe());
+		boolean test = context.computeOnClient(client -> femboy().modules().environment().testEnvironment());
+		report.check("A dedicated server at localhost counts as a test environment (private address)", test, describe);
 	}
 
 	private static void secondPlayer(ClientGameTestContext context, TestDedicatedServerContext server, BlockPos base, TestReport report) {

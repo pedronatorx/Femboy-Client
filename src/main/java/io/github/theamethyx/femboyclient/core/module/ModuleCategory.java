@@ -3,6 +3,7 @@ package io.github.theamethyx.femboyclient.core.module;
 /** The sidebar sections of the ClickGUI, in display order. Each section lists its modules. */
 public enum ModuleCategory {
 	COMBAT("Combat", "combat", "Combat information: target, weapon timing, clicks, combo and explosions, plus Auto Attribute Swap."),
+	AUTOMATION("Automation", "automation", "Combat automation for singleplayer and servers in your own network: KillAura, Trigger Bot, Aim Assist, Reach, Velocity, Auto StunSlam, AutoTotem."),
 	MOVEMENT("Movement", "movement", "Free camera, speed, falls and elytra flight."),
 	VISUALS("Visuals", "visual", "Highlights, hitboxes, projectile paths, brightness and chunk borders."),
 	INVENTORY("Inventory", "inventory", "Item counters, refill reminders, equipment durability, health and effects."),

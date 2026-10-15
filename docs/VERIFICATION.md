@@ -1,4 +1,4 @@
-# Verification report: Femboy Client 0.5.0
+# Verification report: Femboy Client 0.6.0
 
 Date: 2026-10-15. Sections up to "Servers and stability" were written for 0.4.0 and still pass; 0.5.0 additions are in the sections after it.
 
@@ -201,6 +201,20 @@ Where possible, each module was checked against what the game really did in the 
 | Switching preset profiles does not leak modules | Verified in the running Minecraft client | sword → crystal → elytra → sword: exactly each preset's modules are on |
 | Reset to preset | Verified in the running Minecraft client | A changed setting and an extra module are restored and turned off |
 | Presets section of the Profiles page | Verified in the running Minecraft client | Screenshot `gui-1280x720-9-profiles` |
+
+## Automation (0.6.0)
+
+| Feature | Status | Evidence |
+|---|---|---|
+| Private-address check and test-environment gating | Automated tests passed and verified in the running Minecraft client | `PrivateNetworkTest` (loopback, LAN, link-local, 100.64/10, IPv6 ULA vs public addresses; module enabled but not running outside, starts and stops with the environment); singleplayer and the localhost dedicated server count as test environments |
+| KillAura | Verified in the running Minecraft client | Facing away from a husk: turned to 0.0° and hit it once at full charge (server health 20 → 14.1) |
+| Trigger Bot | Verified in the running Minecraft client | Husk under the crosshair hit once (20 → 14.1) |
+| Aim Assist | Verified in the running Minecraft client | 34.2° → 3.0° in 30 ticks, crosshair on the husk, no damage dealt |
+| Reach | Verified in the running Minecraft client | Husk 4.5 blocks away: not reachable before; with +2 range 5.0, a real click hurt it; range back to 3.0 when off |
+| Velocity | Verified in the running Minecraft client | `/damage ... by` a husk pushed you 1.69 blocks without it, 0.00 with 0% |
+| Flight | Verified in the running Minecraft client | Survival: hovered (no height change in 20 ticks), +4.5 blocks with jump, server position agreed, fell when off, no flying ability left |
+| AutoTotem | Verified in the running Minecraft client | Totem moved from inventory slot to offhand on client and server |
+| Auto StunSlam | Verified in the running Minecraft client | Falling 4.8 blocks onto a player holding up a shield: shield disabled, damage through it (20 → 13.2 with Resistance II), back to the mace slot on client and server |
 
 ## Not verified
 
