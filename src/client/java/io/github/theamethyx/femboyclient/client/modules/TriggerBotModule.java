@@ -25,7 +25,7 @@ public final class TriggerBotModule extends Module {
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return true;
+		return false;
 	}
 
 	public int attacks() {
