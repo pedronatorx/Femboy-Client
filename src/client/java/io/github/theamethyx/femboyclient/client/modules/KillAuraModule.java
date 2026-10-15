@@ -57,7 +57,7 @@ public final class KillAuraModule extends Module implements ClientHooks.HudBlock
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return true;
+		return false;
 	}
 
 	public LivingEntity target() {
