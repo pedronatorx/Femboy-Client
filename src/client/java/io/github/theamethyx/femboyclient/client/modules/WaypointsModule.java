@@ -60,7 +60,7 @@ public final class WaypointsModule extends Module implements ClientHooks.WorldRe
 
 	public WaypointsModule() {
 		super("waypoints", "Waypoints", "Save positions and see them as markers with names and distances.",
-				ModuleCategory.WORLD, false, NO_KEY);
+				ModuleCategory.TRACKERS, false, NO_KEY);
 	}
 
 	private boolean labelsOn() {

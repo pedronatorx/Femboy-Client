@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.5.0 - 2026-10-15
+
+### Added
+- **Profiles page.** Use, copy, export (clipboard and `exports/`), import from the clipboard with every value checked, delete, and reset the current profile.
+- **Ten presets:** Sword, Axe, Mace, Spear + Mace, Crystal, Anchor, Pot, UHC / Survival, Elytra and Bow / Crossbow. Each installs as a normal profile and can be reset to the preset. Presets turn on information modules only; Auto Attribute Swap is configured but off where it fits.
+- **Automatic profile switching** by held item (sword, axe, mace, spear, trident, bow, crossbow, crystal, anchor, potion, totem, golden apple, rocket, empty hand) or gliding, optionally per dimension. Off by default; never triggered by Auto Attribute Swap's single-hit swap.
+- **Emergency off:** a button in Settings and an optional key (unbound by default) that turn every module off and pause automatic switching.
+- **Hold-mode keys:** each module's key can toggle it or keep it on only while held.
+- **Combat Info:** clicks per second, combo, reach, accuracy.
+- **Target HUD:** target card with health, absorption, armor, distance, equipment, shield state; lock key for manual target selection.
+- **Weapon Info:** attack charge; axe/shield state; mace fall, smash bonus, vertical speed, wind charges; spear Lunge status and charge windows; bow, crossbow and trident progress and ammunition.
+- **Crystal & Anchor Info:** crystal placement preview and explosion damage estimates for you and your target; anchor charges and explosion warning.
+- **Movement Info:** speed, vertical speed, fall distance, landing and fall damage prediction with a fatal-fall warning.
+- **Elytra Info:** speed, height, pitch, durability, rockets, obstacle warning.
+- **Hitboxes** and **Trajectories** (Visuals).
+- **Item Counters** with refill reminders, **Health & Armor** with durability alerts, **Effects** (Inventory).
+
+### Changed
+- **Everything is off on first start**, including the HUD panels that were on before. Existing profiles keep their saved state.
+- **Sidebar:** Home, Combat, Movement, Visuals, Inventory, Trackers, World, HUD, Developer, Profiles, Settings. Free Camera moved to Movement; Trackers, Player Finder, Player Alert and Waypoints to Trackers. The Player section is gone.
+- **Settings page:** profiles moved to the Profiles page; the emergency button is here.
+- **HUD:** the top-right corner starts below vanilla's effect icons.
+
+### Not included
+- KillAura, Trigger Bot, automatic aiming, AutoCrystal, AutoAnchor, Auto StunSlam, Auto Lunge Swap, AutoTotem, Auto Armor, Auto Pot, Flight and Aim Trainer were not built (see README, "Not included").
+
 ## 0.4.0 - 2026-10-14
 
 ### Added

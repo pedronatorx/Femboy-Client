@@ -19,6 +19,7 @@ import io.github.theamethyx.femboyclient.client.gui.widget.ScrollList;
 import io.github.theamethyx.femboyclient.client.gui.widget.SettingRow;
 import io.github.theamethyx.femboyclient.client.gui.widget.TextField;
 import io.github.theamethyx.femboyclient.client.gui.widget.Widget;
+import io.github.theamethyx.femboyclient.client.profile.Presets;
 import io.github.theamethyx.femboyclient.core.config.ConfigurationManager;
 import io.github.theamethyx.femboyclient.core.config.ProfileRule;
 
@@ -119,6 +120,13 @@ public class ProfilesPage extends Page {
 			return true;
 		}));
 		rows.add(new ResetRow());
+
+		rows.add(new ConfigPage.SectionTitle("Ready-made presets", "Starting points for common PvP styles. Installing one creates a "
+				+ "normal profile you can change, copy and export; Reset puts the preset's settings back. Presets only turn on "
+				+ "information and visual modules."));
+		for (Presets.Preset preset : Presets.all()) {
+			rows.add(new PresetRow(preset));
+		}
 
 		rows.add(new ConfigPage.SectionTitle("Automatic switching", "Rules are checked from the top; the first one that matches "
 				+ "chooses the profile. When none matches, the current profile stays."));
@@ -339,6 +347,84 @@ public class ProfilesPage extends Page {
 		@Override
 		protected void onLayout() {
 			reset.setBounds(x, y, width, 16);
+		}
+	}
+
+	private final class PresetRow extends Container {
+		private final Presets.Preset preset;
+		private final Button install;
+		private final Button use;
+		private final Button rule;
+
+		PresetRow(Presets.Preset preset) {
+			this.preset = preset;
+			install = add(new Button(() -> !exists() ? "Install" : confirming("preset:" + preset.profile()) ? "Confirm" : "Reset",
+					Button.Style.SECONDARY, this::install));
+			install.tooltip(() -> exists() ? "Put this preset's original settings back into '" + preset.profile() + "'. Click twice to confirm."
+					: "Create the profile '" + preset.profile() + "' from this preset (without switching to it).");
+			use = add(new Button("Use", Button.Style.PRIMARY, () -> {
+				String problem = femboy.config().switchProfile(preset.profile());
+				report(problem == null ? "Switched to '" + preset.profile() + "'." : problem, problem == null);
+				rebuild();
+			}));
+			use.enabledWhen(() -> exists() && !preset.profile().equals(femboy.config().activeProfile()));
+			use.tooltip("Switch to this profile.");
+			rule = add(new Button(() -> hasRule() ? "Rule added" : "Add rule", Button.Style.GHOST, () -> {
+				List<ProfileRule> rules = new ArrayList<>(femboy.config().profileRules());
+				rules.add(new ProfileRule(preset.trigger(), ProfileRule.Dimension.ANY, preset.profile()));
+				setRules(rules);
+				report("Added a rule: " + preset.trigger().label() + " switches to '" + preset.profile()
+						+ "'. Turn on 'Switch profiles automatically' below to use it.", true);
+			}));
+			rule.enabledWhen(() -> exists() && !hasRule());
+			rule.tooltip("Add an automatic switching rule: " + preset.trigger().label() + " uses this profile.");
+		}
+
+		private boolean exists() {
+			return femboy.config().profileExists(preset.profile());
+		}
+
+		private boolean hasRule() {
+			return femboy.config().profileRules().stream().anyMatch(r -> r.profile().equals(preset.profile()) && r.item() == preset.trigger());
+		}
+
+		private void install() {
+			String problem;
+			if (!exists()) {
+				problem = femboy.config().createProfileFrom(preset.profile(), preset.modules());
+				report(problem == null ? "Installed '" + preset.title() + "' as profile '" + preset.profile() + "'." : problem, problem == null);
+			} else if (confirm("preset:" + preset.profile())) {
+				problem = femboy.config().overwriteProfile(preset.profile(), preset.modules());
+				report(problem == null ? "Reset '" + preset.profile() + "' to the " + preset.title() + " preset." : problem, problem == null);
+			} else {
+				return;
+			}
+
+			rebuild();
+		}
+
+		@Override
+		public int preferredHeight(UiContext ui, int width) {
+			return 24 + ui.wrappedHeight(preset.description(), width - 12);
+		}
+
+		@Override
+		protected void onLayout() {
+			int right = x + width - 4;
+			rule.setBounds(right - 58, y + 4, 58, 14);
+			use.setBounds(right - 58 - Theme.GAP - 30, y + 4, 30, 14);
+			install.setBounds(right - 58 - 2 * Theme.GAP - 30 - 46, y + 4, 46, 14);
+		}
+
+		@Override
+		public void render(UiContext ui) {
+			onLayout();
+			boolean active = preset.profile().equals(femboy.config().activeProfile());
+			ui.roundRect(x, y, width, height, active ? Theme.SURFACE_ACTIVE : Theme.SURFACE);
+			ui.icon(Icon.STAR, x + 6, y + 7, 8, exists() ? Theme.ACCENT : Theme.TEXT_MUTED);
+			ui.textClipped(preset.title(), x + 18, y + 7, install.x() - x - 24, Theme.TEXT);
+			ui.wrapped(preset.description(), x + 6, y + 20, width - 12, Theme.TEXT_MUTED);
+			super.render(ui);
 		}
 	}
 

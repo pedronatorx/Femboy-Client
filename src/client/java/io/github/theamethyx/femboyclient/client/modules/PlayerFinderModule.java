@@ -83,7 +83,7 @@ public final class PlayerFinderModule extends Module implements ClientHooks.HudB
 
 	public PlayerFinderModule() {
 		super("player_finder", "Player Finder", "Online player list with search and sorting, plus navigation to players in range and to your waypoints.",
-				ModuleCategory.PLAYER, false, NO_KEY);
+				ModuleCategory.TRACKERS, false, NO_KEY);
 		// Edited with the dropdown above the player list; one control is enough.
 		sort.visibleWhen(() -> false);
 		includeSelf.onChange(value -> cachedAt = 0);

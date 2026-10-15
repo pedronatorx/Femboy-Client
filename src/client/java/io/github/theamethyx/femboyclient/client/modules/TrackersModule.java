@@ -93,7 +93,7 @@ public final class TrackersModule extends Module implements ClientHooks.ScreenOv
 
 	public TrackersModule() {
 		super("trackers", "Trackers", "Arrows at the screen edge pointing at players, mobs, waypoints and last-seen positions.",
-				ModuleCategory.VISUALS, false, NO_KEY);
+				ModuleCategory.TRACKERS, false, NO_KEY);
 		showDistance.visibleWhen(labels::get);
 		labelScale.visibleWhen(labels::get);
 	}

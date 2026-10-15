@@ -13,6 +13,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.fabricmc.loader.api.FabricLoader;
 
+import io.github.theamethyx.femboyclient.client.combat.CombatTracker;
 import io.github.theamethyx.femboyclient.client.gui.ClientScreen;
 import io.github.theamethyx.femboyclient.client.hud.HudManager;
 import io.github.theamethyx.femboyclient.client.profile.AutoProfileSwitcher;
@@ -38,6 +39,7 @@ public final class FemboyClient implements ClientModInitializer {
 	private GlobalOptions options;
 	private WorldRenderDispatcher worldRender;
 	private final AutoProfileSwitcher profileSwitcher = new AutoProfileSwitcher();
+	private final CombatTracker combat = new CombatTracker();
 
 	public static FemboyClient get() {
 		return instance;
@@ -95,6 +97,7 @@ public final class FemboyClient implements ClientModInitializer {
 
 		keybinds.releaseUnheld(key -> com.mojang.blaze3d.platform.InputConstants.isKeyDown(client.getWindow(), key));
 		profileSwitcher.tick(client, this);
+		combat.tick(client, comboTimeoutMillis());
 		modules.tick();
 		config.tick();
 	}
@@ -140,6 +143,16 @@ public final class FemboyClient implements ClientModInitializer {
 	/** Called by the keyboard mixin for every key release, also while a screen is open. */
 	public void onKeyReleased(int key) {
 		keybinds.onKeyReleased(key);
+	}
+
+	/** Combo timeout from Combat Info's setting (3 s when that module is not configured). */
+	private long comboTimeoutMillis() {
+		var info = modules.get(io.github.theamethyx.femboyclient.client.modules.CombatInfoModule.class);
+		return info == null ? 3000 : info.comboTimeoutMillis();
+	}
+
+	public CombatTracker combat() {
+		return combat;
 	}
 
 	public AutoProfileSwitcher profileSwitcher() {

@@ -1,10 +1,10 @@
 # Femboy Client
 
-A client-side Fabric mod for **Minecraft Java Edition 1.21.11**: a clean ClickGUI with configurable visual, world, player and HUD modules.
+A client-side Fabric mod for **Minecraft Java Edition 1.21.11**: a clean ClickGUI with combat information, movement, visual, inventory, tracking and HUD modules, profiles with automatic switching, and ten ready-made PvP presets.
 
-Every module works everywhere: in singleplayer and on any server. Femboy Client contains nothing that hides it from anti-cheat systems, and some servers' rules forbid clients like this, so check before you use it there.
+Every module works everywhere: in singleplayer and on any server. Everything is **off on first start**; nothing runs until you turn it on or install a preset. Femboy Client contains nothing that hides it from anti-cheat systems, and some servers' rules forbid clients like this, so check before you use it there.
 
-![Home page](docs/screenshots/0006_gui-1280x720-0-home.png)
+![Home page](docs/screenshots/0011_gui-1280x720-0-home.png)
 
 ## Versions
 
@@ -21,12 +21,13 @@ Every module works everywhere: in singleplayer and on any server. Femboy Client 
 ## Installation (normal Minecraft launcher)
 
 1. Install Fabric Loader 0.19.5 for Minecraft 1.21.11.
-2. Put `femboy-client-0.4.0.jar` (from `build/libs/`) and Fabric API 0.141.6+1.21.11 into the profile's `mods` folder.
+2. Put `femboy-client-0.5.0.jar` (from `build/libs/`) and Fabric API 0.141.6+1.21.11 into the profile's `mods` folder.
 3. Start the game and press **Right Shift** to open the menu. You can rebind it under Options → Controls → Key Binds → Femboy Client.
 
 Settings live in `config/femboyclient/`:
 - `femboyclient.json`: client options, active profile
 - `profiles/*.json`: modules, keys and settings per profile
+- `exports/*.json`: profiles you exported
 
 Every file is written atomically with a `.bak` copy. An unreadable file is moved aside as `*.corrupt-<time>`, never deleted, and the client falls back to the backup or to defaults.
 
@@ -42,7 +43,7 @@ export JAVA_HOME=$HOME/.local/share/jdks/jdk-25.0.4.1+1   # any JDK 25+
 
 | Task | Command |
 |---|---|
-| Build the mod jar (also runs the unit tests) | `./gradlew build` → `build/libs/femboy-client-0.4.0.jar` |
+| Build the mod jar (also runs the unit tests) | `./gradlew build` → `build/libs/femboy-client-0.5.0.jar` |
 | Unit tests only | `./gradlew test` |
 | Server GameTests, headless (includes the research experiment) | `./gradlew runGameTest` |
 | In-game client tests, headless (needs `xvfb-run`), with screenshots | `./scripts/run-client-tests.sh` |
@@ -52,38 +53,72 @@ export JAVA_HOME=$HOME/.local/share/jdks/jdk-25.0.4.1+1   # any JDK 25+
 
 ## Using the menu
 
-The sidebar has eight sections. Every module has an on/off switch, a key bind (click it and press a key; Backspace clears it), settings grouped into sections with tooltips and per-setting reset, and a module reset.
+The sidebar has eleven sections. Every module has an on/off switch, a key (click it and press a key; Backspace clears it) that either **toggles** the module or keeps it on only while **held**, settings grouped into sections with tooltips and per-setting reset, and a module reset.
 
 | Section | Contents |
 |---|---|
 | **Home** | Search across all modules with a category filter (click a module to open it), session status, module health, frame rate |
-| **Combat** | Auto Attribute Swap |
-| **Visuals** | Entity ESP, Storage ESP, Trackers, Fullbright, Free Camera, Chunk Borders |
-| **World** | Geode Analyzer, Waypoints |
-| **Player** | Player Finder, Player Alert |
+| **Combat** | Auto Attribute Swap, Combat Info, Target HUD, Weapon Info, Crystal & Anchor Info |
+| **Movement** | Free Camera, Movement Info, Elytra Info |
+| **Visuals** | Entity ESP, Storage ESP, Hitboxes, Trajectories, Fullbright, Chunk Borders |
+| **Inventory** | Item Counters, Health & Armor, Effects |
+| **Trackers** | Player Finder, Trackers, Player Alert, Waypoints |
+| **World** | Geode Analyzer |
 | **HUD** | Coordinates, Performance, Module List |
 | **Developer** | Java Runner |
-| **Settings** | General tab: profiles, client options (menu scale, animations, tooltips), config folder. Diagnostics tab: frame timing, time per module, message log |
+| **Profiles** | Your profiles (use, copy, export, import, delete, reset), the ten presets, automatic switching rules |
+| **Settings** | General tab: emergency off, client options (menu scale, animations, tooltips, automatic switching), config folder. Diagnostics tab: frame timing, time per module, message log |
 
 ### Modules
 
 | Module | What it does |
 |---|---|
 | **Auto Attribute Swap** | Switches to the right weapon for a single hit and straight back: an axe against a raised shield, a mace while falling, and optional spear, sword, trident and custom-item rules, each with its own cooldown and conditions. See below. |
-| **Entity ESP** | Highlights the entity types you choose (picked by registry id in a searchable checklist). Compact labels with separately sized name, distance and health, outlines with real thickness and opacity per category, tracer lines, color overrides for chosen types. See below. |
-| **Storage ESP** | Highlights storage blocks you choose by block id: chests and copper chests, trapped chests, ender chests, barrels, shulker boxes, hoppers, dispensers/droppers/crafters, furnaces, and other storage. Options: outline, fill, through walls, labels, built-in or custom colors per group, maximum distance, scan interval, maximum highlights. Reads only block entities your client has already received. |
-| **Trackers** | Arrows at the screen edge pointing at players, mobs, waypoints and last-seen positions, labelled with where the position comes from. See below. |
-| **Fullbright** | Lights up dark areas without changing your video settings, with adjustable intensity. |
+| **Combat Info** | Clicks per second (left and right), combo (hits that landed in a row; ends when you take damage), reach of your last hit, accuracy. |
+| **Target HUD** | A card with your target's name, health and absorption, armor points, distance, armor and held items, and whether its shield is raised. The target is what you look at, the entity you hit last, or one you lock with the lock key. |
+| **Weapon Info** | Depends on what you hold. **Axe:** target shield state, your own shield cooldown. **Mace:** fall distance, smash ready, base smash bonus (same formula as the server), vertical speed, wind charges. **Spear:** Lunge level and why it can't trigger (riding, gliding, in water); while charging, the damage, knockback and dismount windows with the speed you have and need. **Bow/crossbow/trident:** draw, load and charge progress, Riptide conditions, ammunition. |
+| **Crystal & Anchor Info** | Highlights obsidian and bedrock within reach where an end crystal can be placed; estimates the explosion damage to you and your target from the crystal, spot or anchor under your crosshair (vanilla formula with exposure, difficulty, armor, Resistance and Protection/Blast Protection); anchor charges and whether it explodes here. |
 | **Free Camera** | Fly the camera with its own rotation while your player stays put. Works on servers. See below. |
+| **Movement Info** | Speed, vertical speed, fall distance and a landing prediction with the fall damage vanilla would deal (landing block included: water, slime, hay, beds...), red when it would kill you. |
+| **Elytra Info** | Speed, height, pitch, elytra durability, rockets, and a warning when your current direction hits a block within a set time. |
+| **Entity ESP** | Highlights the entity types you choose (picked by registry id in a searchable checklist). Compact labels with separately sized name, distance and health, outlines with real thickness and opacity per category, tracer lines, color overrides for chosen types. See below. |
+| **Storage ESP** | Highlights storage blocks you choose by block id. Reads only block entities your client has already received. |
+| **Hitboxes** | Entity hitboxes with eye height and look direction (like F3+B), filtered by players, hostile, passive, items, projectiles and others; color, opacity, line width, range. |
+| **Trajectories** | The predicted path of arrows (bow and crossbow), tridents, snowballs, eggs, ender pearls, splash/lingering potions and experience bottles, with the landing point and any entity in the way. Uses vanilla's per-tick physics. |
+| **Fullbright** | Lights up dark areas without changing your video settings, with adjustable intensity. |
 | **Chunk Borders** | Chunk boundary lines around you. |
-| **Geode Analyzer** | Finds amethyst geodes in loaded chunks and keeps exact growth-stage counts up to date as chunks load and buds grow. See below. |
-| **Waypoints** | Save positions; see them as markers with names and distances. |
+| **Item Counters** | Counts of the items you choose (totems, gapples, crystals, obsidian, anchors, glowstone, pearls, wind charges, rockets, potions by type...), red when low, and **refill reminders** when an item is in your inventory but not in your hotbar or offhand. |
+| **Health & Armor** | Health with absorption, food and saturation, durability of armor and held items, low-health and low-durability warnings with a one-time alert. |
+| **Effects** | Active potion effects with level and time left; harmful ones in red, expiring ones highlighted. |
 | **Player Finder** | Online players from the server's player list (name, game mode, ping) with search and sorting, plus navigation to players in range and to your waypoints. See below. |
-| **Player Alert** | Warns you when another player comes within your render distance: chat message, sound and/or pop-up, optionally also when they leave. See below. |
+| **Trackers** | Arrows at the screen edge pointing at players, mobs, waypoints and last-seen positions, labelled with where the position comes from. See below. |
+| **Player Alert** | Warns you when another player comes within your render distance. See below. |
+| **Waypoints** | Save positions; see them as markers with names and distances. |
+| **Geode Analyzer** | Finds amethyst geodes in loaded chunks and keeps exact growth-stage counts up to date as chunks load and buds grow. See below. |
 | **Coordinates, Performance, Module List** | HUD panels. |
 | **Java Runner** | Write and run small Java programs in a separate process, with output, errors, limits and examples. See below. |
 
+HUD blocks stack in the corner you choose without overlapping, and the top-right corner starts below vanilla's effect icons.
+
 An enabled module **pauses** while no world is loaded and resumes on its own. If a module throws an error, it is turned off and reported under Settings → Diagnostics; other modules keep running.
+
+## Profiles and presets
+
+A **profile** stores which modules are on, every setting and every key. Changes save automatically to the active profile.
+
+- **Create** a profile on the Profiles page: type a name and press Create (it starts as a copy of the current one). **Use** switches to it; the current profile is saved first, and modules that are off in the new profile are turned off.
+- **Copy** duplicates a profile, **Export** copies it to the clipboard and saves it under `config/femboyclient/exports/`, **Import** creates a profile from text on the clipboard. Every imported value is checked; unknown modules and invalid values are dropped and replaced by defaults, and you are told which.
+- **Reset the current profile** turns every module off and restores defaults (two clicks).
+- **Presets:** Sword PvP, Axe PvP, Mace PvP, Spear + Mace PvP, Crystal PvP, Anchor PvP, Pot PvP, UHC / Survival, Elytra PvP and Bow / Crossbow. **Install** creates a normal profile from the preset; edit it like any other. **Reset** puts the preset's settings back. Presets turn on information and visual modules only; where Auto Attribute Swap fits (axe, mace, spear + mace) it is configured but left off.
+- **Automatic switching:** add rules such as "Mace, any dimension → mace_pvp" (or press **Add rule** next to a preset), then turn on *Switch profiles automatically*. Rules are checked from the top; the first match wins (held item or gliding, optionally a dimension). If nothing matches, the profile stays. A profile you pick by hand stays until your held item changes to something another rule matches. A weapon Auto Attribute Swap holds for a single hit never changes the profile.
+
+## Emergency off
+
+**Settings → Turn all modules off**, or a key you bind under Options → Controls → Key Binds → Femboy Client ("Turn all modules off (emergency)", unbound by default). Every module is turned off and restores what it changed (Free Camera returns the view, Fullbright the lighting, Auto Attribute Swap the held item), and automatic profile switching is paused.
+
+## Not included
+
+These spec items are **not built**, and the GUI does not pretend they exist: KillAura, Trigger Bot, automatic aiming, AutoCrystal, AutoAnchor, Auto StunSlam, Auto Lunge Swap, AutoTotem, Auto Armor, Auto Pot, Flight and an Aim Trainer. The first ones fight for you against real players on servers that forbid it, so they are left out on purpose. The others were not built in this round. The presets give the information side of those styles (timing, estimates, counters, reminders) instead.
 
 ### Geode Analyzer
 
@@ -102,7 +137,7 @@ An enabled module **pauses** while no world is loaded and resumes on its own. If
 
 ### Player Alert
 
-- Turn it on in Player → Player Alert. It warns when a player comes within your range, i.e. when the server starts sending you that player.
+- Turn it on in Trackers → Player Alert. It warns when a player comes within your range, i.e. when the server starts sending you that player.
 - **Settings:** chat message (only you see it), sound, pop-up, warn when they leave (and whether they logged off), ignore NPCs (player-shaped entities missing from the server's player list), and a repeat delay so someone walking along the edge of your range doesn't flood the chat.
 - Players already near you when you turn it on are not announced. Several arrivals in the same moment are combined into one message.
 

@@ -1,6 +1,6 @@
-# Verification report: Femboy Client 0.4.0
+# Verification report: Femboy Client 0.5.0
 
-Date: 2026-10-14.
+Date: 2026-10-15. Sections up to "Servers and stability" were written for 0.4.0 and still pass; 0.5.0 additions are in the sections after it.
 
 ## Status values
 
@@ -25,7 +25,7 @@ Date: 2026-10-14.
 |---|---|---|
 | Renamed to Femboy Client (name, mod id `femboyclient`, package, lang, menu title, docs) | Verified in the running Minecraft client | Client starts with the new mod id; sidebar title in screenshots; `ResourceFilesTest` checks the metadata |
 | Settings copied from `config/nova/` on first launch, old folder kept | Automated tests passed | `LegacyConfigMigrationTest` (3 tests). Not exercised with a real NOVA install |
-| Navigation is exactly Home, Combat, Visuals, World, Player, HUD, Developer, Settings | Verified in the running Minecraft client | Check "Sidebar is exactly ..."; screenshots `gui-*` |
+| Navigation is exactly Home, Combat, Movement, Visuals, Inventory, Trackers, World, HUD, Developer, Profiles, Settings (0.5.0) | Verified in the running Minecraft client | Check "Sidebar is exactly ..."; screenshots `gui-*` |
 | Development pages removed (Dashboard, World Analysis, Test Scenarios, Test Results) | Verified in the running Minecraft client | Check "No development pages remain" |
 | Only categories with modules get a sidebar entry | Implemented, not tested | All four categories have modules, so the rule never triggered |
 | Diagnostics as a tab under Settings | Verified in the running Minecraft client | Check "Settings has a Diagnostics tab"; screenshot `settings-diagnostics` |
@@ -159,9 +159,54 @@ Date: 2026-10-14.
 | Dimension changes | Verified in the running Minecraft client | Overworld → Nether → Overworld: modules keep running, waypoints filtered, no errors |
 | No errors in the client log | Verified in the running Minecraft client | Log check (known offline noise excluded and listed) |
 
+## Foundation (0.5.0)
+
+| Feature | Status | Evidence |
+|---|---|---|
+| Every module off by default and at first start | Verified in the running Minecraft client | Checks "No module is on by default" and "No module is on at the first start" (fresh config folder) |
+| Emergency off key: all modules off, camera returned, automatic switching paused | Verified in the running Minecraft client | Bound to F7 in the test and pressed with Free Camera, Fullbright, Entity ESP and Coordinates on: nothing left on, camera back on the player |
+| Hold-mode keys | Automated tests passed and verified in the running Minecraft client | `ModuleManagerTest` (hold, release, missed release, saved mode); in game, Fullbright runs while G is held and stops on release |
+| Duplicate, export, import (with validation), reset profile, overwrite | Automated tests passed | `ConfigurationManagerTest`: garbage, wrong shapes and bad names rejected; invalid values dropped with warnings; nothing applied before switching |
+| Export from the Profiles page | Verified in the running Minecraft client | Clicking Export puts the profile JSON on the clipboard |
+| Automatic switching by held item | Verified in the running Minecraft client | Sword → `auto_sword` (Fullbright on), mace → `auto_mace` (Fullbright off, Coordinates on), unmatched item keeps the profile, a hand-picked profile is kept until the item changes |
+| Rule parsing and order | Automated tests passed | `ProfileRuleTest`, invalid saved rules skipped with a warning |
+
+## Combat, movement and inventory information (0.5.0)
+
+Where possible, each module was checked against what the game really did in the same test, not only against its own formula.
+
+| Feature | Status | Evidence |
+|---|---|---|
+| Combat Info: click, attack, landed hit, reach | Verified in the running Minecraft client | A real left click on a husk 3 blocks ahead: 1 click, 1 attack, 1 landed, reach 2.70 m (geometry: 3.2 - 0.5) |
+| Combat Info: combo counts and ends on damage | Verified in the running Minecraft client | 2 of 2 hits counted, combo 0 after `/damage`. A burning zombie earlier made a hit not land (fire immunity), and the tracker correctly reported it as not landed |
+| Target HUD: crosshair target, lock, unlock | Verified in the running Minecraft client | Screenshot `combat-target-hud` (name, distance, health bar, HP, armor) |
+| Weapon Info: mace smash bonus | Verified in the running Minecraft client | Equal to the server's `MaceItem.getAttackDamageBonus` at falls of 2, 3, 5, 8, 12 and 30 blocks |
+| Weapon Info: spear, bow, crossbow and trident lines | Compiled successfully | Read from the item components and vanilla methods; not exercised in game |
+| Movement Info: fall damage prediction | Verified in the running Minecraft client | 20-block fall in survival: predicted 17, took 17 |
+| Elytra Info | Compiled successfully | Not tested in flight |
+| Crystal & Anchor Info: placement spot and focus | Verified in the running Minecraft client | Obsidian within reach listed; under the crosshair it is "Crystal here"; screenshot `combat-crystal-placement`. Loot lying in the crystal space blocked the spot, as it does in vanilla |
+| Crystal damage estimate | Verified in the running Minecraft client | Crystal 9 blocks away, no armor, Normal: estimate 14.13, damage taken 14.13 |
+| Anchor status and armored/enchanted estimates | Compiled successfully | Not tested in game |
+| Item Counters: totals per item and potion type, refill reminder | Verified in the running Minecraft client | 3 totems (inventory only → refill reminder), 5 golden apples, 2 Healing and 1 Swiftness splash potions |
+| Health & Armor: durability and warning | Verified in the running Minecraft client | Diamond chestplate with 8 durability listed as "8  2%" in red |
+| Effects | Verified in the running Minecraft client | "Speed II 0:29" |
+| Hitboxes and filter | Verified in the running Minecraft client | 2 zombies drawn, 0 with hostile mobs turned off; screenshot `visuals-hitboxes` |
+| Trajectories | Verified in the running Minecraft client | Snowball thrown at -20° pitch: predicted landing 0.12 and 0.02 blocks from where the real snowball hit (two runs). Bow and crossbow paths use the same simulation but were not compared with real arrows |
+
+## Presets (0.5.0)
+
+| Feature | Status | Evidence |
+|---|---|---|
+| All 10 presets use existing modules and valid values | Verified in the running Minecraft client | Each preset validated against the registered modules: no warnings |
+| Switching preset profiles does not leak modules | Verified in the running Minecraft client | sword → crystal → elytra → sword: exactly each preset's modules are on |
+| Reset to preset | Verified in the running Minecraft client | A changed setting and an extra module are restored and turned off |
+| Presets section of the Profiles page | Verified in the running Minecraft client | Screenshot `gui-1280x720-9-profiles` |
+
 ## Not verified
 
 - **Visible window on the NVIDIA GPU:** all rendering was checked with Mesa llvmpipe under Xvfb. Real keyboard shortcuts in the code editor were not tried in a visible window.
 - **A second real client:** the other player in the tests is a server-side fake player; real movement and latency were not tested.
 - **Other server software:** Paper, proxies and anti-xray servers.
+- **Not built:** KillAura, Trigger Bot, automatic aiming, AutoCrystal, AutoAnchor, Auto StunSlam, Auto Lunge Swap, AutoTotem, Auto Armor, Auto Pot, Flight, Aim Trainer.
+- **Test harness:** one of three runs after the last change stopped when the Fabric test harness's network synchronizer failed while connecting to the dedicated server ("Network synchronizer in invalid state"). All checks run before that passed; the other two runs passed completely.
 - **Performance at scale:** very many entities or storage blocks, or a 16-chunk radius in a busy world.

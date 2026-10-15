@@ -34,6 +34,25 @@
   - It needs a Java with a compiler; the Minecraft launcher's Java often has none. Then set "Java for the runner" to a JDK 21+.
   - Each run starts a new Java process, which takes about half a second.
   - Snippets only see a snapshot from the moment you press Run.
+- **Combat Info.**
+  - A hit counts as landed when the target's hurt animation starts within 12 ticks of your attack. Someone else hitting the same target at that moment is counted as yours.
+  - Combo ends when you take damage or after the timeout.
+  - Clicks are counted only while no menu is open.
+- **Weapon Info.**
+  - The mace bonus is the base formula; Density and other server-side enchantment effects add more.
+  - The spear speed is your look direction times your movement, like vanilla. Server-side target movement is not known exactly.
+- **Crystal & Anchor Info.**
+  - Estimates count armor, toughness, Resistance, Protection and Blast Protection.
+  - Not counted: other enchantments, plugins, totems, and whether the explosion source is blocked by an entity.
+  - The anchor warning assumes vanilla dimension rules: only the Nether sets spawn.
+- **Movement Info.** Fall damage is predicted for a straight drop, before Feather Falling and Protection. Landing blocks that change damage (slime, hay, honey, beds, powder snow, cobwebs, water) are handled; others count as normal ground.
+- **Elytra Info.** The obstacle warning follows a straight line along your current velocity; turns and rockets change the real path. Not tested in flight.
+- **Trajectories.**
+  - The path is the center of vanilla's random spread.
+  - Wind charges and firework rockets are not predicted.
+  - Bow, trident and thrown items inherit your movement on the server from its own record of your motion, which can differ slightly from the client's.
+- **Automatic profile switching** saves and loads profile files on the game thread. A switch takes a few milliseconds; scrolling quickly through many weapons switches several times.
+- **Presets** describe starting setups, not a best way to play. They depend only on modules that exist; nothing in them claims to do automation.
 - **Entity ESP.** The color override uses one color for all chosen types; there are no per-type outline widths.
 - **Fullbright** raises the lightmap brightness. The darkness effect and blindness still darken the view.
 - **What the research results cover.** The figures quoted in the Geode Analyzer hold only for the tested setup:
@@ -49,6 +68,7 @@
   - Realms and account-property requests failing without a real login;
   - an anisotropic-filtering option warning.
 - A visible-window run (`--visible`) on the NVIDIA GPU was not performed.
+- Not tested in game in 0.5.0: Elytra Info in flight, the spear charge windows and Lunge (no spear test), bow and crossbow paths (only a thrown snowball was compared with a real throw), anchor explosions, armored or enchanted targets in damage estimates, the lock key pressed on a real keyboard (the test calls the same method).
 - The second player in the multiplayer test is a Fabric fake player added on the server, not a second real client. The server sends it to the client like any player, but movement over time and real network latency were not tested.
 - The test harness sends key events without modifier flags, so the code editor also checks the keyboard state for Ctrl. Real keyboard shortcuts were not exercised in a visible window.
 - Performance was measured with Mesa software rendering (254 zombies: about 26 ms per frame with ESP, health, tracers and Trackers on vs. 24 ms with them off). Numbers on a real GPU will differ.

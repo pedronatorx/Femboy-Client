@@ -2,10 +2,12 @@ package io.github.theamethyx.femboyclient.core.module;
 
 /** The sidebar sections of the ClickGUI, in display order. Each section lists its modules. */
 public enum ModuleCategory {
-	COMBAT("Combat", "combat", "Fighting helpers such as automatic weapon swapping."),
-	VISUALS("Visuals", "visual", "Highlights, trackers, brightness and the free camera."),
-	WORLD("World", "analysis", "World information: geode analysis and waypoints."),
-	PLAYER("Player", "player", "Player list, alerts and navigation."),
+	COMBAT("Combat", "combat", "Combat information: target, weapon timing, clicks, combo and explosions, plus Auto Attribute Swap."),
+	MOVEMENT("Movement", "movement", "Free camera, speed, falls and elytra flight."),
+	VISUALS("Visuals", "visual", "Highlights, hitboxes, projectile paths, brightness and chunk borders."),
+	INVENTORY("Inventory", "inventory", "Item counters, refill reminders, equipment durability, health and effects."),
+	TRACKERS("Trackers", "trackers", "Player list, trackers, alerts and waypoints."),
+	WORLD("World", "analysis", "World information: geode analysis."),
 	HUD("HUD", "hud", "On-screen information such as coordinates and performance."),
 	DEVELOPER("Developer", "developer", "Tools for writing and testing small Java programs.");
 

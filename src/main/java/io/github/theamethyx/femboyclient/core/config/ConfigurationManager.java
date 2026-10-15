@@ -399,6 +399,45 @@ public final class ConfigurationManager {
 		return writeNewProfile(name, clean, "Created profile '" + name + "'.");
 	}
 
+	/**
+	 * Replaces a profile's module data (e.g. "reset to preset"), creating the profile if needed. Values are
+	 * validated first. If it is the active profile, the new state is applied immediately.
+	 *
+	 * @return {@code null} on success, otherwise a readable reason
+	 */
+	public String overwriteProfile(String name, JsonObject modulesJson) {
+		if (!isValidProfileName(name)) {
+			return "Use 1-32 letters, digits, '-' or '_'.";
+		}
+
+		List<String> warnings = new ArrayList<>();
+		JsonObject clean = modules.sanitizeModules(modulesJson, warnings);
+		warnings.forEach(warning -> diagnostics.warn(SOURCE, "Profile '" + name + "': " + warning));
+		JsonObject json = new JsonObject();
+		json.addProperty("schemaVersion", SCHEMA_VERSION);
+		json.add("modules", clean);
+		try {
+			JsonFiles.writeAtomically(profileFile(name), json);
+		} catch (IOException e) {
+			return "Could not write the profile file: " + e.getMessage();
+		}
+
+		if (name.equals(activeProfile)) {
+			List<String> report = new ArrayList<>();
+			applying = true;
+			try {
+				loadProfileInto(name, report);
+			} finally {
+				applying = false;
+			}
+
+			finishReport(report);
+		}
+
+		diagnostics.info(SOURCE, "Wrote profile '" + name + "'.");
+		return null;
+	}
+
 	/** Resets every module of the active profile to its defaults (all modules off) and saves. */
 	public void resetActiveProfile() {
 		for (var module : modules.all()) {

@@ -17,6 +17,7 @@ import io.github.theamethyx.femboyclient.client.modules.AutoAttributeSwapModule;
  * attack. {@code attack} sends the selected slot and then the attack packet; there is no event between
  * deciding to attack and sending it. Before: the module may select another slot (vanilla then sends it).
  * After: the module selects the original slot again and sends it immediately, in the same tick.
+ * The head injection also records the attack for the combat statistics (no game state is changed).
  */
 @Mixin(MultiPlayerGameMode.class)
 public abstract class MultiPlayerGameModeMixin {
@@ -28,6 +29,11 @@ public abstract class MultiPlayerGameModeMixin {
 
 	@Inject(method = "attack", at = @At("HEAD"))
 	private void femboyclient$swapBeforeAttack(Player player, Entity target, CallbackInfo ci) {
+		if (FemboyClient.get() != null && player instanceof net.minecraft.client.player.LocalPlayer local) {
+			// Combat statistics (reach, combo) for the combat HUD modules; only reads state.
+			FemboyClient.get().combat().onAttack(local, target);
+		}
+
 		AutoAttributeSwapModule module = femboyclient$swap();
 		if (module != null) {
 			FemboyClient.get().modules().runGuarded(module, io.github.theamethyx.femboyclient.core.module.ModuleManager.Phase.TICK,

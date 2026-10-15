@@ -95,6 +95,10 @@ public final class HudManager {
 			cursor -= 12;
 		}
 
+		if (anchor == HudAnchor.TOP_RIGHT) {
+			cursor += vanillaEffectIconsHeight();
+		}
+
 		for (Block block : blocks) {
 			int blockWidth = block.width(ui);
 			int blockHeight = block.height();
@@ -103,6 +107,24 @@ public final class HudManager {
 			block.draw(ui, x, y, blockWidth, anchor.right(), dimmed);
 			cursor = anchor.bottom() ? y - GAP : y + blockHeight + GAP;
 		}
+	}
+
+	/** Vanilla draws status effect icons in the top-right corner: beneficial ones in a first row, harmful ones in a second. */
+	private static int vanillaEffectIconsHeight() {
+		var player = net.minecraft.client.Minecraft.getInstance().player;
+		if (player == null) {
+			return 0;
+		}
+
+		boolean beneficial = false;
+		boolean harmful = false;
+		for (var effect : player.getActiveEffects()) {
+			if (!effect.showIcon()) continue;
+			if (effect.getEffect().value().isBeneficial()) beneficial = true;
+			else harmful = true;
+		}
+
+		return harmful ? 52 : beneficial ? 26 : 0;
 	}
 
 	private record Block(List<HudLine> lines, boolean panel) {

@@ -30,6 +30,9 @@ public enum Icon {
 			case "player" -> PLAYER;
 			case "combat" -> COMBAT;
 			case "developer" -> CODE;
+			case "movement" -> ARROW;
+			case "inventory" -> STORAGE;
+			case "trackers" -> TARGET;
 			default -> INFO;
 		};
 	}

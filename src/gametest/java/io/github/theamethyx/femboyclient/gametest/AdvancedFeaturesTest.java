@@ -603,7 +603,11 @@ final class AdvancedFeaturesTest {
 				sections.toString());
 		context.takeScreenshot("visuals-entity-esp-sections");
 		ClientGameTest.openModule(context, FreeCameraModule.class);
-		report.check("Free Camera and Fullbright are on the Visuals page", ClientGameTest.currentTitle(context).equals("Visuals"));
+		String cameraPage = ClientGameTest.currentTitle(context);
+		ClientGameTest.openModule(context, io.github.theamethyx.femboyclient.client.modules.FullbrightModule.class);
+		String brightPage = ClientGameTest.currentTitle(context);
+		report.check("Free Camera is on the Movement page and Fullbright on Visuals", cameraPage.equals("Movement") && brightPage.equals("Visuals"),
+				cameraPage + " / " + brightPage);
 		ClientGameTest.closeMenu(context, ui);
 	}
 }
