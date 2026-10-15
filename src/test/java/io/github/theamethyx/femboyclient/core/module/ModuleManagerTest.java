@@ -213,4 +213,86 @@ class ModuleManagerTest {
 		assertEquals(Module.NO_KEY, module.key());
 		assertEquals(2.0, module.size.get());
 	}
+
+	@Test
+	void holdModeKeysTurnModulesOnOnlyWhileHeld() {
+		KeybindManager keys = new KeybindManager(manager);
+		RecordingModule hold = manager.register(new RecordingModule("hold", "Hold", 70));
+		RecordingModule toggle = manager.register(new RecordingModule("toggle", "Toggle", 70));
+		manager.setHoldKey(hold, true);
+
+		keys.onKeyPressed(70);
+		assertTrue(hold.isEnabled());
+		assertTrue(toggle.isEnabled());
+
+		keys.onKeyReleased(70);
+		assertFalse(hold.isEnabled(), "released hold module turns off");
+		assertTrue(toggle.isEnabled(), "toggle module ignores the release");
+
+		// A missed release (e.g. focus lost) is caught by the per-tick check.
+		keys.onKeyPressed(70);
+		assertTrue(hold.isEnabled());
+		keys.releaseUnheld(key -> false);
+		assertFalse(hold.isEnabled());
+
+		// A hold module the user switched on in the menu is not turned off by releasing its key.
+		manager.setEnabled(hold, true);
+		keys.onKeyReleased(70);
+		keys.releaseUnheld(key -> false);
+		assertTrue(hold.isEnabled());
+	}
+
+	@Test
+	void holdModeIsSavedAndReset() {
+		RecordingModule module = manager.register(new RecordingModule("a", "Alpha", 70));
+		manager.setHoldKey(module, true);
+		JsonObject saved = manager.saveModules();
+		manager.setHoldKey(module, false);
+		manager.loadModules(saved);
+		assertTrue(module.isHoldKey());
+
+		manager.resetToDefaults(module);
+		assertFalse(module.isHoldKey());
+	}
+
+	@Test
+	void disableAllTurnsEveryModuleOffAndRunsTheirCleanup() {
+		RecordingModule a = manager.register(new RecordingModule("a", "Alpha", Module.NO_KEY));
+		RecordingModule b = manager.register(new RecordingModule("b", "Beta", Module.NO_KEY));
+		RecordingModule c = manager.register(new RecordingModule("c", "Gamma", Module.NO_KEY));
+		manager.setEnabled(a, true);
+		manager.setEnabled(c, true);
+
+		List<Module> off = manager.disableAll();
+
+		assertEquals(List.of(a, c), off);
+		assertFalse(a.isEnabled() || b.isEnabled() || c.isEnabled());
+		assertFalse(a.isRunning() || c.isRunning());
+		assertTrue(a.events.contains("disable") && c.events.contains("disable"));
+	}
+
+	@Test
+	void sanitizeKeepsOnlyValidValuesWithoutApplyingThem() {
+		RecordingModule module = manager.register(new RecordingModule("a", "Alpha", Module.NO_KEY));
+		JsonObject input = com.google.gson.JsonParser.parseString("""
+				{"a": {"enabled": "yes", "key": 9999, "keyMode": "hold",
+				       "settings": {"size": 99, "flag": true, "unknown": 1}},
+				 "missing_module": {"enabled": true},
+				 "b": 5}""").getAsJsonObject();
+		List<String> warnings = new ArrayList<>();
+
+		JsonObject clean = manager.sanitizeModules(input, warnings);
+
+		JsonObject a = clean.getAsJsonObject("a");
+		assertFalse(a.has("enabled"));
+		assertFalse(a.has("key"));
+		assertEquals("hold", a.get("keyMode").getAsString());
+		assertFalse(a.getAsJsonObject("settings").has("size"), "out-of-range value dropped");
+		assertTrue(a.getAsJsonObject("settings").get("flag").getAsBoolean());
+		assertFalse(a.getAsJsonObject("settings").has("unknown"));
+		assertFalse(clean.has("missing_module"));
+		assertEquals(5, warnings.size(), warnings::toString);
+		assertEquals(2.0, module.size.get(), "nothing applied");
+		assertFalse(module.flag.get(), "nothing applied");
+	}
 }

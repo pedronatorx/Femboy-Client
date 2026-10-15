@@ -15,6 +15,7 @@ import net.fabricmc.loader.api.FabricLoader;
 
 import io.github.theamethyx.femboyclient.client.gui.ClientScreen;
 import io.github.theamethyx.femboyclient.client.hud.HudManager;
+import io.github.theamethyx.femboyclient.client.profile.AutoProfileSwitcher;
 import io.github.theamethyx.femboyclient.client.render.WorldRenderDispatcher;
 import io.github.theamethyx.femboyclient.core.config.ConfigurationManager;
 import io.github.theamethyx.femboyclient.core.config.LegacyConfigMigration;
@@ -36,6 +37,7 @@ public final class FemboyClient implements ClientModInitializer {
 	private ConfigurationManager config;
 	private GlobalOptions options;
 	private WorldRenderDispatcher worldRender;
+	private final AutoProfileSwitcher profileSwitcher = new AutoProfileSwitcher();
 
 	public static FemboyClient get() {
 		return instance;
@@ -87,8 +89,33 @@ public final class FemboyClient implements ClientModInitializer {
 			}
 		}
 
+		while (ClientKeys.disableAll.consumeClick()) {
+			disableEverything();
+		}
+
+		keybinds.releaseUnheld(key -> com.mojang.blaze3d.platform.InputConstants.isKeyDown(client.getWindow(), key));
+		profileSwitcher.tick(client, this);
 		modules.tick();
 		config.tick();
+	}
+
+	/**
+	 * Emergency stop: turns every module off (each restores what it changed, e.g. Free Camera returns the view
+	 * and Fullbright the lighting) and stops automatic profile switching so no profile turns them back on.
+	 *
+	 * @return how many modules were turned off
+	 */
+	public int disableEverything() {
+		options.autoProfile.set(false);
+		keybinds.clearHeld();
+		int count = modules.disableAll().size();
+		Minecraft client = Minecraft.getInstance();
+		if (client.player != null) {
+			client.player.displayClientMessage(Component.literal("Femboy Client: all modules off (" + count + ")"
+					+ (count == 0 ? "" : ", automatic profile switching paused")), true);
+		}
+
+		return count;
 	}
 
 	private void onStopping(Minecraft client) {
@@ -108,6 +135,15 @@ public final class FemboyClient implements ClientModInitializer {
 			String extra = toggled.size() > 1 ? " (+" + (toggled.size() - 1) + " more on this key)" : "";
 			client.player.displayClientMessage(Component.literal(module.name() + " " + state + extra), true);
 		}
+	}
+
+	/** Called by the keyboard mixin for every key release, also while a screen is open. */
+	public void onKeyReleased(int key) {
+		keybinds.onKeyReleased(key);
+	}
+
+	public AutoProfileSwitcher profileSwitcher() {
+		return profileSwitcher;
 	}
 
 	public DiagnosticLogger diagnostics() {

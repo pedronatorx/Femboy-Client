@@ -35,7 +35,7 @@ public final class CoordinatesHudModule extends Module implements ClientHooks.Hu
 
 	public CoordinatesHudModule() {
 		super("coordinates_hud", "Coordinates", "Shows your position, facing direction and related coordinates on the HUD.",
-				ModuleCategory.HUD, true, NO_KEY);
+				ModuleCategory.HUD, false, NO_KEY);
 	}
 
 	@Override

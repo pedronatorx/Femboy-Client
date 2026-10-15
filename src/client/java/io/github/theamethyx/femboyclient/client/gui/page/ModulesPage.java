@@ -246,16 +246,21 @@ public class ModulesPage extends Page {
 	private final class ModuleControls extends Container {
 		private final ToggleSwitch enabled;
 		private final KeybindButton key;
+		private final Button holdMode;
 		private final Button reset;
 
 		ModuleControls(Module module) {
 			enabled = add(new ToggleSwitch(module::isEnabled, value -> modules.setEnabled(module, value)));
 			enabled.tooltip("Turn the module on or off. It also runs only while its environment allows it (see status above).");
 			key = add(new KeybindButton(module::key, code -> modules.setKey(module, code)));
-			key.tooltip(() -> "Key that toggles this module while playing. Click, then press a key; Backspace removes it."
+			key.tooltip(() -> "Key for this module while playing (see Toggle/Hold). Click, then press a key; Backspace removes it."
 					+ conflictText(module));
+			holdMode = add(new Button(() -> module.isHoldKey() ? "Hold" : "Toggle", Button.Style.SECONDARY,
+					() -> modules.setHoldKey(module, !module.isHoldKey())));
+			holdMode.tooltip(() -> module.isHoldKey() ? "Hold: the module is on only while you hold its key. Click for Toggle."
+					: "Toggle: each press of the key turns the module on or off. Click for Hold.");
 			reset = add(new Button("Reset", Button.Style.SECONDARY, () -> modules.resetToDefaults(module)).icon(Icon.RESET));
-			reset.tooltip("Restore this module's settings, key and on/off state to the defaults.");
+			reset.tooltip("Restore this module's settings, key, key mode and on/off state to the defaults.");
 		}
 
 		private String conflictText(Module module) {
@@ -273,7 +278,9 @@ public class ModulesPage extends Page {
 		protected void onLayout() {
 			enabled.setBounds(x + width - ToggleSwitch.WIDTH - 6, y + 4, ToggleSwitch.WIDTH, ToggleSwitch.HEIGHT);
 			int resetWidth = 50;
-			key.setBounds(x + 6, y + 18, width - 12 - resetWidth - Theme.GAP, 14);
+			int modeWidth = 40;
+			key.setBounds(x + 6, y + 18, width - 12 - resetWidth - modeWidth - 2 * Theme.GAP, 14);
+			holdMode.setBounds(x + width - 6 - resetWidth - Theme.GAP - modeWidth, y + 18, modeWidth, 14);
 			reset.setBounds(x + width - 6 - resetWidth, y + 18, resetWidth, 14);
 		}
 

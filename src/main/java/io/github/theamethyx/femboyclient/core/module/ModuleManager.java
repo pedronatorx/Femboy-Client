@@ -148,12 +148,42 @@ public final class ModuleManager {
 		notifyChanged(module);
 	}
 
+	/** Sets whether the module's key works while held (true) or toggles it (false). */
+	public void setHoldKey(Module module, boolean holdKey) {
+		requireRegistered(module);
+		module.setHoldKeyInternal(holdKey);
+		notifyChanged(module);
+	}
+
+	/**
+	 * Emergency stop: turns every enabled module off, so each one restores what it changed in its
+	 * {@code onDisable}.
+	 *
+	 * @return the modules that were turned off, in registration order
+	 */
+	public List<Module> disableAll() {
+		List<Module> turnedOff = new ArrayList<>();
+		for (Module module : modules.values()) {
+			if (module.isEnabled()) {
+				setEnabled(module, false);
+				turnedOff.add(module);
+			}
+		}
+
+		if (!turnedOff.isEmpty()) {
+			diagnostics.info("Client", "Turned off all modules (" + turnedOff.size() + ").");
+		}
+
+		return turnedOff;
+	}
+
 	/** Restores a module's settings, key and enabled state to their defaults. */
 	public void resetToDefaults(Module module) {
 		requireRegistered(module);
 		module.settings().resetAll();
 		runGuarded(module, Phase.LOAD, module::resetExtra);
 		module.setKeyInternal(module.defaultKey());
+		module.setHoldKeyInternal(false);
 		setEnabled(module, module.isEnabledByDefault());
 	}
 
@@ -276,6 +306,26 @@ public final class ModuleManager {
 		}
 
 		return json;
+	}
+
+	/**
+	 * Copies saved profile data, keeping only modules that exist and values they would accept. Nothing
+	 * is applied. Each dropped value is described in {@code warnings}.
+	 */
+	public JsonObject sanitizeModules(JsonObject json, List<String> warnings) {
+		JsonObject clean = new JsonObject();
+		for (String id : json.keySet()) {
+			Module module = modules.get(id);
+			if (module == null) {
+				warnings.add("Unknown module '" + id + "' was skipped.");
+			} else if (json.get(id) instanceof JsonObject object) {
+				clean.add(id, module.sanitize(object, warnings));
+			} else {
+				warnings.add(module.name() + ": the saved data was not an object; defaults will be used.");
+			}
+		}
+
+		return clean;
 	}
 
 	/**

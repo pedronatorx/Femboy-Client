@@ -118,6 +118,23 @@ public abstract class Setting<T> {
 		return null;
 	}
 
+	/**
+	 * Checks a config value without applying it (used to validate imported profiles).
+	 *
+	 * @return {@code null} if {@link #load(JsonElement)} would accept it, otherwise the reason
+	 */
+	public final String check(JsonElement json) {
+		T parsed;
+		try {
+			parsed = parse(json);
+		} catch (RuntimeException e) {
+			return "'" + name + "' has an unreadable value (" + e.getMessage() + ")";
+		}
+
+		String problem = parsed == null ? "A value is required." : validate(parsed);
+		return problem == null ? null : "'" + name + "' has an invalid value (" + problem + ")";
+	}
+
 	public final void reset() {
 		set(defaultValue);
 	}

@@ -1,4 +1,5 @@
 {
 	"key.category.femboyclient.main": "Femboy Client",
-	"key.femboyclient.open_menu": "Open Femboy Client menu"
+	"key.femboyclient.open_menu": "Open Femboy Client menu",
+	"key.femboyclient.disable_all": "Turn all modules off (emergency)"
 }

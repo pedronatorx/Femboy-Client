@@ -18,6 +18,7 @@ import io.github.theamethyx.femboyclient.client.ClientKeys;
 import io.github.theamethyx.femboyclient.client.gui.page.HomePage;
 import io.github.theamethyx.femboyclient.client.gui.page.ModulesPage;
 import io.github.theamethyx.femboyclient.client.gui.page.Page;
+import io.github.theamethyx.femboyclient.client.gui.page.ProfilesPage;
 import io.github.theamethyx.femboyclient.client.gui.page.SettingsPage;
 import io.github.theamethyx.femboyclient.client.gui.widget.Widget;
 import io.github.theamethyx.femboyclient.core.module.Module;
@@ -66,6 +67,7 @@ public class ClientScreen extends Screen {
 				}
 			}
 
+			pages.add(new ProfilesPage(ui));
 			pages.add(new SettingsPage(ui));
 			current = Math.max(0, Math.min(pages.size() - 1, GuiState.page));
 			navHighlight.snap(current);

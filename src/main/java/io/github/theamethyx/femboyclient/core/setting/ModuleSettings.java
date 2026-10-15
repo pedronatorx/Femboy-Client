@@ -58,6 +58,29 @@ public final class ModuleSettings {
 	}
 
 	/**
+	 * Returns a copy of {@code json} that holds only known settings with valid values, without changing
+	 * any setting. Each dropped value is described in {@code warnings}.
+	 */
+	public JsonObject sanitize(JsonObject json, List<String> warnings) {
+		JsonObject clean = new JsonObject();
+		for (Setting<?> setting : settings.values()) {
+			JsonElement value = json.get(setting.id());
+			if (value == null) {
+				continue;
+			}
+
+			String problem = setting.check(value);
+			if (problem == null) {
+				clean.add(setting.id(), value.deepCopy());
+			} else {
+				warnings.add(problem + "; the default will be used");
+			}
+		}
+
+		return clean;
+	}
+
+	/**
 	 * Applies saved values. Unknown keys are ignored (they may come from a newer or older version)
 	 * and missing keys fall back to defaults.
 	 *

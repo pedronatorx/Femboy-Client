@@ -41,6 +41,7 @@ public abstract class Module {
 	private boolean enabled;
 	private boolean running;
 	private int key;
+	private boolean holdKey;
 	private String lastError;
 	private long lastErrorMillis;
 	private int errorCount;
@@ -111,6 +112,9 @@ public abstract class Module {
 		JsonObject json = new JsonObject();
 		json.addProperty("enabled", enabled);
 		json.addProperty("key", key);
+		if (holdKey) {
+			json.addProperty("keyMode", "hold");
+		}
 		json.add("settings", settings.toJson());
 		JsonObject extra = new JsonObject();
 		saveExtra(extra);
@@ -148,6 +152,17 @@ public abstract class Module {
 			}
 		}
 
+		holdKey = false;
+		JsonElement modeJson = json.get("keyMode");
+		if (modeJson != null) {
+			if (modeJson instanceof JsonPrimitive primitive && primitive.isString()
+					&& (primitive.getAsString().equals("hold") || primitive.getAsString().equals("toggle"))) {
+				holdKey = primitive.getAsString().equals("hold");
+			} else {
+				local.add("the key mode must be 'hold' or 'toggle'; using 'toggle'.");
+			}
+		}
+
 		JsonElement settingsJson = json.get("settings");
 		if (settingsJson instanceof JsonObject object) {
 			local.addAll(settings.load(object));
@@ -165,6 +180,47 @@ public abstract class Module {
 
 		local.forEach(warning -> warnings.add(name + ": " + warning));
 		return wantEnabled;
+	}
+
+	/**
+	 * Copies saved module state, keeping only values {@link #loadFromJson} would accept, without changing
+	 * this module. Used to validate imported profiles before they are written.
+	 */
+	final JsonObject sanitize(JsonObject json, List<String> warnings) {
+		JsonObject clean = new JsonObject();
+		List<String> local = new ArrayList<>();
+		if (json.get("enabled") instanceof JsonPrimitive primitive && primitive.isBoolean()) {
+			clean.add("enabled", primitive);
+		} else if (json.has("enabled")) {
+			local.add("'enabled' must be true or false; it will be off");
+		}
+
+		if (json.get("key") instanceof JsonPrimitive primitive && primitive.isNumber() && isValidKey(primitive.getAsInt())) {
+			clean.addProperty("key", primitive.getAsInt());
+		} else if (json.has("key")) {
+			local.add("the key bind is not a valid key code; it will be unbound");
+		}
+
+		if (json.get("keyMode") instanceof JsonPrimitive primitive && primitive.isString()
+				&& (primitive.getAsString().equals("hold") || primitive.getAsString().equals("toggle"))) {
+			clean.add("keyMode", primitive);
+		} else if (json.has("keyMode")) {
+			local.add("the key mode must be 'hold' or 'toggle'");
+		}
+
+		if (json.get("settings") instanceof JsonObject object) {
+			clean.add("settings", settings.sanitize(object, local));
+		} else if (json.has("settings")) {
+			local.add("'settings' must be an object; defaults will be used");
+		}
+
+		if (json.get("extra") instanceof JsonObject extra) {
+			// Checked by loadExtra when the profile is loaded; invalid entries are reported then.
+			clean.add("extra", extra.deepCopy());
+		}
+
+		local.forEach(warning -> warnings.add(name + ": " + warning + "."));
+		return clean;
 	}
 
 	public static boolean isValidKey(int key) {
@@ -216,6 +272,11 @@ public abstract class Module {
 		return defaultKey;
 	}
 
+	/** Whether the key turns the module on only while it is held, instead of toggling it. */
+	public final boolean isHoldKey() {
+		return holdKey;
+	}
+
 	public final String lastError() {
 		return lastError;
 	}
@@ -238,6 +299,10 @@ public abstract class Module {
 
 	final void setKeyInternal(int key) {
 		this.key = key;
+	}
+
+	final void setHoldKeyInternal(boolean holdKey) {
+		this.holdKey = holdKey;
 	}
 
 	final void recordError(String message) {

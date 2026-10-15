@@ -44,7 +44,7 @@ public final class ModuleListHudModule extends Module implements ClientHooks.Hud
 
 	public ModuleListHudModule() {
 		super("module_list_hud", "Module List", "Lists your enabled modules at the edge of the screen.",
-				ModuleCategory.HUD, true, NO_KEY);
+				ModuleCategory.HUD, false, NO_KEY);
 	}
 
 	@Override

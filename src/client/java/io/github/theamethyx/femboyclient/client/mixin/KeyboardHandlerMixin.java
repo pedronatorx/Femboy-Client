@@ -21,6 +21,7 @@ import io.github.theamethyx.femboyclient.client.FemboyClient;
  */
 @Mixin(KeyboardHandler.class)
 public abstract class KeyboardHandlerMixin {
+	private static final int GLFW_RELEASE = 0;
 	private static final int GLFW_PRESS = 1;
 
 	@Shadow
@@ -29,6 +30,12 @@ public abstract class KeyboardHandlerMixin {
 
 	@Inject(method = "keyPress", at = @At("HEAD"))
 	private void femboyclient$onKeyPress(long window, int action, KeyEvent event, CallbackInfo ci) {
+		if (action == GLFW_RELEASE && window == minecraft.getWindow().handle() && FemboyClient.get() != null) {
+			// Releases count even with a screen open, so a hold-mode module never stays on by accident.
+			FemboyClient.get().onKeyReleased(event.key());
+			return;
+		}
+
 		if (action != GLFW_PRESS || minecraft.screen != null || window != minecraft.getWindow().handle()) {
 			return;
 		}

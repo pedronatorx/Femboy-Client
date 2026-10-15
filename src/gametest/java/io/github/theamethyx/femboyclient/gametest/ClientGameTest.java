@@ -62,7 +62,7 @@ public class ClientGameTest implements FabricClientGameTest {
 	static final BlockPos PLAYER = new BlockPos(0, -60, 0);
 	/** Center of the geode fixture's stone cube; the cube spans chunks x -1..1, z 0..2. */
 	static final BlockPos GEODE_CENTER = new BlockPos(0, -41, 30);
-	static final List<String> NAVIGATION = List.of("Home", "Combat", "Visuals", "World", "Player", "HUD", "Developer", "Settings");
+	static final List<String> NAVIGATION = List.of("Home", "Combat", "Visuals", "World", "Player", "HUD", "Developer", "Profiles", "Settings");
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
@@ -71,6 +71,7 @@ public class ClientGameTest implements FabricClientGameTest {
 
 		report.check("Femboy Client entrypoint ran", context.computeOnClient(client -> FemboyClient.get() != null && FemboyClient.get().modules() != null));
 		report.check("All 15 modules registered", context.computeOnClient(client -> FemboyClient.get().modules().all().size()) == 15);
+		FoundationTest.firstLaunch(context, report);
 		// Deterministic screenshots: no easing between frames.
 		context.runOnClient(client -> FemboyClient.get().options().animations.set(false));
 
@@ -91,6 +92,9 @@ public class ClientGameTest implements FabricClientGameTest {
 			dimensionChange(context, singleplayer, report);
 			configAndProfiles(context, report);
 			controlInteractions(context, ui, report);
+			FoundationTest.emergencyOff(context, report);
+			FoundationTest.holdKeys(context, report);
+			FoundationTest.automaticProfiles(context, singleplayer, ui, report);
 			AdvancedFeaturesTest.pages(context, ui, report);
 			AdvancedFeaturesTest.espOverhaul(context, singleplayer, report);
 			AdvancedFeaturesTest.trackers(context, singleplayer, report);
@@ -220,7 +224,7 @@ public class ClientGameTest implements FabricClientGameTest {
 			screen.showPage(0);
 			return list;
 		});
-		report.check("Sidebar is exactly Home, Combat, Visuals, World, Player, HUD, Developer, Settings", titles.equals(NAVIGATION), titles.toString());
+		report.check("Sidebar is exactly " + String.join(", ", NAVIGATION), titles.equals(NAVIGATION), titles.toString());
 		report.check("No development pages (Scenarios, Analysis, Results, Dashboard) remain",
 				titles.stream().noneMatch(t -> Set.of("Scenarios", "Analysis", "Results", "Dashboard", "Test Results", "World Analysis").contains(t)));
 
@@ -689,6 +693,7 @@ public class ClientGameTest implements FabricClientGameTest {
 		String result = context.computeOnClient(client -> {
 			FemboyClient femboy = femboy();
 			Module coords = femboy.modules().get("coordinates_hud");
+			femboy.modules().setEnabled(coords, true);
 			String problem = femboy.config().createProfile("gametest");
 			if (problem != null) return "create: " + problem;
 			problem = femboy.config().switchProfile("gametest");
@@ -700,6 +705,7 @@ public class ClientGameTest implements FabricClientGameTest {
 			boolean gametestHasCoords = coords.isEnabled();
 			femboy.config().switchProfile("default");
 			femboy.config().deleteProfile("gametest");
+			femboy.modules().setEnabled(coords, false);
 			return defaultHasCoords && !gametestHasCoords ? "ok" : "default=" + defaultHasCoords + " gametest=" + gametestHasCoords;
 		});
 		report.check("Profiles keep independent module state", result.equals("ok"), result);

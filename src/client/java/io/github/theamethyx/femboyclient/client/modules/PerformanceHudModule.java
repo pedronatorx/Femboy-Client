@@ -36,7 +36,7 @@ public final class PerformanceHudModule extends Module implements ClientHooks.Hu
 
 	public PerformanceHudModule() {
 		super("performance_hud", "Performance", "Shows FPS, frame time, ping, memory and singleplayer server tick time.",
-				ModuleCategory.HUD, true, NO_KEY);
+				ModuleCategory.HUD, false, NO_KEY);
 	}
 
 	@Override

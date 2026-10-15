@@ -13,7 +13,10 @@ import java.util.Objects;
 import java.util.function.LongSupplier;
 import java.util.regex.Pattern;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 
 import io.github.theamethyx.femboyclient.core.diag.DiagnosticLogger;
@@ -25,7 +28,7 @@ import io.github.theamethyx.femboyclient.core.setting.ModuleSettings;
  *
  * <pre>
  * config/femboyclient/
- *   femboyclient.json               global options, active profile
+ *   femboyclient.json               global options, active profile, profile switching rules
  *   profiles/&lt;name&gt;.json    module state for one profile
  *   *.bak                   previous version of each file (written before every save)
  *   *.corrupt-&lt;time&gt;       unreadable files moved aside, never deleted
@@ -46,6 +49,7 @@ public final class ConfigurationManager {
 	private final DiagnosticLogger diagnostics;
 	private final LongSupplier clock;
 	private final List<String> lastReport = new ArrayList<>();
+	private final List<ProfileRule> profileRules = new ArrayList<>();
 
 	private String activeProfile = DEFAULT_PROFILE;
 	private boolean dirty;
@@ -78,6 +82,7 @@ public final class ConfigurationManager {
 			JsonObject global = readWithRecovery(globalFile(), "Global settings", report);
 			activeProfile = DEFAULT_PROFILE;
 			globalSettings.resetAll();
+			profileRules.clear();
 
 			if (global != null) {
 				checkSchema(global, "Global settings", report);
@@ -85,6 +90,7 @@ public final class ConfigurationManager {
 					globalSettings.load(settings).forEach(warning -> report.add("Global settings: " + warning));
 				}
 
+				profileRules.addAll(ProfileRule.fromJson(global.get("profileRules"), report));
 				if (global.get("activeProfile") instanceof JsonPrimitive primitive && primitive.isString()) {
 					String name = primitive.getAsString();
 					if (isValidProfileName(name) && Files.exists(profileFile(name))) {
@@ -186,6 +192,7 @@ public final class ConfigurationManager {
 		json.addProperty("schemaVersion", SCHEMA_VERSION);
 		json.addProperty("activeProfile", activeProfile);
 		json.add("settings", globalSettings.toJson());
+		json.add("profileRules", ProfileRule.toJson(profileRules));
 		return json;
 	}
 
@@ -293,6 +300,167 @@ public final class ConfigurationManager {
 
 		diagnostics.info(SOURCE, "Deleted profile '" + name + "' (a copy was kept in the profiles folder).");
 		return null;
+	}
+
+	/**
+	 * Creates {@code target} as a copy of {@code source}, without switching.
+	 *
+	 * @return {@code null} on success, otherwise a readable reason
+	 */
+	public String duplicateProfile(String source, String target) {
+		JsonObject modulesJson = profileModules(source);
+		if (modulesJson == null) {
+			return "Profile '" + source + "' could not be read.";
+		}
+
+		return writeNewProfile(target, modulesJson, "Duplicated profile '" + source + "' as '" + target + "'.");
+	}
+
+	/**
+	 * The profile as shareable JSON text (module state only; no global options or file paths).
+	 *
+	 * @return the text, or {@code null} if the profile could not be read
+	 */
+	public String exportProfile(String name) {
+		JsonObject modulesJson = profileModules(name);
+		if (modulesJson == null) {
+			return null;
+		}
+
+		JsonObject json = new JsonObject();
+		json.addProperty("femboyClientProfile", name);
+		json.addProperty("schemaVersion", SCHEMA_VERSION);
+		json.add("modules", modulesJson);
+		return JsonFiles.GSON.toJson(json);
+	}
+
+	/**
+	 * Writes an exported profile to {@code exports/<name>-<time>.json}.
+	 *
+	 * @return the written file, or {@code null} if it failed (reported to diagnostics)
+	 */
+	public Path exportProfileToFile(String name) {
+		String text = exportProfile(name);
+		if (text == null) {
+			return null;
+		}
+
+		Path file = root.resolve("exports").resolve(name + "-" + timestamp() + ".json");
+		try {
+			JsonFiles.writeAtomically(file, JsonParser.parseString(text));
+			return file;
+		} catch (IOException e) {
+			diagnostics.error(SOURCE, "Could not export profile '" + name + "': " + e.getMessage(), e);
+			return null;
+		}
+	}
+
+	/** Result of {@link #importProfile}: {@code error} is null on success; warnings list values that were dropped. */
+	public record ImportResult(String error, List<String> warnings) {
+	}
+
+	/**
+	 * Creates profile {@code name} from exported text. Every value is validated first; unknown modules and
+	 * invalid values are dropped (their defaults apply) and listed in the warnings. Nothing is switched.
+	 */
+	public ImportResult importProfile(String name, String text) {
+		JsonObject json;
+		try {
+			JsonElement parsed = JsonParser.parseString(text == null ? "" : text.strip());
+			if (!(parsed instanceof JsonObject object)) {
+				return new ImportResult("This is not a Femboy Client profile (expected a JSON object).", List.of());
+			}
+
+			json = object;
+		} catch (JsonParseException e) {
+			return new ImportResult("This is not valid JSON: " + e.getMessage(), List.of());
+		}
+
+		if (!(json.get("modules") instanceof JsonObject modulesJson)) {
+			return new ImportResult("This is not a Femboy Client profile (no 'modules' object).", List.of());
+		}
+
+		List<String> warnings = new ArrayList<>();
+		checkSchema(json, "The imported profile", warnings);
+		JsonObject clean = modules.sanitizeModules(modulesJson, warnings);
+		String problem = writeNewProfile(name, clean, "Imported profile '" + name + "'" + (warnings.isEmpty() ? "." : " (" + warnings.size() + " value(s) dropped)."));
+		return new ImportResult(problem, problem == null ? List.copyOf(warnings) : List.of());
+	}
+
+	/**
+	 * Creates a profile from module data that came from this build (e.g. a built-in preset).
+	 *
+	 * @return {@code null} on success, otherwise a readable reason
+	 */
+	public String createProfileFrom(String name, JsonObject modulesJson) {
+		List<String> warnings = new ArrayList<>();
+		JsonObject clean = modules.sanitizeModules(modulesJson, warnings);
+		warnings.forEach(warning -> diagnostics.warn(SOURCE, "Profile '" + name + "': " + warning));
+		return writeNewProfile(name, clean, "Created profile '" + name + "'.");
+	}
+
+	/** Resets every module of the active profile to its defaults (all modules off) and saves. */
+	public void resetActiveProfile() {
+		for (var module : modules.all()) {
+			modules.resetToDefaults(module);
+		}
+
+		saveNow();
+		diagnostics.info(SOURCE, "Reset profile '" + activeProfile + "' to defaults.");
+	}
+
+	private String writeNewProfile(String name, JsonObject modulesJson, String logMessage) {
+		String problem = checkNewProfileName(name);
+		if (problem != null) {
+			return problem;
+		}
+
+		JsonObject json = new JsonObject();
+		json.addProperty("schemaVersion", SCHEMA_VERSION);
+		json.add("modules", modulesJson);
+		try {
+			JsonFiles.writeAtomically(profileFile(name), json);
+		} catch (IOException e) {
+			return "Could not write the profile file: " + e.getMessage();
+		}
+
+		diagnostics.info(SOURCE, logMessage);
+		return null;
+	}
+
+	/** Module data of a profile: the live state for the active one, otherwise read from disk. */
+	private JsonObject profileModules(String name) {
+		if (name.equals(activeProfile)) {
+			return modules.saveModules();
+		}
+
+		if (!isValidProfileName(name) || !Files.exists(profileFile(name))) {
+			return null;
+		}
+
+		try {
+			return JsonFiles.readObject(profileFile(name)).get("modules") instanceof JsonObject object ? object : new JsonObject();
+		} catch (IOException e) {
+			diagnostics.warn(SOURCE, "Could not read profile '" + name + "': " + e.getMessage());
+			return null;
+		}
+	}
+
+	public boolean profileExists(String name) {
+		return name.equals(activeProfile) || (isValidProfileName(name) && Files.exists(profileFile(name)));
+	}
+
+	// ----- automatic switching rules ---------------------------------------------------------
+
+	/** Rules for automatic profile switching, in priority order. */
+	public List<ProfileRule> profileRules() {
+		return List.copyOf(profileRules);
+	}
+
+	public void setProfileRules(List<ProfileRule> rules) {
+		profileRules.clear();
+		profileRules.addAll(rules);
+		markDirty();
 	}
 
 	private String checkNewProfileName(String name) {

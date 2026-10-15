@@ -5,6 +5,7 @@ import java.util.List;
 
 import net.minecraft.util.Util;
 
+import io.github.theamethyx.femboyclient.client.ClientKeys;
 import io.github.theamethyx.femboyclient.client.gui.Icon;
 import io.github.theamethyx.femboyclient.client.gui.Theme;
 import io.github.theamethyx.femboyclient.client.gui.UiContext;
@@ -12,19 +13,14 @@ import io.github.theamethyx.femboyclient.client.gui.widget.Button;
 import io.github.theamethyx.femboyclient.client.gui.widget.Container;
 import io.github.theamethyx.femboyclient.client.gui.widget.ScrollList;
 import io.github.theamethyx.femboyclient.client.gui.widget.SettingRow;
-import io.github.theamethyx.femboyclient.client.gui.widget.TextField;
 import io.github.theamethyx.femboyclient.client.gui.widget.Widget;
 import io.github.theamethyx.femboyclient.core.config.ConfigurationManager;
 
 /** Profiles, client-wide options and config files. */
 public class ConfigPage extends Page {
-	private static final long CONFIRM_WINDOW_MS = 4000;
-
 	private final ScrollList content;
 	private String feedback;
 	private int feedbackColor;
-	private String pendingDelete;
-	private long pendingDeleteAt;
 
 	public ConfigPage(UiContext ui) {
 		super(ui);
@@ -43,7 +39,7 @@ public class ConfigPage extends Page {
 
 	@Override
 	public String subtitle() {
-		return "Profiles, client options and config files.";
+		return "Emergency off, client options and config files.";
 	}
 
 	@Override
@@ -67,19 +63,12 @@ public class ConfigPage extends Page {
 		List<Widget> rows = new ArrayList<>();
 		rows.add(new Feedback());
 
-		rows.add(new SectionTitle("Profiles", "Each profile stores which modules are on, their keys and settings. Changes save automatically."));
-		for (String profile : config.profiles()) {
-			rows.add(new ProfileRow(profile));
-		}
+		rows.add(new SectionTitle("Emergency off", "Turns every module off at once; each one restores what it changed (camera, "
+				+ "lighting, held item). Automatic profile switching is paused too. Bind a key for it in Minecraft's Options > "
+				+ "Controls > Key Binds under 'Femboy Client' (currently " + ClientKeys.disableAll.getTranslatedKeyMessage().getString() + ")."));
+		rows.add(new DisableAllRow());
 
-		rows.add(new CreateRow("New profile name", "Create", "Create a profile as a copy of the current one, without switching to it.", 32,
-				cp -> Character.isLetterOrDigit(cp) || cp == '-' || cp == '_', name -> {
-			String problem = config.createProfile(name.trim());
-			report(problem == null ? "Created profile '" + name.trim() + "'." : problem, problem == null);
-			return problem == null;
-		}));
-
-		rows.add(new SectionTitle("Client options", "Apply to every profile."));
+		rows.add(new SectionTitle("Client options", "Apply to every profile. Profiles have their own page."));
 		rows.addAll(SettingRow.rowsFor(femboy.options().settings.all()));
 
 		rows.add(new SectionTitle("Files", "Stored in " + config.root().toAbsolutePath()));
@@ -109,7 +98,8 @@ public class ConfigPage extends Page {
 		}
 	}
 
-	private static final class SectionTitle extends Widget {
+	/** Accent heading with a muted explanation; shared with the Profiles page. */
+	static final class SectionTitle extends Widget {
 		private final String title;
 		private final String description;
 
@@ -130,108 +120,26 @@ public class ConfigPage extends Page {
 		}
 	}
 
-	private final class ProfileRow extends Container {
-		private final String name;
-		private final boolean active;
-		private final Button switchButton;
-		private final Button deleteButton;
-
-		ProfileRow(String name) {
-			this.name = name;
-			this.active = name.equals(femboy.config().activeProfile());
-			switchButton = add(new Button("Use", Button.Style.SECONDARY, () -> {
-				String problem = femboy.config().switchProfile(name);
-				report(problem == null ? "Switched to profile '" + name + "'." : problem, problem == null);
-				rebuild();
-			}));
-			switchButton.tooltip("Save the current profile, then load '" + name + "'.");
-			deleteButton = add(new Button(() -> confirming() ? "Confirm" : "", Button.Style.DANGER, this::delete).icon(Icon.TRASH));
-			deleteButton.tooltip("Delete this profile. Click twice to confirm. A backup copy stays in the profiles folder.");
-		}
-
-		private boolean confirming() {
-			return name.equals(pendingDelete) && System.currentTimeMillis() - pendingDeleteAt < CONFIRM_WINDOW_MS;
-		}
-
-		private void delete() {
-			if (!confirming()) {
-				pendingDelete = name;
-				pendingDeleteAt = System.currentTimeMillis();
-				return;
-			}
-
-			pendingDelete = null;
-			String problem = femboy.config().deleteProfile(name);
-			report(problem == null ? "Deleted profile '" + name + "'." : problem, problem == null);
-			rebuild();
-		}
-
-		@Override
-		public int preferredHeight(UiContext ui, int width) {
-			return 20;
-		}
-
-		@Override
-		protected void onLayout() {
-			int deleteWidth = confirming() ? 56 : 18;
-			deleteButton.setBounds(x + width - 3 - deleteWidth, y + 3, deleteWidth, 14);
-			switchButton.setBounds(x + width - 3 - deleteWidth - Theme.GAP - 34, y + 3, 34, 14);
-		}
-
-		@Override
-		public void render(UiContext ui) {
-			onLayout();
-			ui.roundRect(x, y, width, height, active ? Theme.SURFACE_ACTIVE : Theme.SURFACE);
-			if (active) {
-				ui.rect(x, y + 3, 2, height - 6, Theme.ACCENT);
-				ui.icon(Icon.CHECK, x + 7, y + 6, 8, Theme.ACCENT);
-			} else {
-				ui.icon(Icon.FOLDER, x + 7, y + 6, 8, Theme.TEXT_MUTED);
-			}
-
-			ui.textClipped(name, x + 20, y + 6, width - 120, active ? Theme.TEXT : Theme.TEXT_SECONDARY);
-			if (active) {
-				ui.textRight("Active", x + width - 6, y + 6, Theme.ACCENT_STRONG);
-			} else {
-				super.render(ui);
-			}
-		}
-
-		@Override
-		public boolean mouseClicked(UiContext ui, double mouseX, double mouseY, int button) {
-			return !active && super.mouseClicked(ui, mouseX, mouseY, button);
-		}
-	}
-
-	private final class CreateRow extends Container {
-		private final TextField field;
+	private final class DisableAllRow extends Container {
 		private final Button button;
 
-		CreateRow(String placeholder, String label, String tooltip, int maxLength, java.util.function.IntPredicate allowed,
-				java.util.function.Predicate<String> action) {
-			field = add(new TextField(placeholder, maxLength).allow(allowed));
-			Runnable submit = () -> {
-				if (action.test(field.text())) {
-					field.setText("");
-					rebuild();
-				}
-			};
-			field.onSubmit(text -> submit.run());
-			button = add(new Button(label, Button.Style.PRIMARY, submit).icon(Icon.PLUS));
-			button.enabledWhen(() -> !field.text().isBlank());
-			button.tooltip(tooltip);
+		DisableAllRow() {
+			button = add(new Button("Turn all modules off", Button.Style.DANGER, () -> {
+				int count = femboy.disableEverything();
+				report(count == 0 ? "No module was on." : "Turned " + count + " module(s) off.", true);
+				rebuild();
+			}).icon(Icon.STOP));
+			button.tooltip("Turn every module off now. Turn them back on one by one, or switch profiles.");
 		}
 
 		@Override
 		public int preferredHeight(UiContext ui, int width) {
-			return 15;
+			return 16;
 		}
 
 		@Override
 		protected void onLayout() {
-			int buttonWidth = 58;
-			field.setBounds(x, y, width - buttonWidth - Theme.GAP, 15);
-			button.setBounds(x + width - buttonWidth, y, buttonWidth, 15);
+			button.setBounds(x, y, width, 16);
 		}
 	}
 

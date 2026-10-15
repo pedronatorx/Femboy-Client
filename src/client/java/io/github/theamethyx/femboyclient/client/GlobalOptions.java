@@ -38,4 +38,9 @@ public final class GlobalOptions {
 
 	public final BooleanSetting toggleMessages = settings.add(new BooleanSetting("toggle_messages", "Key bind messages",
 			"Show a short message above the hotbar when a key bind turns a module on or off.", true));
+	public final BooleanSetting autoProfile = settings.add(new BooleanSetting("auto_profile", "Switch profiles automatically",
+			"Switch to another profile when what you hold (or the dimension) matches one of your rules on the Profiles page. "
+					+ "Choosing a profile by hand stays in effect until your held item changes to something another rule matches.", false));
+	public final BooleanSetting profileMessages = settings.add(new BooleanSetting("profile_messages", "Profile switch messages",
+			"Show the new profile's name above the hotbar after an automatic switch.", true));
 }

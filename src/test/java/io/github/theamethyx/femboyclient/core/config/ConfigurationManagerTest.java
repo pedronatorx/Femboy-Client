@@ -190,4 +190,80 @@ class ConfigurationManagerTest {
 		config.saveNow();
 		assertFalse(Files.readString(dir.resolve("femboyclient.json")).contains("authorizedServers"));
 	}
+
+	@Test
+	void duplicateExportAndImportProfiles() throws IOException {
+		ConfigurationManager config = newConfig();
+		config.load();
+		module.size.set(4.0);
+
+		assertNull(config.duplicateProfile("default", "copy"));
+		assertNotNull(config.duplicateProfile("default", "COPY"), "names are unique ignoring case");
+		String exported = config.exportProfile("copy");
+		assertTrue(exported.contains("\"size\": 4"), exported);
+
+		ConfigurationManager.ImportResult imported = config.importProfile("imported", exported);
+		assertNull(imported.error());
+		assertTrue(imported.warnings().isEmpty(), imported.warnings()::toString);
+		module.size.set(1.0);
+		assertNull(config.switchProfile("imported"));
+		assertEquals(4.0, module.size.get());
+
+		Path file = config.exportProfileToFile("imported");
+		assertNotNull(file);
+		assertTrue(Files.readString(file).contains("femboyClientProfile"));
+	}
+
+	@Test
+	void importRejectsGarbageAndDropsInvalidValues() {
+		ConfigurationManager config = newConfig();
+		config.load();
+
+		assertNotNull(config.importProfile("bad", "not json {").error());
+		assertNotNull(config.importProfile("bad", "[1, 2]").error());
+		assertNotNull(config.importProfile("bad", "{\"something\": 1}").error());
+		assertNotNull(config.importProfile("bad name!", "{\"modules\": {}}").error());
+		assertFalse(Files.exists(profile("bad")));
+
+		ConfigurationManager.ImportResult result = config.importProfile("partial",
+				"{\"modules\": {\"test_module\": {\"enabled\": false, \"settings\": {\"size\": 50}}, \"other\": {}}}");
+		assertNull(result.error());
+		assertEquals(2, result.warnings().size(), result.warnings()::toString);
+		assertNull(config.switchProfile("partial"));
+		assertFalse(module.isEnabled());
+		assertEquals(2.0, module.size.get(), "invalid size replaced by the default");
+	}
+
+	@Test
+	void resetActiveProfileRestoresDefaults() {
+		ConfigurationManager config = newConfig();
+		config.load();
+		module.size.set(5.0);
+		modules.setEnabled(module, false);
+
+		config.resetActiveProfile();
+
+		assertEquals(2.0, module.size.get());
+		assertTrue(module.isEnabled(), "this test module is on by default");
+	}
+
+	@Test
+	void profileRulesAreSavedAndInvalidOnesSkipped() throws IOException {
+		ConfigurationManager config = newConfig();
+		config.load();
+		config.setProfileRules(List.of(new ProfileRule(ProfileRule.Trigger.MACE, ProfileRule.Dimension.ANY, "mace"),
+				new ProfileRule(ProfileRule.Trigger.GLIDING, ProfileRule.Dimension.END, "elytra")));
+		config.saveNow();
+
+		ConfigurationManager reloaded = newConfig();
+		assertTrue(reloaded.load().isEmpty());
+		assertEquals(config.profileRules(), reloaded.profileRules());
+
+		Path global = dir.resolve("femboyclient.json");
+		Files.writeString(global, Files.readString(global).replace("\"mace\",", "\"hammer\","));
+		ConfigurationManager broken = newConfig();
+		List<String> report = broken.load();
+		assertEquals(1, broken.profileRules().size());
+		assertTrue(report.stream().anyMatch(line -> line.contains("rule 1")), report::toString);
+	}
 }

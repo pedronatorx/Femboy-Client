@@ -269,6 +269,11 @@ public final class AutoAttributeSwapModule extends Module implements ClientHooks
 	}
 
 	/** Why the last attack did not swap, or null. */
+	/** Whether a swapped weapon is still in hand, waiting to be switched back. */
+	public boolean swapInProgress() {
+		return pending != null;
+	}
+
 	public String lastSkip() {
 		return lastSkip;
 	}

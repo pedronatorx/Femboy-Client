@@ -17,11 +17,14 @@ public final class ClientKeys {
 	public static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(FemboyClient.MOD_ID, "main"));
 
 	public static KeyMapping openMenu;
+	/** Emergency stop; unbound by default so it cannot be pressed by accident. */
+	public static KeyMapping disableAll;
 
 	private ClientKeys() {
 	}
 
 	static void register() {
 		openMenu = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.femboyclient.open_menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, CATEGORY));
+		disableAll = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.femboyclient.disable_all", InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY));
 	}
 }
