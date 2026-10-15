@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.1 - 2026-10-15
+
+### Changed
+- **Auto Attribute Swap: the spear rule is now two parts.**
+  - **Spear reach:** a click at a target beyond normal reach but within the spear's range jabs with the spear and switches back.
+  - **Spear lunge:** holding attack with food or wind charges jabs a Lunge spear repeatedly to dash, with its own cooldown. Test environments only.
+
 ## 0.6.0 - 2026-10-15
 
 ### Added

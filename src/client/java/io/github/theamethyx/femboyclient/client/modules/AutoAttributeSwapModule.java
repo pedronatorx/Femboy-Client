@@ -11,8 +11,11 @@ import java.util.function.Predicate;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
@@ -20,13 +23,22 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.AttackRange;
+import net.minecraft.world.item.component.PiercingWeapon;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
 
+import io.github.theamethyx.femboyclient.client.FemboyClient;
+import io.github.theamethyx.femboyclient.client.combat.AttackTiming;
 import io.github.theamethyx.femboyclient.client.gui.Theme;
 import io.github.theamethyx.femboyclient.client.gui.UiContext;
 import io.github.theamethyx.femboyclient.client.gui.widget.AttributeSwapPanel;
 import io.github.theamethyx.femboyclient.client.gui.widget.Widget;
 import io.github.theamethyx.femboyclient.client.hud.HudAnchor;
 import io.github.theamethyx.femboyclient.client.hud.HudLine;
+import io.github.theamethyx.femboyclient.client.mixin.MultiPlayerGameModeAccessor;
 import io.github.theamethyx.femboyclient.client.module.ClientHooks;
 import io.github.theamethyx.femboyclient.core.module.Module;
 import io.github.theamethyx.femboyclient.core.module.ModuleCategory;
@@ -77,7 +89,10 @@ public final class AutoAttributeSwapModule extends Module implements ClientHooks
 	public enum Rule {
 		AXE("axe", "Axe", "Disables a raised shield for 5 seconds.", Items.IRON_AXE, 1000, true),
 		MACE("mace", "Mace", "Smash attack: extra damage the farther you fall.", Items.MACE, 0, true),
-		SPEAR("spear", "Spear", "Spear enchantments and effects on a normal hit.", Items.IRON_SPEAR, 500, false),
+		SPEAR("spear", "Spear reach", "Click at a target beyond your normal reach but within the spear's (up to 4.5 blocks): "
+				+ "jab with the spear and switch straight back.", Items.IRON_SPEAR, 500, false),
+		SPEAR_LUNGE("spear_lunge", "Spear lunge", "Hold attack with food or wind charges in hand: jab with your Lunge spear again "
+				+ "and again to dash forward. Singleplayer and servers in your own network only.", Items.WIND_CHARGE, 150, false),
 		SWORD("sword", "Sword", "Sword enchantments such as Sweeping Edge and Fire Aspect.", Items.DIAMOND_SWORD, 0, false),
 		TRIDENT("trident", "Trident", "Impaling and other trident enchantments.", Items.TRIDENT, 500, false),
 		CUSTOM("custom", "Custom items", "Any items you pick from the list.", Items.NETHER_STAR, 500, false);
@@ -143,8 +158,20 @@ public final class AutoAttributeSwapModule extends Module implements ClientHooks
 		public List<Setting<?>> controls() {
 			List<Setting<?>> list = new ArrayList<>(conditions);
 			list.add(0, cooldown);
-			list.add(1, targets);
+			if (rule != Rule.SPEAR_LUNGE) {
+				list.add(1, targets);
+			}
+
 			return list;
+		}
+
+		/** Why the rule cannot run here, or {@code null}. */
+		public String unavailableReason() {
+			if (rule == Rule.SPEAR_LUNGE && !FemboyClient.get().modules().environment().testEnvironment()) {
+				return Module.TEST_ENVIRONMENT_ONLY;
+			}
+
+			return null;
 		}
 
 		public List<Setting<?>> all() {
@@ -169,6 +196,9 @@ public final class AutoAttributeSwapModule extends Module implements ClientHooks
 		}
 	}
 
+	static final Set<String> DEFAULT_LUNGE_ITEMS = Set.of("minecraft:wind_charge", "minecraft:bread", "minecraft:cooked_beef",
+			"minecraft:cooked_porkchop", "minecraft:golden_carrot", "minecraft:baked_potato", "minecraft:cooked_chicken", "minecraft:apple");
+
 	/** A swap that happened, as far as the client can confirm it. */
 	public record SwapRecord(Rule rule, String item, int fromSlot, int toSlot, String target, long at, boolean usedForHit, boolean restored, String note) {
 	}
@@ -190,6 +220,11 @@ public final class AutoAttributeSwapModule extends Module implements ClientHooks
 	private final BooleanSetting axeShieldOnly;
 	private final NumberSetting maceMinFall;
 	private final IdSetSetting customItems;
+	private final BooleanSetting lungeAnyItem;
+	private final IdSetSetting lungeItems;
+	private final BooleanSetting lungeRepeat;
+	private Set<Item> lungeSet = Set.of();
+	private int lunges;
 	private Set<Item> customSet = Set.of();
 	private List<IdSetSetting.Choice> itemChoices;
 
@@ -220,10 +255,24 @@ public final class AutoAttributeSwapModule extends Module implements ClientHooks
 		customItems.choices(this::itemChoices);
 		customItems.onChange(ids -> customSet = resolveItems(ids));
 		rules.get(Rule.CUSTOM).conditions.add(customItems);
+		lungeItems = settings().add(new IdSetSetting("lunge_items", "Hold to lunge",
+				"Items in your hand that make holding attack lunge. Items without weapon attack speed recharge in 5 ticks, "
+						+ "which the server uses for the jab when you switch to the spear only for it.", DEFAULT_LUNGE_ITEMS)).panelOnly();
+		lungeItems.choices(this::itemChoices);
+		lungeItems.onChange(ids -> lungeSet = resolveItems(ids));
+		lungeSet = resolveItems(lungeItems.get());
+		lungeAnyItem = settings().add(new BooleanSetting("lunge_any_item", "Any non-weapon item",
+				"Lunge while holding anything that is not a weapon, including an empty hand.", false)).panelOnly();
+		lungeRepeat = settings().add(new BooleanSetting("lunge_repeat", "Repeat while held",
+				"Keep lunging while attack is held, once per cooldown. Off: one lunge per click.", true)).panelOnly();
+		rules.get(Rule.SPEAR_LUNGE).conditions.add(lungeItems);
+		rules.get(Rule.SPEAR_LUNGE).conditions.add(lungeAnyItem);
+		rules.get(Rule.SPEAR_LUNGE).conditions.add(lungeRepeat);
 
 		rules.get(Rule.AXE).matcher = stack -> stack.is(ItemTags.AXES);
 		rules.get(Rule.MACE).matcher = stack -> stack.is(Items.MACE);
-		rules.get(Rule.SPEAR).matcher = stack -> stack.is(ItemTags.SPEARS);
+		rules.get(Rule.SPEAR).matcher = stack -> stack.is(ItemTags.SPEARS) && stack.has(DataComponents.PIERCING_WEAPON);
+		rules.get(Rule.SPEAR_LUNGE).matcher = stack -> stack.is(ItemTags.SPEARS) && stack.has(DataComponents.PIERCING_WEAPON) && lungeLevel(stack) > 0;
 		rules.get(Rule.SWORD).matcher = stack -> stack.is(ItemTags.SWORDS);
 		rules.get(Rule.TRIDENT).matcher = stack -> stack.is(Items.TRIDENT);
 		rules.get(Rule.CUSTOM).matcher = stack -> customSet.contains(stack.getItem());
@@ -321,7 +370,8 @@ public final class AutoAttributeSwapModule extends Module implements ClientHooks
 		long now = System.currentTimeMillis();
 		lastSkip = null;
 		for (RuleSettings rule : rules.values()) {
-			if (!rule.enabled.get() || !conditionsMet(rule, player, target)) {
+			// The spear parts jab instead of hitting; they run from the click (spear reach) and from the tick (lunge).
+			if (rule.rule == Rule.SPEAR || rule.rule == Rule.SPEAR_LUNGE || !rule.enabled.get() || !conditionsMet(rule, player, target)) {
 				continue;
 			}
 
@@ -377,9 +427,132 @@ public final class AutoAttributeSwapModule extends Module implements ClientHooks
 				restored ? "switched back in the same tick" : "could not switch back");
 	}
 
+	// ----- spear: reach jab and lunge -------------------------------------------------------------
+
+	private int lungeLevel(ItemStack stack) {
+		LocalPlayer player = Minecraft.getInstance().player;
+		if (player == null) {
+			return 0;
+		}
+
+		return player.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).get(Enchantments.LUNGE)
+				.map(holder -> EnchantmentHelper.getItemEnchantmentLevel(holder, stack)).orElse(0);
+	}
+
+	/** Number of lunge jabs sent since the module started (for the panel and tests). */
+	public int lunges() {
+		return lunges;
+	}
+
+	/**
+	 * Called by MinecraftMixin when you click attack, before vanilla handles it. When the spear-reach rule applies, jabs with
+	 * the spear (switching to it and straight back) and returns {@code true} so vanilla's own click is skipped.
+	 */
+	public boolean onAttackClick() {
+		Minecraft client = Minecraft.getInstance();
+		LocalPlayer player = client.player;
+		RuleSettings lunge = rules.get(Rule.SPEAR_LUNGE);
+		if (player != null && lunge.enabled.get() && lunge.unavailableReason() == null && lungeTrigger(player.getMainHandItem())
+				&& findSlot(player.getInventory(), lunge) >= 0) {
+			// While holding a lunge item, clicks belong to the lunge (sent from the tick), not to a vanilla swing.
+			return true;
+		}
+
+		RuleSettings rule = rules.get(Rule.SPEAR);
+		if (player == null || client.gameMode == null || pending != null || !rule.enabled.get() || client.hitResult instanceof EntityHitResult
+				|| (skipWhileUsing.get() && player.isUsingItem()) || rule.remainingCooldown() > 0) {
+			return false;
+		}
+
+
+		Inventory inventory = player.getInventory();
+		int slot = findSlot(inventory, rule);
+		if (slot < 0) {
+			return false;
+		}
+
+		ItemStack spear = inventory.getItem(slot);
+		AttackRange range = spear.get(DataComponents.ATTACK_RANGE);
+		if (range == null) {
+			return false;
+		}
+
+		HitResult hit = range.getClosesetHit(player, 1.0f, entity -> PiercingWeapon.canHitEntity(player, entity) && rule.targets.get().matches(entity));
+		if (!(hit instanceof EntityHitResult entityHit)) {
+			return false;
+		}
+
+		jab(player, slot, rule, entityHit.getEntity().getDisplayName().getString());
+		return true;
+	}
+
+	private boolean lungeTrigger(ItemStack held) {
+		if (held.isEmpty()) {
+			return lungeAnyItem.get();
+		}
+
+		if (lungeSet.contains(held.getItem())) {
+			return true;
+		}
+
+		return lungeAnyItem.get() && !AttackTiming.isWeapon(held);
+	}
+
+	private boolean lungeKeyWasDown;
+
+	private void tickLunge(Minecraft client, LocalPlayer player) {
+		RuleSettings rule = rules.get(Rule.SPEAR_LUNGE);
+		boolean down = client.options.keyAttack.isDown() && client.screen == null;
+		boolean fresh = down && !lungeKeyWasDown;
+		lungeKeyWasDown = down;
+		if (!rule.enabled.get() || !down || (!fresh && !lungeRepeat.get()) || pending != null || client.gameMode == null) {
+			return;
+		}
+
+		if (rule.unavailableReason() != null || !lungeTrigger(player.getMainHandItem()) || rule.remainingCooldown() > 0) {
+			return;
+		}
+
+		if (player.isPassenger() || player.isFallFlying() || player.isInWater()) {
+			lastSkip = "Lunge does not work while riding, gliding or in water";
+			return;
+		}
+
+		int slot = findSlot(player.getInventory(), rule);
+		if (slot < 0) {
+			lastSkip = "no spear with Lunge in hotbar";
+			return;
+		}
+
+		jab(player, slot, rule, "lunge");
+		lunges++;
+	}
+
+	/** Switches to the spear in {@code slot}, jabs, and switches straight back in the same tick. */
+	private void jab(LocalPlayer player, int slot, RuleSettings rule, String target) {
+		Minecraft client = Minecraft.getInstance();
+		Inventory inventory = player.getInventory();
+		int original = inventory.getSelectedSlot();
+		ItemStack spear = inventory.getItem(slot);
+		PiercingWeapon piercing = spear.get(DataComponents.PIERCING_WEAPON);
+		long now = System.currentTimeMillis();
+		inventory.setSelectedSlot(slot);
+		client.gameMode.piercingAttack(piercing);
+		player.swing(InteractionHand.MAIN_HAND);
+		inventory.setSelectedSlot(original);
+		((MultiPlayerGameModeAccessor) client.gameMode).femboyclient$ensureHasSentCarriedItem();
+		readyAt.put(rule.rule, now + rule.cooldown.intValue());
+		last = new SwapRecord(rule.rule, spear.getHoverName().getString(), original, slot, target, now, true, inventory.getSelectedSlot() == original,
+				"jabbed and switched back in the same tick");
+	}
+
 	@Override
 	protected void onTick() {
 		LocalPlayer player = Minecraft.getInstance().player;
+		if (player != null) {
+			tickLunge(Minecraft.getInstance(), player);
+		}
+
 		if (pending == null) {
 			return;
 		}

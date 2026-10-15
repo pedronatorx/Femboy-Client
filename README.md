@@ -21,7 +21,7 @@ Everything is **off on first start**; nothing runs until you turn it on or insta
 ## Installation (normal Minecraft launcher)
 
 1. Install Fabric Loader 0.19.5 for Minecraft 1.21.11.
-2. Put `femboy-client-0.6.0.jar` (from `build/libs/`) and Fabric API 0.141.6+1.21.11 into the profile's `mods` folder.
+2. Put `femboy-client-0.6.1.jar` (from `build/libs/`) and Fabric API 0.141.6+1.21.11 into the profile's `mods` folder.
 3. Start the game and press **Right Shift** to open the menu. You can rebind it under Options → Controls → Key Binds → Femboy Client.
 
 Settings live in `config/femboyclient/`:
@@ -43,7 +43,7 @@ export JAVA_HOME=$HOME/.local/share/jdks/jdk-25.0.4.1+1   # any JDK 25+
 
 | Task | Command |
 |---|---|
-| Build the mod jar (also runs the unit tests) | `./gradlew build` → `build/libs/femboy-client-0.6.0.jar` |
+| Build the mod jar (also runs the unit tests) | `./gradlew build` → `build/libs/femboy-client-0.6.1.jar` |
 | Unit tests only | `./gradlew test` |
 | Server GameTests, headless (includes the research experiment) | `./gradlew runGameTest` |
 | In-game client tests, headless (needs `xvfb-run`), with screenshots | `./scripts/run-client-tests.sh` |
@@ -74,7 +74,7 @@ The sidebar has twelve sections. Every module has an on/off switch, a key (click
 
 | Module | What it does |
 |---|---|
-| **Auto Attribute Swap** | Switches to the right weapon for a single hit and straight back: an axe against a raised shield, a mace while falling, and optional spear, sword, trident and custom-item rules, each with its own cooldown and conditions. See below. |
+| **Auto Attribute Swap** | Switches to the right weapon for a single hit and straight back: an axe against a raised shield, a mace while falling, optional sword, trident and custom-item rules, and two spear parts: **Spear reach** (click a target beyond your normal reach but within the spear's 4.5 blocks and it jabs with the spear) and **Spear lunge** (hold attack with food or wind charges in hand to jab a Lunge spear again and again and dash; test environments only). Each rule has its own cooldown and conditions. See below. |
 | **Combat Info** | Clicks per second (left and right), combo (hits that landed in a row; ends when you take damage), reach of your last hit, accuracy. |
 | **Target HUD** | A card with your target's name, health and absorption, armor points, distance, armor and held items, and whether its shield is raised. The target is what you look at, the entity you hit last, or one you lock with the lock key. |
 | **Weapon Info** | Depends on what you hold. **Axe:** target shield state, your own shield cooldown. **Mace:** fall distance, smash ready, base smash bonus (same formula as the server), vertical speed, wind charges. **Spear:** Lunge level and why it can't trigger (riding, gliding, in water); while charging, the damage, knockback and dismount windows with the speed you have and need. **Bow/crossbow/trident:** draw, load and charge progress, Riptide conditions, ammunition. |
@@ -155,6 +155,11 @@ Nothing here hides anything from anti-cheat or server checks (no fake rotations,
 - Players already near you when you turn it on are not announced. Several arrivals in the same moment are combined into one message.
 
 ### Auto Attribute Swap
+
+**The two spear parts.** A spear jab is its own action, aimed along the spear's attack range (2 to 4.5 blocks in survival, 6.5 in creative). The server checks the jab against your attack charge using the attack speed of the item it last saw you holding; it updates that only when it ticks you. Switching to the spear only for the jab (and back in the same tick) therefore uses the held item's charge time:
+- **Spear reach** (any server, like the other rules): when you click and nothing is under the crosshair within your normal reach, but a target is along the spear's range, the module switches to the spear, jabs and switches straight back. Settings: cooldown, target filter.
+- **Spear lunge** (singleplayer and servers in your own network only): while you hold attack with one of the "Hold to lunge" items (default: wind charges and common foods; optionally any non-weapon item), it jabs with a spear that has Lunge every cooldown (default 150 ms) and switches back. Items without weapon attack speed recharge in 5 ticks, and the server allows 5 ticks of leeway, so each jab is accepted. Lunge does not work while riding, gliding or in water, costs 1 durability and 4 exhaustion per level per jab, and food drains quickly.
+
 
 - **What it does:** when you attack, it selects the hotbar slot of a weapon chosen by rule, the attack is sent with that item, and the original slot is selected and sent again in the same tick. The server applies the hit with the swapped item's effects and never sees the swap during its own tick, so your attack charge is kept.
 - **Rules,** checked in this order, each in its own card with the item icon, an on/off switch, a reset button and its settings:

@@ -1,4 +1,4 @@
-# Verification report: Femboy Client 0.6.0
+# Verification report: Femboy Client 0.6.1
 
 Date: 2026-10-15. Sections up to "Servers and stability" were written for 0.4.0 and still pass; 0.5.0 additions are in the sections after it.
 
@@ -215,6 +215,8 @@ Where possible, each module was checked against what the game really did in the 
 | Flight | Verified in the running Minecraft client | Survival: hovered (no height change in 20 ticks), +4.5 blocks with jump, server position agreed, fell when off, no flying ability left |
 | AutoTotem | Verified in the running Minecraft client | Totem moved from inventory slot to offhand on client and server |
 | Auto StunSlam | Verified in the running Minecraft client | Falling 4.8 blocks onto a player holding up a shield: shield disabled, damage through it (20 → 13.2 with Resistance II), back to the mace slot on client and server |
+| Auto Attribute Swap: spear reach | Verified in the running Minecraft client | Husk 3.5 blocks away: a sword click did nothing; with the rule one click jabbed it with the spear (20 → 14.1) and returned to the sword slot on client and server |
+| Auto Attribute Swap: spear lunge | Verified in the running Minecraft client | Holding attack with bread: nothing without the rule; with it 6 lunges in 20 ticks (Lunge III spear, 150 ms cooldown), 18.1 blocks forward, server position within 0.01, slot stayed on the bread |
 
 ## Not verified
 

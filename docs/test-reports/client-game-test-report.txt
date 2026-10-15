@@ -1,5 +1,5 @@
 Femboy Client client game test report
-Started: 2026-10-15T20:15:43.039207390
+Started: 2026-10-15T20:54:57.251746787
 
 PASS  Femboy Client entrypoint ran
 PASS  All 34 modules registered  -- 34
@@ -50,7 +50,7 @@ PASS  At least one geode card is listed
 PASS  Clicking a geode card shows its exact counts and details
 PASS  A waypoint can be added at the player position  -- null
 PASS  In singleplayer the list has no other players (yourself excluded by default)  -- 0 entries
-PASS  With 'Include yourself' your own entry is listed with a known position  -- [Entry[id=2654e3c3-150d-3857-a426-0b141796a4e0, name=Player0, ping=0, gameMode=Creative, knowledge=IN_RANGE, position=(0.5, -60.0, 0.5), seenAt=1792088177933]]
+PASS  With 'Include yourself' your own entry is listed with a known position  -- [Entry[id=2654e3c3-150d-3857-a426-0b141796a4e0, name=Player0, ping=0, gameMode=Creative, knowledge=IN_RANGE, position=(0.5, -60.0, 0.5), seenAt=1792090533445]]
 PASS  The waypoint of this world is offered as a navigation target
 PASS  Clicking the waypoint starts navigation to it  -- Target[name=Spawn, position=(0.5, -59.5, 0.5), note=waypoint, color=-9524993]
 PASS  Stopping navigation clears the target
@@ -101,7 +101,7 @@ PASS  Item Counters: reminds to refill totems that are only in the inventory  --
 PASS  Health & Armor lists the nearly broken chestplate with its durability  -- [Health: 20.0, Food: 20  sat 4.0, Diamond Chestplate: 8  2%]
 PASS  Effects lists Speed II with its remaining time  -- [Speed II: 0:29]
 PASS  Hitboxes draws both zombies, and none once hostile mobs are filtered out  -- drawn 2, filtered 0
-PASS  Trajectories: a real snowball lands within 2 blocks of the predicted point  -- predicted (0.5, -55.19158995772563, 14.0), last server position (0.40745758285780476, -55.16969165029055, 13.7587595086963) (10 ticks), horizontal error 0.26
+PASS  Trajectories: a real snowball lands within 2 blocks of the predicted point  -- predicted (0.5, -55.19158995772563, 14.0), last server position (0.5905394788004755, -55.28016407578789, 13.861318725204336) (10 ticks), horizontal error 0.17
 PASS  Crystal & Anchor Info: obsidian within reach is a placement spot and under the crosshair it is the focus  -- spot true, focus Focus[label=Crystal here, center=(0.5, -60.0, 2.5), power=6.0, note=null]; Block{minecraft:obsidian} [] (0.5, -60.0, 2.4309332234547383)
 PASS  Crystal damage estimate (no armor, Normal) matches the damage really taken within 0.5  -- estimate 14.13, taken 14.13
 PASS  Singleplayer counts as a test environment, so automation modules can run
@@ -114,13 +114,15 @@ PASS  Flight: hovers in survival, rises with jump (server agrees), falls again w
 PASS  AutoTotem moves a totem from the inventory into the offhand (client and server)  -- client true, server true, slot emptied true
 PASS  Test target holds up a shield (server and client agree)  -- server true, client true
 PASS  Auto StunSlam falling onto a shielding player: axe disables the shield, mace damages through it, slot restored  -- Axe and mace hit Bob; shield disabled true; health 20 -> 13.2; slot client 2 server 2 (mace = 2); max fall 4.8, crosshair on Bob true
+PASS  Spear reach: out of sword reach a click does nothing; with the rule it jabs with the spear and returns to the sword  -- without rule health 20.0; with rule hit true (health 14.1); slot client 0 server 0; SwapRecord[rule=SPEAR, item=Iron Spear, fromSlot=0, toSlot=1, target=Husk, at=1792090572550, usedForHit=true, restored=true, note=jabbed and switched back in the same tick]
+PASS  Spear lunge: holding attack with bread jabs the Lunge spear repeatedly and dashes forward; slot stays on the bread  -- without rule moved 0.00; with rule 6 lunges, moved 18.2 blocks forward (server agrees within 0.00); slot client 3 server 3
 PASS  Auto Attribute Swap is on the Combat page
 PASS  Entity ESP settings are grouped into sections  -- [Targets, Boxes, Colors, Labels, Health, Tracers, Performance]
 PASS  Free Camera is on the Movement page and Fullbright on Visuals  -- Movement / Visuals
 PASS  Outline thickness changes the rendered outline (magenta pixels at 1x vs 5x)  -- 2354 vs 7968 pixels
 PASS  Outline opacity changes the rendered outline (strongly magenta pixels at 100% vs 20%)  -- 7968 vs 36 pixels
 PASS  Per-category outline switch removes the outline of hostile mobs  -- 2354 vs 0 pixels
-PASS  Tracer lines are drawn when enabled and gone when disabled  -- 750 without, 2810 with
+PASS  Tracer lines are drawn when enabled and gone when disabled  -- 732 without, 2792 with
 PASS  Name size changes the drawn label width  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false] -> DrawnLabel[name=Target, x=187, y=80, width=55, height=22, healthBar=false, healthText=false]
 PASS  Distance size changes the drawn label height  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false] -> DrawnLabel[name=Target, x=199, y=78, width=30, height=24, healthBar=false, healthText=false]
 PASS  Background padding changes the drawn label size  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false] -> DrawnLabel[name=Target, x=195, y=78, width=38, height=24, healthBar=false, healthText=false]
@@ -133,7 +135,7 @@ PASS  Health can be limited to chosen categories  -- DrawnLabel[name=Target, x=1
 PASS  Long names are shortened to the maximum name width  -- DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true]
 PASS  Labels of entities at the same spot do not overlap  -- [DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true], DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true], DrawnLabel[name=Stacked A, x=236, y=87, width=41, height=20, healthBar=true, healthText=true], DrawnLabel[name=Stacked B, x=235, y=66, width=41, height=20, healthBar=true, healthText=true]]
 PASS  Labels are drawn at 854x480 as well  -- [DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true], DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true], DrawnLabel[name=Stacked A, x=236, y=87, width=41, height=20, healthBar=true, healthText=true], DrawnLabel[name=Stacked B, x=235, y=66, width=41, height=20, healthBar=true, healthText=true]]
-NOTE  254 zombies in view (Mesa software rendering): average frame 25.0 ms with ESP (labels, health, tracers) and Trackers, 21.5 ms without. Average cost per call: entity_esp/tick 0.122 ms, entity_esp/render_world 0.069 ms, entity_esp/render_hud 0.278 ms, trackers/render_hud 0.104 ms, 
+NOTE  254 zombies in view (Mesa software rendering): average frame 22.6 ms with ESP (labels, health, tracers) and Trackers, 19.9 ms without. Average cost per call: entity_esp/tick 0.114 ms, entity_esp/render_world 0.067 ms, entity_esp/render_hud 0.233 ms, trackers/render_hud 0.100 ms, 
 PASS  With 254 entities, ESP keeps to its highlight limit (64)  -- 64 tracked
 PASS  No module errors with many entities
 PASS  Trackers: a mob in front gets an on-screen marker  -- Indicator[name=Ahead, source=HOSTILE, onScreen=true, x=214, y=134, label=Ahead · 8m]
@@ -165,7 +167,7 @@ PASS  Java Runner: runtime exceptions are shown  -- FAILED: Exception: java.lang
     at run (line 1)
 PASS  Java Runner: the game itself is not reachable (compile error)  -- COMPILE_ERROR: Line 1: package net.minecraft.client does not exist
 PASS  Minecraft keeps ticking while a program runs (20 ticks while the worker loops)  -- 20 ticks took 1.00 s, still running: true
-PASS  Java Runner: an endless loop is stopped at the time limit  -- TIMED_OUT, pid 64571
+PASS  Java Runner: an endless loop is stopped at the time limit  -- TIMED_OUT, pid 74958
 PASS  Java Runner: Stop kills the program  -- STOPPED
 PASS  Java Runner: excessive output is cut off  -- OUTPUT_LIMIT, 163 lines
 PASS  Java Runner: code that deletes files asks for confirmation and does not run yet  -- [deletes files]
@@ -207,7 +209,7 @@ Performance            off      -
 Module List            off      -
 Java Runner            on       running
 PASS  No module errors were logged during the run
-NOTE  Natural world (seed 8675309): 2 geode(s) in the scanned area, 2 complete
+NOTE  Natural world (seed 8675309): 2 geode(s) in the scanned area, 1 complete
 PASS  Naturally generated geodes are found and grouped in a normal world
 PASS  Every natural geode's completeness is stated (complete or incomplete with a reason)
 NOTE  Natural ticking: 2 geode(s) re-observed, 2 within simulation distance, 2 of those grew
@@ -219,16 +221,16 @@ PASS  Every module runs on a dedicated server (no server list, no pausing)
 PASS  A dedicated server at localhost counts as a test environment (private address)  -- Server localhost:25565 (your network)
 PASS  A second player on the server reaches the client
 PASS  Player Alert warns when the player comes into range  -- [Alice (5 m ↑) is in range]
-PASS  Player Finder lists the player in range with their real position  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=IN_RANGE, position=(9.5, -29.0, -7.5), seenAt=1792088310942]
+PASS  Player Finder lists the player in range with their real position  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=IN_RANGE, position=(6.5, -29.0, -8.5), seenAt=1792090675495]
 PASS  Entity ESP highlights the other player
 PASS  Player Alert reports when the player leaves range (setting on)  -- [Alice left your range, Alice (5 m ↑) is in range]
-PASS  Player Finder keeps the last seen position once the player is out of range  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=LAST_SEEN, position=(9.5, -29.0, -7.5), seenAt=1792088311147]
+PASS  Player Finder keeps the last seen position once the player is out of range  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=LAST_SEEN, position=(6.5, -29.0, -8.5), seenAt=1792090675598]
 PASS  Trackers point to the last seen position, labelled with its age  -- [Indicator[name=Alice, source=LAST_SEEN, onScreen=true, x=214, y=114, label=Alice · 5m · last seen 0 s ago]]
 PASS  A player who logs off disappears from Player Finder
 PASS  Trackers drop a player who logged off
 PASS  Attribute swap: by default the axe is only used against a raised shield (no swap on a normal mob)  -- sword 0->1, axe 0->0
 PASS  Attribute swap: the server applied the hit with the axe (axe lost durability, sword did not)  -- sword 1->1, axe 0->2
-PASS  Attribute swap: switched back to the sword in the same tick, on client and server  -- client 0, server 0, SwapRecord[rule=AXE, item=Iron Axe, fromSlot=0, toSlot=1, target=Dummy, at=1792088314396, usedForHit=true, restored=true, note=switched back in the same tick]
+PASS  Attribute swap: switched back to the sword in the same tick, on client and server  -- client 0, server 0, SwapRecord[rule=AXE, item=Iron Axe, fromSlot=0, toSlot=1, target=Dummy, at=1792090678843, usedForHit=true, restored=true, note=switched back in the same tick]
 PASS  Attribute swap: no second swap during the axe's cooldown (1 s)  -- sword 1->2, axe 2->2, skip: Axe on cooldown
 PASS  Attribute swap: a longer per-item cooldown (3 s) blocks swaps for longer  -- axe 2->4->4
 PASS  Attribute swap: with a swap-back delay the axe stays selected for those ticks, then the sword returns  -- right after 1, later 0, server 0
@@ -241,8 +243,8 @@ PASS  The server keeps receiving the player's updates during free camera  -- ser
 PASS  The player stays put on the server and on the client  -- server moved 0.000, client moved 0.000
 PASS  Disabling the free camera returns the view to the player
 PASS  No rubber-band: server and client agree on the position after the camera returns  -- server-client difference 0.000
-PASS  After the camera returns, clicking works again (control: swing, block broken)  -- swung=true, aimed=true (BlockPos{x=4, y=-34, z=-8} pitch 90.0, expected BlockPos{x=4, y=-30, z=-8}), server: Block{minecraft:air}, held 0 minecraft:air, mode CREATIVE, at (4.5, -30.14510670065164, -7.5)
+PASS  After the camera returns, clicking works again (control: swing, block broken)  -- swung=true, aimed=true (BlockPos{x=1, y=-34, z=-9} pitch 90.0, expected BlockPos{x=1, y=-30, z=-9}), server: Block{minecraft:air}, held 1 minecraft:rotten_flesh, mode CREATIVE, at (1.5, -30.14510670065164, -8.5)
 NOTE  Ignored known offline-test noise: missing X11 cursor shapes (Xvfb), anisotropic filtering option, Realms and account-properties requests failing without a real login.
 PASS  No render-thread, server-thread or client-code errors in the client log
 
-Result: PASSED (193 checks passed, 182 s)
+Result: PASSED (195 checks passed, 192 s)

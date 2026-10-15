@@ -15,7 +15,7 @@ import io.github.theamethyx.femboyclient.client.modules.FreeCameraModule;
  * With the free camera that is far from the player, so attacking, using an item or pick-block would act
  * on whatever is in front of the camera, which the server rejects as out of reach. There is no event to
  * cancel these clicks, so they are skipped while the camera is detached. Hotbar, inventory and chat keys
- * are unaffected.
+ * are unaffected. The attack click is also offered to Auto Attribute Swap's spear parts first (there is no click event).
  */
 @Mixin(Minecraft.class)
 public abstract class MinecraftMixin {
@@ -23,6 +23,19 @@ public abstract class MinecraftMixin {
 	private void femboyclient$noAttackInFreeCamera(CallbackInfoReturnable<Boolean> cir) {
 		if (FreeCameraModule.detached) {
 			cir.setReturnValue(false);
+			return;
+		}
+
+		// Auto Attribute Swap's spear parts: a jab at a target beyond normal reach, or a lunge click while holding food or
+		// wind charges. When one of them handles the click, vanilla's own swing or miss for it is skipped.
+		io.github.theamethyx.femboyclient.client.FemboyClient femboy = io.github.theamethyx.femboyclient.client.FemboyClient.get();
+		var swap = femboy == null ? null : femboy.modules().get(io.github.theamethyx.femboyclient.client.modules.AutoAttributeSwapModule.class);
+		if (swap != null && swap.isRunning()) {
+			boolean[] handled = {false};
+			femboy.modules().runGuarded(swap, io.github.theamethyx.femboyclient.core.module.ModuleManager.Phase.TICK, () -> handled[0] = swap.onAttackClick());
+			if (handled[0]) {
+				cir.setReturnValue(false);
+			}
 		}
 	}
 

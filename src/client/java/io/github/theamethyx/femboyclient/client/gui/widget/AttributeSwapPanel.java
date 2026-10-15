@@ -160,14 +160,20 @@ public final class AttributeSwapPanel extends Container {
 				return "No world loaded";
 			}
 
+			String unavailable = rule.unavailableReason();
+			if (unavailable != null) {
+				return unavailable;
+			}
+
 			int slot = rule.hotbarSlot();
-			String where = slot < 0 ? "Not in your hotbar" : "In " + AutoAttributeSwapModule.slotName(slot) + ": "
+			String where = slot < 0 ? (rule.rule() == AutoAttributeSwapModule.Rule.SPEAR_LUNGE ? "No spear with Lunge in your hotbar" : "Not in your hotbar") : "In " + AutoAttributeSwapModule.slotName(slot) + ": "
 					+ player.getInventory().getItem(slot).getHoverName().getString();
 			long remaining = rule.remainingCooldown();
 			return where + "  ·  " + (remaining > 0 ? String.format(Locale.ROOT, "next swap in %.1f s", remaining / 1000.0) : "ready");
 		}
 
 		private int stateColor() {
+			if (rule.unavailableReason() != null) return Theme.TEXT_MUTED;
 			if (!rule.enabled().get()) return Theme.TEXT_MUTED;
 			if (rule.hotbarSlot() < 0) return Theme.WARNING;
 			return rule.remainingCooldown() > 0 ? Theme.WARNING : Theme.SUCCESS;

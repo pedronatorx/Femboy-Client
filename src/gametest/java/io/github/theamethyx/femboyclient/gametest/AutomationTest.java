@@ -82,6 +82,8 @@ final class AutomationTest {
 		flight(context, singleplayer, report);
 		autoTotem(context, singleplayer, report);
 		stunSlam(context, singleplayer, report);
+		spearReach(context, singleplayer, report);
+		spearLunge(context, singleplayer, report);
 
 		server.runCommand("kill @e[type=!player]");
 		server.runCommand("clear @a");
@@ -281,6 +283,82 @@ final class AutomationTest {
 	}
 
 	private static TargetPlayer target;
+
+	private static int serverSlot(TestSingleplayerContext singleplayer) {
+		return singleplayer.getServer().computeOnServer(s -> s.getPlayerList().getPlayers().stream().filter(p -> !(p instanceof FakePlayer))
+				.findFirst().orElseThrow().getInventory().getSelectedSlot());
+	}
+
+	private static void swapRule(ClientGameTestContext context, String id, Object value) {
+		set(context, io.github.theamethyx.femboyclient.client.modules.AutoAttributeSwapModule.class, id, value);
+	}
+
+	/** Spear reach: a husk 3.5 blocks away is out of sword reach; with the rule a click jabs it with the spear. */
+	private static void spearReach(ClientGameTestContext context, TestSingleplayerContext singleplayer, TestReport report) {
+		var server = singleplayer.getServer();
+		server.runCommand("clear @a");
+		server.runCommand("item replace entity @a hotbar.0 with minecraft:iron_sword");
+		server.runCommand("item replace entity @a hotbar.1 with minecraft:iron_spear");
+		context.runOnClient(client -> client.player.getInventory().setSelectedSlot(0));
+		freshHusk(context, singleplayer, "0.5 -60 4.3");
+		server.runCommand("tp @p 0.5 -60 0.5 0 5");
+		context.waitTicks(25);
+		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+		context.waitTicks(25);
+		float withoutRule = huskHealth(singleplayer);
+
+		var swap = io.github.theamethyx.femboyclient.client.modules.AutoAttributeSwapModule.class;
+		enable(context, swap, true);
+		swapRule(context, "spear_enabled", true);
+		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+		boolean hit = ClientGameTest.waitUntil(context, () -> huskHealth(singleplayer) < 20, 20);
+		context.waitTicks(2);
+		int clientSlot = context.computeOnClient(client -> client.player.getInventory().getSelectedSlot());
+		String last = context.computeOnClient(client -> String.valueOf(femboy().modules().get(swap).lastSwap()));
+		report.check("Spear reach: out of sword reach a click does nothing; with the rule it jabs with the spear and returns to the sword",
+				withoutRule == 20 && hit && clientSlot == 0 && serverSlot(singleplayer) == 0,
+				String.format(Locale.ROOT, "without rule health %.1f; with rule hit %s (health %.1f); slot client %d server %d; %s",
+						withoutRule, hit, huskHealth(singleplayer), clientSlot, serverSlot(singleplayer), last));
+		swapRule(context, "spear_enabled", false);
+		enable(context, swap, false);
+	}
+
+	/** Spear lunge: holding bread and the attack button, with a Lunge spear in the hotbar, dashes forward. */
+	private static void spearLunge(ClientGameTestContext context, TestSingleplayerContext singleplayer, TestReport report) {
+		var server = singleplayer.getServer();
+		server.runCommand("kill @e[type=!player]");
+		server.runCommand("clear @a");
+		server.runCommand("item replace entity @a hotbar.2 with minecraft:iron_spear[enchantments={\"minecraft:lunge\":3}]");
+		server.runCommand("item replace entity @a hotbar.3 with minecraft:bread 16");
+		server.runCommand("effect give @a saturation 60 10");
+		context.runOnClient(client -> client.player.getInventory().setSelectedSlot(3));
+		server.runCommand("tp @p 0.5 -60 -20.5 0 0");
+		context.waitTicks(25);
+
+		Vec3 start = context.computeOnClient(client -> client.player.position());
+		context.getInput().holdMouseFor(GLFW.GLFW_MOUSE_BUTTON_LEFT, 20);
+		context.waitTicks(10);
+		double withoutRule = context.computeOnClient(client -> client.player.position().distanceTo(start));
+
+		var swap = io.github.theamethyx.femboyclient.client.modules.AutoAttributeSwapModule.class;
+		enable(context, swap, true);
+		swapRule(context, "spear_lunge_enabled", true);
+		Vec3 before = context.computeOnClient(client -> client.player.position());
+		context.getInput().holdMouseFor(GLFW.GLFW_MOUSE_BUTTON_LEFT, 20);
+		context.waitTicks(10);
+		Vec3 after = context.computeOnClient(client -> client.player.position());
+		Vec3 serverAfter = server.computeOnServer(s -> s.getPlayerList().getPlayers().getFirst().position());
+		int lunges = context.computeOnClient(client -> femboy().modules().get(swap).lunges());
+		int clientSlot = context.computeOnClient(client -> client.player.getInventory().getSelectedSlot());
+		double forward = after.z - before.z;
+		report.check("Spear lunge: holding attack with bread jabs the Lunge spear repeatedly and dashes forward; slot stays on the bread",
+				withoutRule < 0.1 && lunges >= 3 && forward > 3 && after.distanceTo(serverAfter) < 1 && clientSlot == 3 && serverSlot(singleplayer) == 3,
+				String.format(Locale.ROOT, "without rule moved %.2f; with rule %d lunges, moved %.1f blocks forward (server agrees within %.2f); slot client %d server %d",
+						withoutRule, lunges, forward, after.distanceTo(serverAfter), clientSlot, serverSlot(singleplayer)));
+		swapRule(context, "spear_lunge_enabled", false);
+		enable(context, swap, false);
+		server.runCommand("effect clear @a");
+	}
 
 	private static FakePlayer bob(MinecraftServer server) {
 		return target;
