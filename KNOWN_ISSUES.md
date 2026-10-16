@@ -66,7 +66,13 @@
   - vanilla geodes in a flat test world;
   - exposure produced by calling the game's random-tick code;
   - exposure between 0 and about 38 hours.
-- **Not built (0.7.0 spec):** Anti Hunger, Hotbar Profiles, Item Swap, Chest Organizer, Structure Finder, Material List, Schematic Viewer, armor in nametags, shader-based entity outlines, AutoCrystal, AutoAnchor, Auto Pot, Aim Trainer. Player, item and projectile ESP, tracers, health bars and distance are options of Entity ESP; CPS and reach are in Combat Info; ping and FPS in Performance; durability alerts in Health & Armor.
+- **Covered by other modules:** player, item and projectile ESP, tracers, health bars and distance are options of Entity ESP; CPS and reach are in Combat Info; ping and FPS in Performance; durability alerts in Health & Armor.
+- **Structure Finder** works only in singleplayer (it needs the world seed). Positions are the structure's chunk start like /locate; the height is not known.
+- **Schematic Viewer** draws outlines of missing and wrong blocks, not block models. Old (pre-1.13) schematics with numeric block ids are not supported. Only the first palette of a multi-palette structure file is used. The Litematica reader was checked with a file written by the test, not with a file saved by Litematica itself.
+- **Material List** counts the item that places each block; blocks without an item (fire, portals) are left out, double slabs count 2, the upper half of doors and the head of beds are not counted twice.
+- **AutoCrystal/AutoAnchor/Auto Pot** turn your view visibly; they act one step per tick, so they are slower than clients that hide rotations. AutoAnchor does nothing in the Nether.
+- **Anti Hunger** makes the server treat you as walking, so sprint-jumps cost the walking jump hunger and other server-side sprint effects (such as sprint knockback when the "report sprint when attacking" setting is off) are lost.
+- **Player Alert auto leave** only leaves multiplayer servers, never singleplayer.
 - **Ore ESP and Block Counter** see only what the server sent; anti-xray servers send fake ores.
 - **No Fall** tells the server you are on the ground; it does not help when the server checks falls itself.
 - **HUD editor:** the name label of a block dragged to the very top can overlap the help panel.
@@ -83,6 +89,7 @@
 - Not tested in game in 0.5.0: Elytra Info in flight, the spear charge windows and Lunge (no spear test), bow and crossbow paths (only a thrown snowball was compared with a real throw), anchor explosions, armored or enchanted targets in damage estimates, the lock key pressed on a real keyboard (the test calls the same method).
 - The second player in the multiplayer test is a Fabric fake player added on the server, not a second real client. The server sends it to the client like any player, but movement over time and real network latency were not tested.
 - The test harness sends key events without modifier flags, so the code editor also checks the keyboard state for Ctrl. Real keyboard shortcuts were not exercised in a visible window.
+- Not tested in game in 0.8.0: moving Aim Trainer targets, Hotbar Profiles loading on a profile switch (loading by button was tested), Schematic Viewer rotation and layer filter, Structure Finder for structures other than villages and strongholds, the GUI at menu scales other than Auto.
 - Not tested in game in 0.7.0: Elytra Flight, Strafe Assist, Keystrokes key highlighting (only its placement), the drawn Shulker Preview tooltip (only its data), the menu scale option with the new themes, Auto Reconnect actually reconnecting (only the countdown screen).
 - The in-game tests sometimes stop with "Network synchronizer in invalid state" when the machine is short on memory (another Minecraft client running); a rerun passes.
 - Performance was measured with Mesa software rendering (254 zombies: about 26 ms per frame with ESP, health, tracers and Trackers on vs. 24 ms with them off). Numbers on a real GPU will differ.

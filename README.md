@@ -1,8 +1,8 @@
 # Femboy Client
 
-A client-side Fabric mod for **Minecraft Java Edition 1.21.11**: a themeable ClickGUI with 60 combat, automation, movement, visual, inventory, tracking, world and utility modules, a drag-and-drop HUD editor, profiles with automatic switching, and 17 ready-made presets.
+A client-side Fabric mod for **Minecraft Java Edition 1.21.11**: a themeable ClickGUI with 72 combat, automation, movement, visual, inventory, tracking, world and utility modules, a drag-and-drop HUD editor, profiles with automatic switching, and 17 ready-made presets.
 
-Everything is **off on first start**; nothing runs until you turn it on or install a preset. Every module shows a **tier** badge: *Visual* and *Assist* modules (information, ESP, HUD) and *Automation* modules that only manage your own items (Auto Attribute Swap's spear reach and weapon rules, Auto Tool, Inventory Sorter, Sprint) work on every server. **Sandbox** modules (combat automation, movement changes, Auto Armor, Auto Refill, Auto Offhand) work only in a **test environment**: singleplayer, or a server you reach at a private address (your own PC, your LAN, or a VPN such as Tailscale or ZeroTier). There are no prompts or allowlists; elsewhere they simply stay off and their description says why. Femboy Client contains nothing that hides it from anti-cheat systems, and some servers' rules forbid clients like this, so check before you use it there.
+Everything is **off on first start**; nothing runs until you turn it on or install a preset. Every module shows a **tier** badge: *Visual* and *Assist* modules (information, ESP, HUD) and *Automation* modules that only manage your own items (Auto Attribute Swap's spear reach and weapon rules, Auto Tool, Inventory Sorter, Chest Organizer, Item Swap, Hotbar Profiles, Sprint) work on every server. **Sandbox** modules (combat automation including AutoCrystal, AutoAnchor and Auto Pot, movement changes including Anti Hunger, Auto Armor, Auto Refill, Auto Offhand) work only in a **test environment**: singleplayer, or a server you reach at a private address (your own PC, your LAN, or a VPN such as Tailscale or ZeroTier). There are no prompts or allowlists; elsewhere they simply stay off and their description says why. Femboy Client contains nothing that hides it from anti-cheat systems, and some servers' rules forbid clients like this, so check before you use it there.
 
 ![Home page](docs/screenshots/0012_gui-1280x720-0-home.png)
 
@@ -53,18 +53,18 @@ export JAVA_HOME=$HOME/.local/share/jdks/jdk-25.0.4.1+1   # any JDK 25+
 
 ## Using the menu
 
-The sidebar has twelve sections. Every module has an on/off switch, a key (click it and press a key; Backspace clears it) that either **toggles** the module or keeps it on only while **held**, settings grouped into sections with tooltips and per-setting reset, and a module reset.
+The sidebar has twelve sections. **Home** shows every module in category cards: **left-click** a module to turn it on or off, **right-click** it to slide in its settings panel (tabs **Settings**, **Keybinds**, **Info**, and a Reset button; Esc closes it). On the category pages a click or right-click opens the settings on the right and the switch turns the module on or off. Every module has an on/off switch, a key (click it and press a key; Backspace clears it) that either **toggles** the module or keeps it on only while **held**, settings grouped into sections with tooltips and per-setting reset, and a module reset.
 
 | Section | Contents |
 |---|---|
-| **Home** | Search across all modules with a category filter (click a module to open it), session status, module health, frame rate |
-| **Combat** | Auto Attribute Swap, Combat Info, Target HUD, Weapon Info, Crystal & Anchor Info, Auto Criticals\*, Sprint Reset\*, Auto Weapon Switch\* |
-| **Automation** | KillAura\*, Trigger Bot\*, Aim Assist\*, Reach\*, Velocity\*, Auto StunSlam\*, Auto Offhand\* |
-| **Movement** | Free Camera, Sprint, Movement Info, Elytra Info, Flight\*, Elytra Flight\*, Speed\*, Strafe Assist\*, Step\*, Safe Walk\*, No Slow\*, No Fall\* |
-| **Visuals** | Entity ESP, Storage ESP, Ore ESP, Hitboxes, Trajectories, Block Highlight, Light Level, Fullbright, Zoom, Chunk Borders |
-| **Inventory** | Item Counters, Health & Armor, Effects, Auto Tool, Inventory Sorter, Shulker Preview, Auto Armor\*, Auto Refill\* |
+| **Home** | All modules in category cards with category chips and search; left-click toggles, right-click opens the settings panel; a strip lists what is on |
+| **Combat** | Auto Attribute Swap, Combat Info, Target HUD, Weapon Info, Crystal & Anchor Info, Aim Trainer, Auto Criticals\*, Sprint Reset\*, Auto Weapon Switch\* |
+| **Automation** | KillAura\*, Trigger Bot\*, Aim Assist\*, Reach\*, Velocity\*, Auto StunSlam\*, Auto Offhand\*, AutoCrystal\*, AutoAnchor\*, Auto Pot\* |
+| **Movement** | Free Camera, Sprint, Movement Info, Elytra Info, Flight\*, Elytra Flight\*, Speed\*, Strafe Assist\*, Step\*, Safe Walk\*, No Slow\*, No Fall\*, Anti Hunger\* |
+| **Visuals** | Entity ESP, Entity Outlines, Storage ESP, Ore ESP, Hitboxes, Trajectories, Block Highlight, Light Level, Fullbright, Zoom, Chunk Borders |
+| **Inventory** | Item Counters, Health & Armor, Effects, Auto Tool, Inventory Sorter, Shulker Preview, Item Swap, Hotbar Profiles, Chest Organizer, Auto Armor\*, Auto Refill\* |
 | **Trackers** | Player Finder, Trackers, Player Alert, Waypoints |
-| **World** | Geode Analyzer, Block Counter, Death Coordinates |
+| **World** | Geode Analyzer, Block Counter, Death Coordinates, Structure Finder, Schematic Viewer, Material List |
 | **Utilities** | Coordinates, Performance, Module List, Keystrokes, Notifications, Better Chat, Auto Reconnect |
 | **Developer** | Java Runner |
 | **Profiles** | Your profiles (use, copy, export, import, delete, reset), the 17 presets, automatic switching rules and delay |
@@ -106,6 +106,17 @@ The sidebar has twelve sections. Every module has an on/off switch, a key (click
 | **Auto Armor, Auto Refill** | Equips better armor from your inventory; refills a hotbar stack from the inventory when it runs low. |
 | **Block Counter** | Counts chosen blocks around you with scan progress (`Scanned 81/81 chunks`). |
 | **Death Coordinates** | Remembers where you died, shows it on the HUD and adds a waypoint. |
+| **AutoCrystal** | Places end crystals on obsidian or bedrock next to the target and breaks crystals that hurt it; least target damage, most self damage, never-kill-yourself, place and break delays, switch to crystals, visible turning. |
+| **AutoAnchor** | Outside the Nether: places a respawn anchor next to the target, charges it with glowstone and uses it so it explodes; same damage limits; the status line says why no spot works. |
+| **Auto Pot** | Throws splash potions at your feet from the hotbar: Healing or Regeneration below a health threshold, and Strength, Speed or Fire Resistance when missing. Your view turns down for the throw and back. |
+| **Anti Hunger** | Does not report sprinting to the server, so sprinting costs no hunger (sprint knockback is kept by reporting sprint just before a hit). |
+| **Aim Trainer** | Practice targets only you can see; while on, a left click is a shot, not an attack. Rounds with hits, misses, accuracy, reaction time and a best score. |
+| **Entity Outlines** | Vanilla's glowing outline (through walls) for players, hostile and passive mobs, items and projectiles, with a color per group. |
+| **Item Swap** | Up to three keys that each bring an item to hand (from the hotbar, or swapped in from the inventory); press again to go back. |
+| **Hotbar Profiles** | Save hotbar layouts and load them with one click; a layout named like a profile loads when that profile becomes active. |
+| **Chest Organizer** | Sort, Stack (put in what the container already has), Store all and Take all buttons on chests, barrels, ender chests and shulker boxes. |
+| **Structure Finder** | Nearest villages, strongholds, trial chambers and any other structure type, with the same search as /locate. Singleplayer only: it needs the world seed, which servers never send. |
+| **Schematic Viewer, Material List** | Load `.nbt`, `.schem` or `.litematic` files from `config/femboyclient/schematics/`, place them where you stand (with rotation and a layer filter) and see missing and wrong blocks outlined; the Material List shows what is left to place and what you carry. |
 | **Keystrokes, Notifications, Better Chat, Auto Reconnect** | WASD, mouse and space display; toasts for module and profile changes; timestamps and stacking of repeated chat lines with longer history; reconnects to the last server after a disconnect, with a delay. |
 | **Free Camera** | Fly the camera with its own rotation while your player stays put. Works on servers. See below. |
 | **Movement Info** | Speed, vertical speed, fall distance and a landing prediction with the fall damage vanilla would deal (landing block included: water, slime, hay, beds...), red when it would kill you. |
@@ -121,7 +132,7 @@ The sidebar has twelve sections. Every module has an on/off switch, a key (click
 | **Effects** | Active potion effects with level and time left; harmful ones in red, expiring ones highlighted. |
 | **Player Finder** | Online players from the server's player list (name, game mode, ping) with search and sorting, plus navigation to players in range and to your waypoints. See below. |
 | **Trackers** | Arrows at the screen edge pointing at players, mobs, waypoints and last-seen positions, labelled with where the position comes from. See below. |
-| **Player Alert** | Warns you when another player comes within your render distance. See below. |
+| **Player Alert** | Warns you when another player comes within your render distance, and can leave the server for you. See below. |
 | **Waypoints** | Save positions; see them as markers with names and distances. |
 | **Geode Analyzer** | Finds amethyst geodes in loaded chunks and keeps exact growth-stage counts up to date as chunks load and buds grow. See below. |
 | **Coordinates, Performance, Module List** | HUD panels. |
@@ -151,7 +162,7 @@ Sandbox-tier modules (marked \* above, plus the Spear lunge part of Auto Attribu
 
 Nothing here hides anything from anti-cheat or server checks (no fake rotations, no packet tricks, no anti-kick).
 
-**Not built yet:** AutoCrystal, AutoAnchor, Auto Pot, Aim Trainer, Anti Hunger, Hotbar Profiles, Item Swap, Chest Organizer, Structure Finder, Material List, Schematic Viewer, armor in nametags and shader entity outlines.
+**Not built:** silent (server-only) rotations and anything else that hides what the client does; full block-model ghost rendering in the Schematic Viewer (it draws outlines).
 
 ### Geode Analyzer
 
@@ -172,6 +183,7 @@ Nothing here hides anything from anti-cheat or server checks (no fake rotations,
 
 - Turn it on in Trackers → Player Alert. It warns when a player comes within your range, i.e. when the server starts sending you that player.
 - **Settings:** chat message (only you see it), sound, pop-up, warn when they leave (and whether they logged off), ignore NPCs (player-shaped entities missing from the server's player list), and a repeat delay so someone walking along the edge of your range doesn't flood the chat.
+- **Auto leave** (off by default): disconnects from a multiplayer server as soon as a player is detected, optionally only within a distance and never for the friends you list. By default it then turns itself off, so rejoining does not make you leave again right away; Auto Reconnect does not bring you back.
 - Players already near you when you turn it on are not announced. Several arrivals in the same moment are combined into one message.
 
 ### Auto Attribute Swap

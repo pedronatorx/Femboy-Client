@@ -120,6 +120,10 @@ public final class EntityEspModule extends Module implements ClientHooks.WorldRe
 			"Space between the lines of a label.", 1, 0, 4, 1, "px"));
 	private final NumberSetting maxNameWidth = settings().add(new NumberSetting("max_name_width", "Maximum name width",
 			"Longer names are shortened with '...'.", 110, 40, 240, 10, "px"));
+	private final BooleanSetting equipment = settings().add(new BooleanSetting("equipment", "Armor and held items",
+			"Show the armor and held items of players (and mobs that wear some) as icons above their label, with durability bars.", false));
+	private final NumberSetting equipmentScale = settings().add(new NumberSetting("equipment_scale", "Item icon size",
+			"Size of the equipment icons; 1 is the size of an inventory slot.", 0.75, 0.4, 1.5, 0.05, "x")).visibleWhen(equipment::get);
 	private final NumberSetting maxLabels = settings().add(new NumberSetting("max_labels", "Maximum labels",
 			"Clutter limit: labels are drawn for the nearest entities only.", 16, 0, 64, 1, ""));
 
@@ -384,7 +388,8 @@ public final class EntityEspModule extends Module implements ClientHooks.WorldRe
 				String meters = distance.get() ? String.format(Locale.ROOT, "%.0fm", interpolated.distanceTo(camera)) : null;
 				boolean withHealth = healthShown(entity);
 				LivingEntity living = withHealth ? (LivingEntity) entity : null;
-				label = new EspRenderer.Label(name, meters, withHealth ? living.getHealth() : Float.NaN, withHealth ? living.getMaxHealth() : Float.NaN);
+				label = new EspRenderer.Label(name, meters, withHealth ? living.getHealth() : Float.NaN, withHealth ? living.getMaxHealth() : Float.NaN,
+						equipment.get() ? equipmentOf(entity) : List.of());
 			}
 
 			targets.add(new EspRenderer.Target(box, colorOf(entity), outlined(entity), label));
@@ -393,10 +398,29 @@ public final class EntityEspModule extends Module implements ClientHooks.WorldRe
 		return targets;
 	}
 
+	/** Main hand, helmet to boots, offhand: the non-empty ones, in the order a nametag shows them. */
+	private static List<net.minecraft.world.item.ItemStack> equipmentOf(Entity entity) {
+		if (!(entity instanceof LivingEntity living)) {
+			return List.of();
+		}
+
+		List<net.minecraft.world.item.ItemStack> stacks = new ArrayList<>();
+		for (net.minecraft.world.entity.EquipmentSlot slot : List.of(net.minecraft.world.entity.EquipmentSlot.MAINHAND, net.minecraft.world.entity.EquipmentSlot.HEAD,
+				net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET,
+				net.minecraft.world.entity.EquipmentSlot.OFFHAND)) {
+			net.minecraft.world.item.ItemStack stack = living.getItemBySlot(slot);
+			if (!stack.isEmpty()) {
+				stacks.add(stack);
+			}
+		}
+
+		return stacks;
+	}
+
 	private EspRenderer.LabelStyle labelStyle() {
 		return new EspRenderer.LabelStyle(nameScale.get().floatValue(), distanceScale.get().floatValue(), healthTextScale.get().floatValue(),
 				healthBarScale.get().floatValue(), coloredNames.get(), textColor.get(), labelBackground.get().floatValue(), labelPadding.intValue(),
-				textSpacing.intValue(), maxNameWidth.intValue(), healthStyle.get(), healthOpacity.get().floatValue());
+				textSpacing.intValue(), maxNameWidth.intValue(), healthStyle.get(), healthOpacity.get().floatValue(), equipmentScale.get().floatValue());
 	}
 
 	@Override
@@ -413,7 +437,7 @@ public final class EntityEspModule extends Module implements ClientHooks.WorldRe
 
 	@Override
 	public void renderOverlay(UiContext ui, int screenWidth, int screenHeight, float partialTick) {
-		if (maxLabels.intValue() == 0 || !names.get() && !distance.get() && !health.get()) {
+		if (maxLabels.intValue() == 0 || !names.get() && !distance.get() && !health.get() && !equipment.get()) {
 			lastLabels = List.of();
 			return;
 		}

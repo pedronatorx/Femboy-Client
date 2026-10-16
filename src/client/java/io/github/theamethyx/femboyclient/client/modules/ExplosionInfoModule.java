@@ -86,7 +86,11 @@ public final class ExplosionInfoModule extends Module implements ClientHooks.Hud
 	}
 
 	/** What the crosshair points at: a crystal, a spot a crystal could be placed on, or an anchor. */
-	public record Focus(String label, Vec3 center, float power, String note) {
+	public record Focus(String label, Vec3 center, float power, String note, BlockPos removed) {
+		public Focus(String label, Vec3 center, float power, String note) {
+			this(label, center, power, note, null);
+		}
+
 	}
 
 	public Focus focus() {
@@ -159,7 +163,7 @@ public final class ExplosionInfoModule extends Module implements ClientHooks.Hud
 			int charges = state.getValue(RespawnAnchorBlock.CHARGE);
 			boolean nether = level.dimension() == Level.NETHER;
 			String note = charges + "/4 charges, " + (nether ? "sets your spawn here" : charges > 0 ? "EXPLODES when used here" : "uncharged");
-			return new Focus("Anchor", pos.getCenter(), nether || charges == 0 ? 0 : ANCHOR_POWER, note);
+			return new Focus("Anchor", pos.getCenter(), nether || charges == 0 ? 0 : ANCHOR_POWER, note, pos.immutable());
 		}
 
 		return null;
@@ -167,13 +171,22 @@ public final class ExplosionInfoModule extends Module implements ClientHooks.Hud
 
 	/** Estimated explosion damage to {@code entity}; 0 when out of range. */
 	public static float estimate(LivingEntity entity, Vec3 center, float power) {
+		return estimate(entity, center, power, null);
+	}
+
+	/**
+	 * Estimated explosion damage when the block at {@code removed} is gone at the moment of the explosion (a respawn anchor
+	 * removes itself before it explodes, so it does not shield anyone); {@code null} keeps every block.
+	 */
+	public static float estimate(LivingEntity entity, Vec3 center, float power, BlockPos removed) {
 		float diameter = power * 2;
 		double distance = Math.sqrt(entity.distanceToSqr(center)) / diameter;
 		if (distance > 1) {
 			return 0;
 		}
 
-		double impact = (1 - distance) * ServerExplosion.getSeenPercent(center, entity);
+		float seen = removed == null ? ServerExplosion.getSeenPercent(center, entity) : seenPercent(center, entity, removed);
+		double impact = (1 - distance) * seen;
 		float damage = (float) ((impact * impact + impact) / 2 * 7 * diameter + 1);
 		if (entity instanceof Player) {
 			Difficulty difficulty = entity.level().getDifficulty();
@@ -198,6 +211,44 @@ public final class ExplosionInfoModule extends Module implements ClientHooks.Hud
 		return protection > 0 ? CombatRules.getDamageAfterMagicAbsorb(damage, protection) : damage;
 	}
 
+	/** {@code ServerExplosion.getSeenPercent} with the block at {@code removed} treated as air. */
+	public static float seenPercent(Vec3 center, net.minecraft.world.entity.Entity entity, BlockPos removed) {
+		AABB box = entity.getBoundingBox();
+		double stepX = 1.0 / ((box.maxX - box.minX) * 2.0 + 1.0);
+		double stepY = 1.0 / ((box.maxY - box.minY) * 2.0 + 1.0);
+		double stepZ = 1.0 / ((box.maxZ - box.minZ) * 2.0 + 1.0);
+		double offsetX = (1.0 - Math.floor(1.0 / stepX) * stepX) / 2.0;
+		double offsetZ = (1.0 - Math.floor(1.0 / stepZ) * stepZ) / 2.0;
+		Level level = entity.level();
+		int clear = 0;
+		int total = 0;
+		for (double x = 0; x <= 1; x += stepX) {
+			for (double y = 0; y <= 1; y += stepY) {
+				for (double z = 0; z <= 1; z += stepZ) {
+					Vec3 from = new Vec3(net.minecraft.util.Mth.lerp(x, box.minX, box.maxX) + offsetX, net.minecraft.util.Mth.lerp(y, box.minY, box.maxY),
+							net.minecraft.util.Mth.lerp(z, box.minZ, box.maxZ) + offsetZ);
+					net.minecraft.world.level.ClipContext context = new net.minecraft.world.level.ClipContext(from, center,
+							net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, entity);
+					boolean blocked = net.minecraft.world.level.BlockGetter.traverseBlocks(from, center, context, (ctx, pos) -> {
+						if (pos.equals(removed)) {
+							return null;
+						}
+
+						BlockState state = level.getBlockState(pos);
+						return ctx.getBlockShape(state, level, pos).clip(from, center, pos) != null ? Boolean.TRUE : null;
+					}, ctx -> Boolean.FALSE);
+					if (!blocked) {
+						clear++;
+					}
+
+					total++;
+				}
+			}
+		}
+
+		return total == 0 ? 0 : (float) clear / total;
+	}
+
 	private static int level(LivingEntity entity, ResourceKey<Enchantment> key, net.minecraft.world.item.ItemStack stack) {
 		return entity.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).get(key)
 				.map(holder -> EnchantmentHelper.getItemEnchantmentLevel((Holder<Enchantment>) holder, stack)).orElse(0);
@@ -219,13 +270,13 @@ public final class ExplosionInfoModule extends Module implements ClientHooks.Hud
 			return;
 		}
 
-		float self = estimate(player, current.center(), current.power());
+		float self = estimate(player, current.center(), current.power(), current.removed());
 		float health = player.getHealth() + player.getAbsorptionAmount();
 		lines.add(HudLine.of(current.note() == null ? current.label() + ": you" : "You", String.format(Locale.ROOT, "%.1f dmg", self),
 				self >= health ? Theme.ERROR : self > 0 ? Theme.WARNING : Theme.SUCCESS));
 		LivingEntity target = Targets.current();
 		if (target != null && target != player) {
-			float other = estimate(target, current.center(), current.power());
+			float other = estimate(target, current.center(), current.power(), current.removed());
 			lines.add(HudLine.of("Target", String.format(Locale.ROOT, "%.1f dmg", other), Theme.ACCENT_STRONG));
 		}
 	}

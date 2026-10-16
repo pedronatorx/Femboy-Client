@@ -1,8 +1,8 @@
 Femboy Client client game test report
-Started: 2026-10-17T00:14:52.663422090
+Started: 2026-10-17T01:43:04.134107988
 
 PASS  Femboy Client entrypoint ran
-PASS  All 60 modules registered  -- 60
+PASS  All 72 modules registered  -- 72
 PASS  No module is on by default  -- []
 PASS  No module is on at the first start  -- []
 PASS  Right Shift opens the Femboy Client screen
@@ -11,7 +11,11 @@ PASS  No development pages (Scenarios, Analysis, Results, Dashboard) remain
 PASS  Every page rendered at 854x480 and 1280x720
 PASS  Escape closes the Femboy Client screen
 PASS  Home search 'geode' lists the Geode Analyzer  -- [geode_analyzer]
-PASS  Clicking a module on Home opens it on its category page (World)  -- World / geode_analyzer
+PASS  Right-clicking a module on Home opens its settings panel (and does not turn it on)  -- geode_analyzer, off true
+PASS  The settings panel's Keybinds tab shows the key field
+PASS  Escape closes the settings panel and keeps the menu open
+PASS  Left-clicking a module on Home turns it on, and again off
+PASS  Opening a module shows it on its category page (World)  -- World / geode_analyzer
 PASS  A category page searches only its own modules  -- [chunk_borders, ore_esp]
 PASS  Clicking the switch enables Chunk Borders
 PASS  Key capture binds K to Chunk Borders  -- key=75
@@ -50,7 +54,7 @@ PASS  At least one geode card is listed
 PASS  Clicking a geode card shows its exact counts and details
 PASS  A waypoint can be added at the player position  -- null
 PASS  In singleplayer the list has no other players (yourself excluded by default)  -- 0 entries
-PASS  With 'Include yourself' your own entry is listed with a known position  -- [Entry[id=2654e3c3-150d-3857-a426-0b141796a4e0, name=Player0, ping=0, gameMode=Creative, knowledge=IN_RANGE, position=(0.5, -60.0, 0.5), seenAt=1792188928796]]
+PASS  With 'Include yourself' your own entry is listed with a known position  -- [Entry[id=2654e3c3-150d-3857-a426-0b141796a4e0, name=Player0, ping=0, gameMode=Creative, knowledge=IN_RANGE, position=(0.5, -60.0, 0.5), seenAt=1792194219458]]
 PASS  The waypoint of this world is offered as a navigation target
 PASS  Clicking the waypoint starts navigation to it  -- Target[name=Spawn, position=(0.5, -59.5, 0.5), note=waypoint, color=-9524993]
 PASS  Stopping navigation clears the target
@@ -101,11 +105,11 @@ PASS  Item Counters: reminds to refill totems that are only in the inventory  --
 PASS  Health & Armor lists the nearly broken chestplate with its durability  -- [Health: 20.0, Food: 20  sat 4.0, Diamond Chestplate: 8  2%]
 PASS  Effects lists Speed II with its remaining time  -- [Speed II: 0:29]
 PASS  Hitboxes draws both zombies, and none once hostile mobs are filtered out  -- drawn 2, filtered 0
-PASS  Trajectories: a real snowball lands within 2 blocks of the predicted point  -- predicted (0.5, -55.19158995772563, 14.0), last server position (0.4534836720652466, -55.17803353636846, 13.870960283168682) (10 ticks), horizontal error 0.14
-PASS  Crystal & Anchor Info: obsidian within reach is a placement spot and under the crosshair it is the focus  -- spot true, focus Focus[label=Crystal here, center=(0.5, -60.0, 2.5), power=6.0, note=null]; Block{minecraft:obsidian} [] (0.5, -60.0, 2.4309332234547383)
+PASS  Trajectories: a real snowball lands within 2 blocks of the predicted point  -- predicted (0.5, -55.19158995772563, 14.0), last server position (0.565695348357982, -55.06955706794439, 13.672377570634936) (10 ticks), horizontal error 0.33
+PASS  Crystal & Anchor Info: obsidian within reach is a placement spot and under the crosshair it is the focus  -- spot true, focus Focus[label=Crystal here, center=(0.5, -60.0, 2.5), power=6.0, note=null, removed=null]; Block{minecraft:obsidian} [] (0.5, -60.0, 2.4309332234547383)
 PASS  Crystal damage estimate (no armor, Normal) matches the damage really taken within 0.5  -- estimate 14.13, taken 14.13
 PASS  Singleplayer counts as a test environment, so automation modules can run
-PASS  Sandbox modules switched on while on a (simulated) public server stay off and do nothing; they start in a test environment  -- sandbox [aim_assist, auto_armor, auto_criticals, auto_refill, auto_stunslam, auto_totem, auto_weapon_switch, elytra_flight, flight, kill_aura, no_fall, no_slow, reach, safe_walk, speed, step, strafe, trigger_bot, velocity, w_tap]; running on public []; husk health 20.0; reason 'Only in singleplayer and on servers in your own network (LAN or VPN).'; running in test env 20
+PASS  Sandbox modules switched on while on a (simulated) public server stay off and do nothing; they start in a test environment  -- sandbox [aim_assist, anti_hunger, auto_anchor, auto_armor, auto_criticals, auto_crystal, auto_pot, auto_refill, auto_stunslam, auto_totem, auto_weapon_switch, elytra_flight, flight, kill_aura, no_fall, no_slow, reach, safe_walk, speed, step, strafe, trigger_bot, velocity, w_tap]; running on public []; husk health 20.0; reason 'Only in singleplayer and on servers in your own network (LAN or VPN).'; running in test env 24
 PASS  KillAura turns from facing away to the husk and hits it (server health below 20)  -- health 14.096, attacks 1, angle to target 0.0°
 PASS  Trigger Bot attacks the husk under the crosshair  -- attacks 1, health 14.096
 PASS  Aim Assist turns the view onto the husk without attacking  -- angle 34.2° -> 3.0°, crosshair on husk true
@@ -115,8 +119,8 @@ PASS  Flight: hovers in survival, rises with jump (server agrees), falls again w
 PASS  AutoTotem moves a totem from the inventory into the offhand (client and server)  -- client true, server true, slot emptied true
 PASS  Test target holds up a shield (server and client agree)  -- server true, client true
 PASS  Auto StunSlam falling onto a shielding player: axe disables the shield, mace damages through it, slot restored  -- Axe and mace hit Bob; shield disabled true; health 20 -> 13.2; slot client 2 server 2 (mace = 2); max fall 4.8, crosshair on Bob true
-PASS  Spear reach: out of sword reach a click does nothing; with the rule it jabs with the spear and returns to the sword  -- without rule health 20.0; with rule hit true (health 14.1); slot client 0 server 0; SwapRecord[rule=SPEAR, item=Iron Spear, fromSlot=0, toSlot=1, target=Husk, at=1792188972107, usedForHit=true, restored=true, note=jabbed and switched back in the same tick]
-PASS  Spear lunge: holding attack with bread jabs the Lunge spear repeatedly and dashes forward; slot stays on the bread  -- without rule moved 0.00; with rule 6 lunges, moved 18.2 blocks forward (server agrees within 0.00); slot client 3 server 3
+PASS  Spear reach: out of sword reach a click does nothing; with the rule it jabs with the spear and returns to the sword  -- without rule health 20.0; with rule hit true (health 14.1); slot client 0 server 0; SwapRecord[rule=SPEAR, item=Iron Spear, fromSlot=0, toSlot=1, target=Husk, at=1792194262466, usedForHit=true, restored=true, note=jabbed and switched back in the same tick]
+PASS  Spear lunge: holding attack with bread jabs the Lunge spear repeatedly and dashes forward; slot stays on the bread  -- without rule moved 0.00; with rule 6 lunges, moved 18.2 blocks forward (server agrees within 0.01); slot client 3 server 3
 PASS  Theme selector switches the menu colors; a custom accent overrides the theme's; default is the navy/magenta Femboy theme  -- default FFA66BFF, midnight magenta FFE05CC8, custom FF33CC99, back FFA66BFF
 PASS  HUD editor: Coordinates and the Keystrokes widget are placed; dragging Coordinates moves it and saves the position  -- placed [coordinates_hud, keystrokes]; moved Placed[moduleId=coordinates_hud, name=Coordinates, x=200, y=120, width=114, height=37, custom=true]; saved {"coordinates_hud":[0.4683841,0.5]}
 PASS  HUD editor reset puts blocks back into their corners
@@ -126,9 +130,9 @@ PASS  Block Counter counts the 2 diamond ores in loaded chunks and shows full sc
 PASS  Light Level marks grass with block light 0 as a spawn spot and stops once a torch lights it  -- before torch true, after torch false
 PASS  Block Highlight outlines the block under the crosshair  -- MutableBlockPos{x=0, y=-61, z=2} vs MutableBlockPos{x=0, y=-61, z=2}
 PASS  Notifications shows client messages as toasts while on  -- 1 toast(s)
-PASS  Better Chat adds a timestamp and stacks a repeated message into one line with x2  -- 1|[00:16] femboy repeat x2
+PASS  Better Chat adds a timestamp and stacks a repeated message into one line with x2  -- 1|[01:44] femboy repeat x2
 PASS  Auto Reconnect adds a reconnect button with a countdown to the disconnected screen  -- Reconnecting in 60 s
-PASS  Death Coordinates records where you died and saves a waypoint  -- Death[x=3, y=-60, z=7, dimension=minecraft:overworld, at=1792188981917], waypoint true
+PASS  Death Coordinates records where you died and saves a waypoint  -- Death[x=3, y=-60, z=7, dimension=minecraft:overworld, at=1792194272244], waypoint true
 PASS  Shulker Preview gives shulker boxes an item-grid tooltip only while on  -- on true, off true
 PASS  Auto Tool selects the pickaxe while mining stone and switches back afterwards  -- while mining slot 1, after 0
 PASS  Inventory Sorter orders the main inventory by item, merging stacks of the same item (server agrees)  -- minecraft:apple 1, minecraft:dirt 10, minecraft:stone 8, minecraft:air 0, 
@@ -144,6 +148,23 @@ PASS  No Fall: a 20-block fall (17 damage without it) deals no damage  -- landed
 PASS  Auto Weapon Switch picks the iron sword while you aim at the husk; the hit deals sword damage  -- slot 2, husk health 14.096
 PASS  Auto Criticals: the click becomes a jump and a critical hit (more than a normal 5.9 damage)  -- crits 1, damage 8.86
 PASS  Sprint Reset stops sprinting right after a sprinting hit and sprints again after the pause  -- paused true, resumed true
+PASS  Item Swap brings the totem from the inventory into the held slot and a second press puts it back (server agrees)  -- minecraft:totem_of_undying / minecraft:iron_sword -> minecraft:iron_sword / minecraft:totem_of_undying
+PASS  Item Swap selects the golden apple already in the hotbar and goes back on the second press  -- 4 -> 0
+PASS  Hotbar Profiles saves a layout and moves the items back into place from inventory and hotbar (server agrees)  -- save null, load null, hotbar minecraft:diamond_sword, minecraft:diamond_pickaxe, minecraft:cobblestone
+PASS  Chest Organizer adds Sort, Stack, Store and Take buttons to the chest screen  -- [Take, Store, Stack, Sort]
+PASS  Chest Organizer: Sort orders the chest and merges stacks (server: dirt 5, stone 7)  -- minecraft:dirt 5, minecraft:stone 7, minecraft:air
+PASS  Chest Organizer: Stack puts in only items the chest already has (stone in, apples stay)  -- 0 stone, 2 apples left
+PASS  Chest Organizer: Take moves everything into the inventory (server agrees)  -- chest empty true, stone 17
+PASS  Anti Hunger: the server no longer counts the run as sprinting, so it charges no sprint hunger  -- sprinted 808 cm without, 0 cm with
+PASS  Auto Pot throws the healing potion when health is low; health rises and the view and slot come back  -- health 10.8, thrown 1, slot/pitch 0 / 0
+PASS  AutoCrystal places a crystal on obsidian next to the husk and breaks it; the husk is hurt or killed  -- placed 2, broken 1, husk health -1.0
+PASS  AutoAnchor places, charges and detonates a respawn anchor next to the husk (overworld)  -- explosions 1, no target, husk health -1.0
+PASS  Entity Outlines makes the husk glow (vanilla outline) only while on  -- on true, off true
+PASS  Entity ESP shows the husk's helmet and sword as icons above its label  -- [DrawnLabel[name=Husk, x=204, y=82, width=21, height=16, healthBar=false, healthText=false, equipment=2]]
+PASS  Aim Trainer: aiming at a target and clicking is a hit (a new target appears), clicking at the sky is a miss  -- 1 hit, 1 missed, targets 1
+PASS  Schematic Viewer reads .nbt, .schem and .litematic files (stone then oak planks)  -- test_build.nbt: 2 ok; test_build.schem: 2 ok; test_build.litematic: 2 ok; 
+PASS  Schematic Viewer compares the placed schematic with the world (stone right, dirt where planks belong)  -- ok; 1 placed, 0 missing, 1 wrong
+PASS  Material List shows what is left to place and what you carry (1 oak planks left, carrying 3)  -- 1 missing; [Oak Planks 1/1 carrying 3]
 PASS  Auto Attribute Swap is on the Combat page
 PASS  Entity ESP settings are grouped into sections  -- [Targets, Boxes, Colors, Labels, Health, Tracers, Performance]
 PASS  Free Camera is on the Movement page and Fullbright on Visuals  -- Movement / Visuals
@@ -151,19 +172,19 @@ PASS  Outline thickness changes the rendered outline (magenta pixels at 1x vs 5x
 PASS  Outline opacity changes the rendered outline (strongly magenta pixels at 100% vs 20%)  -- 7968 vs 36 pixels
 PASS  Per-category outline switch removes the outline of hostile mobs  -- 2354 vs 0 pixels
 PASS  Tracer lines are drawn when enabled and gone when disabled  -- 750 without, 2810 with
-PASS  Name size changes the drawn label width  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false] -> DrawnLabel[name=Target, x=187, y=80, width=55, height=22, healthBar=false, healthText=false]
-PASS  Distance size changes the drawn label height  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false] -> DrawnLabel[name=Target, x=199, y=78, width=30, height=24, healthBar=false, healthText=false]
-PASS  Background padding changes the drawn label size  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false] -> DrawnLabel[name=Target, x=195, y=78, width=38, height=24, healthBar=false, healthText=false]
-PASS  Distance can be turned off independently of the name  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false] -> DrawnLabel[name=Target, x=199, y=92, width=30, height=10, healthBar=false, healthText=false]
+PASS  Name size changes the drawn label width  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false, equipment=0] -> DrawnLabel[name=Target, x=187, y=80, width=55, height=22, healthBar=false, healthText=false, equipment=0]
+PASS  Distance size changes the drawn label height  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false, equipment=0] -> DrawnLabel[name=Target, x=199, y=78, width=30, height=24, healthBar=false, healthText=false, equipment=0]
+PASS  Background padding changes the drawn label size  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false, equipment=0] -> DrawnLabel[name=Target, x=195, y=78, width=38, height=24, healthBar=false, healthText=false, equipment=0]
+PASS  Distance can be turned off independently of the name  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false, equipment=0] -> DrawnLabel[name=Target, x=199, y=92, width=30, height=10, healthBar=false, healthText=false, equipment=0]
 PASS  Health is not shown by default
-PASS  Health bar is shown for hostile mobs when enabled (bar only by default)  -- DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=false]
-PASS  Health style 'Bar and number' shows both  -- DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true]
-PASS  Health bar size changes the drawn label  -- DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true] -> DrawnLabel[name=Target, x=182, y=78, width=64, height=24, healthBar=true, healthText=true]
-PASS  Health can be limited to chosen categories  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false]
-PASS  Long names are shortened to the maximum name width  -- DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true]
-PASS  Labels of entities at the same spot do not overlap  -- [DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true], DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true], DrawnLabel[name=Stacked A, x=236, y=87, width=41, height=20, healthBar=true, healthText=true], DrawnLabel[name=Stacked B, x=235, y=66, width=41, height=20, healthBar=true, healthText=true]]
-PASS  Labels are drawn at 854x480 as well  -- [DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true], DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true], DrawnLabel[name=Stacked A, x=236, y=87, width=41, height=20, healthBar=true, healthText=true], DrawnLabel[name=Stacked B, x=235, y=66, width=41, height=20, healthBar=true, healthText=true]]
-NOTE  254 zombies in view (Mesa software rendering): average frame 26.4 ms with ESP (labels, health, tracers) and Trackers, 23.7 ms without. Average cost per call: entity_esp/tick 0.097 ms, entity_esp/render_world 0.056 ms, entity_esp/render_hud 0.375 ms, trackers/render_hud 0.147 ms, 
+PASS  Health bar is shown for hostile mobs when enabled (bar only by default)  -- DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=false, equipment=0]
+PASS  Health style 'Bar and number' shows both  -- DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true, equipment=0]
+PASS  Health bar size changes the drawn label  -- DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true, equipment=0] -> DrawnLabel[name=Target, x=182, y=78, width=64, height=24, healthBar=true, healthText=true, equipment=0]
+PASS  Health can be limited to chosen categories  -- DrawnLabel[name=Target, x=199, y=86, width=30, height=16, healthBar=false, healthText=false, equipment=0]
+PASS  Long names are shortened to the maximum name width  -- DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true, equipment=0]
+PASS  Labels of entities at the same spot do not overlap  -- [DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=Stacked A, x=236, y=87, width=41, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=Stacked B, x=235, y=66, width=41, height=20, healthBar=true, healthText=true, equipment=0]]
+PASS  Labels are drawn at 854x480 as well  -- [DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=Stacked A, x=236, y=87, width=41, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=Stacked B, x=235, y=66, width=41, height=20, healthBar=true, healthText=true, equipment=0]]
+NOTE  254 zombies in view (Mesa software rendering): average frame 27.5 ms with ESP (labels, health, tracers) and Trackers, 23.1 ms without. Average cost per call: entity_esp/tick 0.112 ms, entity_esp/render_world 0.064 ms, entity_esp/render_hud 0.371 ms, trackers/render_hud 0.166 ms, 
 PASS  With 254 entities, ESP keeps to its highlight limit (64)  -- 64 tracked
 PASS  No module errors with many entities
 PASS  Trackers: a mob in front gets an on-screen marker  -- Indicator[name=Ahead, source=HOSTILE, onScreen=true, x=214, y=134, label=Ahead · 8m]
@@ -195,9 +216,9 @@ PASS  Java Runner: runtime exceptions are shown  -- FAILED: Exception: java.lang
     at run (line 1)
 PASS  Java Runner: the game itself is not reachable (compile error)  -- COMPILE_ERROR: Line 1: package net.minecraft.client does not exist
 PASS  Minecraft keeps ticking while a program runs (20 ticks while the worker loops)  -- 20 ticks took 1.00 s, still running: true
-PASS  Java Runner: an endless loop is stopped at the time limit  -- TIMED_OUT, pid 45641
+PASS  Java Runner: an endless loop is stopped at the time limit  -- TIMED_OUT, pid 68676
 PASS  Java Runner: Stop kills the program  -- STOPPED
-PASS  Java Runner: excessive output is cut off  -- OUTPUT_LIMIT, 161 lines
+PASS  Java Runner: excessive output is cut off  -- OUTPUT_LIMIT, 156 lines
 PASS  Java Runner: code that deletes files asks for confirmation and does not run yet  -- [deletes files]
 PASS  Java Runner: Cancel runs nothing
 PASS  Java Runner: the 'Module overview' example runs  -- FINISHED: Module                 Enabled  Running
@@ -207,6 +228,7 @@ Combat Info            off      -
 Target HUD             off      -
 Weapon Info            off      -
 Crystal & Anchor Info  off      -
+Aim Trainer            off      -
 KillAura               off      -
 Trigger Bot            off      -
 Aim Assist             off      -
@@ -217,6 +239,9 @@ Auto Offhand           off      -
 Auto Criticals         off      -
 Sprint Reset           off      -
 Auto Weapon Switch     off      -
+AutoCrystal            off      -
+AutoAnchor             off      -
+Auto Pot               off      -
 Free Camera            off      -
 Sprint                 off      -
 Flight                 off      -
@@ -227,11 +252,13 @@ Step                   off      -
 Safe Walk              off      -
 No Slow                off      -
 No Fall                off      -
+Anti Hunger            off      -
 Movement Info          off      -
 Elytra Info            off      -
 Entity ESP             off      -
 Storage ESP            off      -
 Hitboxes               off      -
+Entity Outlines        off      -
 Trajectories           off      -
 Fullbright             off      -
 Chunk Borders          off      -
@@ -247,6 +274,9 @@ Auto Armor             off      -
 Auto Refill            off      -
 Inventory Sorter       off      -
 Shulker Preview        off      -
+Item Swap              off      -
+Hotbar Profiles        off      -
+Chest Organizer        off      -
 Player Finder          off      -
 Trackers               off      -
 Player Alert           off      -
@@ -254,6 +284,9 @@ Waypoints              on       running
 Geode Analyzer         off      -
 Block Counter          off      -
 Death Coordinates      off      -
+Structure Finder       off      -
+Schematic Viewer       off      -
+Material List          off      -
 Coordinates            off      -
 Performance            off      -
 Module List            off      -
@@ -263,6 +296,7 @@ Better Chat            off      -
 Auto Reconnect         off      -
 Java Runner            on       running
 PASS  No module errors were logged during the run
+PASS  Structure Finder finds the nearest stronghold in a normal singleplayer world  -- [Found[id=minecraft:village_plains, label=Village plains, pos=BlockPos{x=-304, y=0, z=-320}], Found[id=minecraft:stronghold, label=Stronghold, pos=BlockPos{x=1376, y=0, z=848}]]
 NOTE  Natural world (seed 8675309): 2 geode(s) in the scanned area, 1 complete
 PASS  Naturally generated geodes are found and grouped in a normal world
 PASS  Every natural geode's completeness is stated (complete or incomplete with a reason)
@@ -275,16 +309,16 @@ PASS  Every module runs on a dedicated server (no server list, no pausing)
 PASS  A dedicated server at localhost counts as a test environment (private address)  -- Server localhost:25565 (your network)
 PASS  A second player on the server reaches the client
 PASS  Player Alert warns when the player comes into range  -- [Alice (5 m ↑) is in range]
-PASS  Player Finder lists the player in range with their real position  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=IN_RANGE, position=(2.5, -29.0, 0.5), seenAt=1792189103409]
+PASS  Player Finder lists the player in range with their real position  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=IN_RANGE, position=(13.5, -29.0, -3.5), seenAt=1792194423390]
 PASS  Entity ESP highlights the other player
 PASS  Player Alert reports when the player leaves range (setting on)  -- [Alice left your range, Alice (5 m ↑) is in range]
-PASS  Player Finder keeps the last seen position once the player is out of range  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=LAST_SEEN, position=(2.5, -29.0, 0.5), seenAt=1792189103599]
+PASS  Player Finder keeps the last seen position once the player is out of range  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=LAST_SEEN, position=(13.5, -29.0, -3.5), seenAt=1792194423487]
 PASS  Trackers point to the last seen position, labelled with its age  -- [Indicator[name=Alice, source=LAST_SEEN, onScreen=true, x=214, y=114, label=Alice · 5m · last seen 0 s ago]]
 PASS  A player who logs off disappears from Player Finder
 PASS  Trackers drop a player who logged off
 PASS  Attribute swap: by default the axe is only used against a raised shield (no swap on a normal mob)  -- sword 0->1, axe 0->0
 PASS  Attribute swap: the server applied the hit with the axe (axe lost durability, sword did not)  -- sword 1->1, axe 0->2
-PASS  Attribute swap: switched back to the sword in the same tick, on client and server  -- client 0, server 0, SwapRecord[rule=AXE, item=Iron Axe, fromSlot=0, toSlot=1, target=Dummy, at=1792189106964, usedForHit=true, restored=true, note=switched back in the same tick]
+PASS  Attribute swap: switched back to the sword in the same tick, on client and server  -- client 0, server 0, SwapRecord[rule=AXE, item=Iron Axe, fromSlot=0, toSlot=1, target=Dummy, at=1792194426745, usedForHit=true, restored=true, note=switched back in the same tick]
 PASS  Attribute swap: no second swap during the axe's cooldown (1 s)  -- sword 1->2, axe 2->2, skip: Axe on cooldown
 PASS  Attribute swap: a longer per-item cooldown (3 s) blocks swaps for longer  -- axe 2->4->4
 PASS  Attribute swap: with a swap-back delay the axe stays selected for those ticks, then the sword returns  -- right after 1, later 0, server 0
@@ -297,8 +331,10 @@ PASS  The server keeps receiving the player's updates during free camera  -- ser
 PASS  The player stays put on the server and on the client  -- server moved 0.000, client moved 0.000
 PASS  Disabling the free camera returns the view to the player
 PASS  No rubber-band: server and client agree on the position after the camera returns  -- server-client difference 0.000
-PASS  After the camera returns, clicking works again (control: swing, block broken)  -- swung=true, aimed=true (BlockPos{x=-3, y=-34, z=0} pitch 90.0, expected BlockPos{x=-3, y=-30, z=0}), server: Block{minecraft:air}, held 0 minecraft:air, mode CREATIVE, at (-2.5, -30.14510670065164, 0.5)
+PASS  After the camera returns, clicking works again (control: swing, block broken)  -- swung=true, aimed=true (BlockPos{x=8, y=-34, z=-4} pitch 90.0, expected BlockPos{x=8, y=-30, z=-4}), server: Block{minecraft:air}, held 0 minecraft:air, mode CREATIVE, at (8.5, -30.14510670065164, -3.5)
+PASS  Structure Finder is unavailable on a server and says why (no world seed)  -- Needs the world seed, so it only works in singleplayer (servers never send the seed).
+PASS  Player Alert's auto leave disconnects when a player comes into range and turns itself off  -- left true, reason Alice was 6 blocks away, server list true, auto leave off true
 NOTE  Ignored known offline-test noise: missing X11 cursor shapes (Xvfb), anisotropic filtering option, Realms and account-properties requests failing without a real login.
 PASS  No render-thread, server-thread or client-code errors in the client log
 
-Result: PASSED (223 checks passed, 224 s)
+Result: PASSED (247 checks passed, 253 s)

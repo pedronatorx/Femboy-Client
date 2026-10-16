@@ -24,6 +24,7 @@ import io.github.theamethyx.femboyclient.core.module.Module;
 import io.github.theamethyx.femboyclient.core.module.ModuleCategory;
 import io.github.theamethyx.femboyclient.core.setting.BooleanSetting;
 import io.github.theamethyx.femboyclient.core.setting.NumberSetting;
+import io.github.theamethyx.femboyclient.core.setting.StringSetting;
 
 /**
  * Warns when another player comes within range of your client, i.e. when the server starts sending you
@@ -50,7 +51,24 @@ public final class PlayerAlertModule extends Module {
 			"Don't warn about the same player again within this time, so someone walking along the edge of your range "
 					+ "doesn't flood the chat.", 30, 0, 600, 5, "s"));
 
+
+	{
+		settings().section("Auto leave");
+	}
+
+	private final BooleanSetting autoLeave = settings().add(new BooleanSetting("auto_leave", "Leave the server",
+			"Disconnect from a multiplayer server as soon as another player is detected (like pressing Disconnect). Auto Reconnect does "
+					+ "not bring you back after this.", false));
+	private final NumberSetting leaveDistance = settings().add(new NumberSetting("leave_distance", "Leave within",
+			"Only leave when the player is this close; 0 leaves for anyone in range.", 0, 0, 256, 4, "blocks")).visibleWhen(autoLeave::get);
+	private final StringSetting leaveIgnore = settings().add(new StringSetting("leave_ignore", "Don't leave for",
+			"Names of friends to stay for, separated by commas.", "", 256, "Friend1, Friend2")).visibleWhen(autoLeave::get);
+	private final BooleanSetting leaveOff = settings().add(new BooleanSetting("leave_off", "Turn auto leave off after leaving",
+			"So that joining again does not make you leave right away while the player is still there.", true)).visibleWhen(autoLeave::get);
+
 	private final Map<UUID, String> inRange = new LinkedHashMap<>();
+	private String leftBecause;
+	private boolean leaving;
 	private final Map<UUID, Long> lastWarned = new HashMap<>();
 	private final Deque<String> recent = new ArrayDeque<>();
 	private String world;
@@ -62,7 +80,7 @@ public final class PlayerAlertModule extends Module {
 	}
 
 	public PlayerAlertModule() {
-		super("player_alert", "Player Alert", "Warns you when another player comes within your render distance.",
+		super("player_alert", "Player Alert", "Warns you when another player comes within your render distance, and can leave the server for you.",
 				ModuleCategory.TRACKERS, false, NO_KEY);
 	}
 
@@ -122,6 +140,7 @@ public final class PlayerAlertModule extends Module {
 		inRange.clear();
 		inRange.putAll(now);
 		baseline = false;
+		checkAutoLeave(client);
 
 		if (!arrived.isEmpty()) {
 			warn(arrived.size() == 1 ? arrived.getFirst() + " is in range" : arrived.size() + " players in range: " + String.join(", ", arrived),
@@ -162,6 +181,47 @@ public final class PlayerAlertModule extends Module {
 		if (toast.get()) {
 			SystemToast.addOrUpdate(client.getToastManager(), TOAST, Component.literal(arrival ? "Player nearby" : "Player left"), Component.literal(text));
 		}
+	}
+
+	/** Leaves a multiplayer server when a player that is not ignored is close enough. */
+	private void checkAutoLeave(Minecraft client) {
+		if (!autoLeave.get() || leaving || client.isLocalServer() || client.getCurrentServer() == null) {
+			return;
+		}
+
+		java.util.Set<String> ignored = new java.util.HashSet<>();
+		for (String name : leaveIgnore.get().split(",")) {
+			if (!name.isBlank()) {
+				ignored.add(name.trim().toLowerCase(Locale.ROOT));
+			}
+		}
+
+		for (AbstractClientPlayer other : client.level.players()) {
+			String name = other.getGameProfile().name();
+			if (!inRange.containsKey(other.getUUID()) || ignored.contains(name.toLowerCase(Locale.ROOT))
+					|| leaveDistance.get() > 0 && other.distanceTo(client.player) > leaveDistance.get()) {
+				continue;
+			}
+
+			leaving = true;
+			leftBecause = String.format(Locale.ROOT, "%s was %.0f blocks away", name, other.distanceTo(client.player));
+			if (leaveOff.get()) {
+				autoLeave.set(false);
+			}
+
+			// Disconnect after this tick, like the pause menu's Disconnect button.
+			client.execute(() -> {
+				client.disconnectFromWorld(Component.literal("Player Alert: " + leftBecause));
+				SystemToast.addOrUpdate(client.getToastManager(), TOAST, Component.literal("Left the server"), Component.literal(leftBecause));
+				leaving = false;
+			});
+			return;
+		}
+	}
+
+	/** Why Player Alert last left a server, or {@code null}. */
+	public String leftBecause() {
+		return leftBecause;
 	}
 
 	/** Players currently in range, by name. */

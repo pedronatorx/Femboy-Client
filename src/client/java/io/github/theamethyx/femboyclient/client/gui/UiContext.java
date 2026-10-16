@@ -275,6 +275,32 @@ public final class UiContext {
 		graphics.fill(x + width - 1, y + 1, x + width, y + height - 1, color);
 	}
 
+	/** A rectangle with rounded corners of {@code radius} pixels (drawn as stepped rows, so it stays crisp). */
+	public void roundRect(int x, int y, int width, int height, int color, int radius) {
+		int r = Math.min(radius, Math.min(width, height) / 2);
+		if (r <= 1) {
+			roundRect(x, y, width, height, color);
+			return;
+		}
+
+		for (int i = 0; i < r; i++) {
+			double dy = r - i - 0.5;
+			int inset = r - (int) Math.round(Math.sqrt(r * r - dy * dy));
+			graphics.fill(x + inset, y + i, x + width - inset, y + i + 1, color);
+			graphics.fill(x + inset, y + height - i - 1, x + width - inset, y + height - i, color);
+		}
+
+		graphics.fill(x, y + r, x + width, y + height - r, color);
+	}
+
+	/** A soft shadow around a rounded box: a few widening, fading layers. */
+	public void shadow(int x, int y, int width, int height, int radius, float strength) {
+		for (int i = 3; i >= 1; i--) {
+			int alpha = Math.round(strength * 40 / i);
+			roundRect(x - i, y - i + 1, width + 2 * i, height + 2 * i, alpha << 24, radius + i);
+		}
+	}
+
 	/** One-pixel border following the {@link #roundRect} shape. */
 	public void outline(int x, int y, int width, int height, int color) {
 		graphics.fill(x + 1, y, x + width - 1, y + 1, color);
@@ -343,6 +369,17 @@ public final class UiContext {
 		pose.translate(x, y);
 		pose.scale(scale, scale);
 		graphics.drawString(font, text, 0, 0, color, false);
+		pose.popMatrix();
+	}
+
+	/** Draws an item icon (with its durability bar and count) scaled around its top-left corner; 1 is 16 GUI pixels. */
+	public void item(net.minecraft.world.item.ItemStack stack, float x, float y, float scale) {
+		var pose = graphics.pose();
+		pose.pushMatrix();
+		pose.translate(x, y);
+		pose.scale(scale, scale);
+		graphics.renderItem(stack, 0, 0);
+		graphics.renderItemDecorations(font, stack, 0, 0);
 		pose.popMatrix();
 	}
 

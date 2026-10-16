@@ -106,11 +106,8 @@ public class ModuleRow extends Container {
 			return true;
 		}
 
-		if (button == 0) {
-			onSelect.accept(module);
-		} else if (button == 1) {
-			// Right-click toggles, a common shortcut in module lists.
-			manager.toggle(module);
+		if (button == 0 || button == 1) {
+			// Left- or right-click opens the module's settings; the switch turns it on or off.
 			onSelect.accept(module);
 		}
 

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -29,7 +30,11 @@ public final class EspRenderer {
 	/**
 	 * Label content. {@code distance} may be null; {@code health} is NaN when no health should be shown.
 	 */
-	public record Label(String name, String distance, float health, float maxHealth) {
+	public record Label(String name, String distance, float health, float maxHealth, List<ItemStack> equipment) {
+		public Label(String name, String distance, float health, float maxHealth) {
+			this(name, distance, health, maxHealth, List.of());
+		}
+
 		public static Label of(String name, String distance) {
 			return new Label(name, distance, Float.NaN, Float.NaN);
 		}
@@ -63,12 +68,13 @@ public final class EspRenderer {
 
 	/** Label drawing options. Scales are relative to the normal GUI font; padding and spacing are GUI pixels. */
 	public record LabelStyle(float nameScale, float distanceScale, float healthTextScale, float healthBarScale, boolean coloredNames,
-			int textColor, float backgroundOpacity, int padding, int spacing, int maxNameWidth, HealthStyle healthStyle, float healthOpacity) {
-		public static final LabelStyle DEFAULT = new LabelStyle(0.75f, 0.65f, 0.65f, 1, true, 0xFFFFFF, 0.5f, 2, 1, 110, HealthStyle.BAR, 0.9f);
+			int textColor, float backgroundOpacity, int padding, int spacing, int maxNameWidth, HealthStyle healthStyle, float healthOpacity,
+			float equipmentScale) {
+		public static final LabelStyle DEFAULT = new LabelStyle(0.75f, 0.65f, 0.65f, 1, true, 0xFFFFFF, 0.5f, 2, 1, 110, HealthStyle.BAR, 0.9f, 0.75f);
 	}
 
 	/** Where a label ended up on screen; read by automated tests to check that size settings take effect. */
-	public record DrawnLabel(String name, int x, int y, int width, int height, boolean healthBar, boolean healthText) {
+	public record DrawnLabel(String name, int x, int y, int width, int height, boolean healthBar, boolean healthText, int equipment) {
 	}
 
 	private static final int LINE_HEIGHT = 8;
@@ -108,7 +114,8 @@ public final class EspRenderer {
 			}
 
 			Label label = target.label();
-			if (label == null || (label.name() == null || label.name().isEmpty()) && label.distance() == null && !label.hasHealth()) {
+			if (label == null || (label.name() == null || label.name().isEmpty()) && label.distance() == null && !label.hasHealth()
+					&& label.equipment().isEmpty()) {
 				continue;
 			}
 
@@ -150,7 +157,17 @@ public final class EspRenderer {
 		int w = Math.round(contentW) + 2 * pad;
 		int h = Math.round(contentH) + 2 * pad;
 		int x = centerX - w / 2;
-		int y = ui.placeLabel(x, bottomY - h, w, h);
+		// Equipment icons sit in a row on top of the label box; the label and the row are placed as one block.
+		List<ItemStack> equipment = label.equipment();
+		float iconSize = 16 * style.equipmentScale();
+		int iconRowH = equipment.isEmpty() ? 0 : Math.round(iconSize) + 1;
+		int iconRowW = Math.round(equipment.size() * iconSize);
+		int blockX = Math.min(x, centerX - iconRowW / 2);
+		int blockW = Math.max(w, iconRowW);
+		int y = ui.placeLabel(blockX, bottomY - h - iconRowH, blockW, h + iconRowH) + iconRowH;
+		for (int i = 0; i < equipment.size(); i++) {
+			ui.item(equipment.get(i), centerX - iconRowW / 2f + i * iconSize, y - iconRowH, style.equipmentScale());
+		}
 
 		if (style.backgroundOpacity() > 0) {
 			ui.roundRect(x, y, w, h, withAlpha(0x101014, style.backgroundOpacity()));
@@ -191,7 +208,7 @@ public final class EspRenderer {
 			ui.rect(bx, by, Math.max(1, Math.round(bw * fraction)), bh, withAlpha(healthColor(fraction), style.healthOpacity()));
 		}
 
-		return new DrawnLabel(label.name(), x, y, w, h, healthBar, healthText);
+		return new DrawnLabel(label.name(), x, y, w, h, healthBar, healthText, equipment.size());
 	}
 
 	/** Green at full health through yellow to red. */

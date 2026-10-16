@@ -26,6 +26,12 @@ public abstract class MinecraftMixin {
 			return;
 		}
 
+		// Aim Trainer: a click while training is a shot at the training targets, never an attack.
+		if (io.github.theamethyx.femboyclient.client.modules.AimTrainerModule.onAttackClick()) {
+			cir.setReturnValue(false);
+			return;
+		}
+
 		// Auto Criticals (sandbox only) postpones a charged hit on the ground to the fall of a jump.
 		if (io.github.theamethyx.femboyclient.client.modules.AutoCriticalsModule.onAttackClick()) {
 			cir.setReturnValue(false);
@@ -45,9 +51,17 @@ public abstract class MinecraftMixin {
 		}
 	}
 
+	/** Entity Outlines: vanilla's glowing outline for the entity groups the module chooses. */
+	@Inject(method = "shouldEntityAppearGlowing", at = @At("RETURN"), cancellable = true)
+	private void femboyclient$outlines(net.minecraft.world.entity.Entity entity, CallbackInfoReturnable<Boolean> cir) {
+		if (!cir.getReturnValueZ() && io.github.theamethyx.femboyclient.client.modules.EntityOutlinesModule.glows(entity)) {
+			cir.setReturnValue(true);
+		}
+	}
+
 	@Inject(method = "continueAttack", at = @At("HEAD"), cancellable = true)
 	private void femboyclient$noMiningInFreeCamera(boolean attacking, CallbackInfo ci) {
-		if (FreeCameraModule.detached) {
+		if (FreeCameraModule.detached || io.github.theamethyx.femboyclient.client.modules.AimTrainerModule.active()) {
 			ci.cancel();
 		}
 	}

@@ -30,6 +30,7 @@ import io.github.theamethyx.femboyclient.client.modules.TrackersModule;
 import io.github.theamethyx.femboyclient.client.modules.FreeCameraModule;
 import io.github.theamethyx.femboyclient.client.modules.GeodeAnalyzerModule;
 import io.github.theamethyx.femboyclient.client.modules.PlayerAlertModule;
+import io.github.theamethyx.femboyclient.client.modules.StructureFinderModule;
 import io.github.theamethyx.femboyclient.client.modules.PlayerFinderModule;
 import io.github.theamethyx.femboyclient.client.modules.StorageEspModule;
 import io.github.theamethyx.femboyclient.core.module.Module;
@@ -63,8 +64,8 @@ final class MultiplayerTest {
 	}
 
 	static void run(ClientGameTestContext context, UiDriver ui, TestReport report) {
-		try (TestDedicatedServerContext server = context.worldBuilder().createServer();
-				TestServerConnection connection = server.connect()) {
+		try (TestDedicatedServerContext server = context.worldBuilder().createServer()) {
+			TestServerConnection connection = server.connect();
 			connection.getClientWorld().waitForChunksRender();
 			String address = context.computeOnClient(client -> client.getCurrentServer().ip);
 			report.note("Connected to dedicated test server at " + address);
@@ -93,7 +94,44 @@ final class MultiplayerTest {
 			freeCamera(context, server, base, report);
 
 			context.runOnClient(client -> MODULES.forEach(type -> femboy().modules().setEnabled(femboy().modules().get(type), false)));
+			String structures = context.computeOnClient(client -> femboy().modules().availability(femboy().modules().get(StructureFinderModule.class)).reason());
+			report.check("Structure Finder is unavailable on a server and says why (no world seed)", structures.equals(StructureFinderModule.NEEDS_SEED),
+					structures);
+
+			// Last, because it leaves the server: the test connection is then already closed by the client.
+			autoLeave(context, server, base, report);
+			if (context.computeOnClient(client -> client.level != null)) {
+				connection.close();
+			}
 		}
+	}
+
+	private static void autoLeave(ClientGameTestContext context, TestDedicatedServerContext server, BlockPos base, TestReport report) {
+		context.runOnClient(client -> {
+			PlayerAlertModule alert = femboy().modules().get(PlayerAlertModule.class);
+			((BooleanSetting) alert.settings().get("auto_leave")).set(true);
+			femboy().modules().setEnabled(alert, true);
+		});
+		context.waitTicks(3);
+		Vec3 at = Vec3.atBottomCenterOf(base.above()).add(4, 0, 0);
+		server.runOnServer(s -> {
+			ServerLevel level = s.overworld();
+			FakePlayer alice = FakePlayer.get(level, new GameProfile(ALICE, "Alice"));
+			alice.snapTo(at.x, at.y, at.z, 90, 0);
+			s.getPlayerList().broadcastAll(ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(List.of(alice)));
+			level.addNewPlayer(alice);
+		});
+		boolean left = ClientGameTest.waitUntil(context, () -> context.computeOnClient(client -> client.level == null), 100);
+		context.waitTicks(10);
+		String why = context.computeOnClient(client -> femboy().modules().get(PlayerAlertModule.class).leftBecause());
+		boolean multiplayerScreen = context.computeOnClient(client -> client.screen instanceof net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen);
+		boolean switchedOff = context.computeOnClient(client -> !((BooleanSetting) femboy().modules().get(PlayerAlertModule.class).settings().get("auto_leave")).get());
+		context.takeScreenshot("multiplayer-auto-leave");
+		context.runOnClient(client -> femboy().modules().resetToDefaults(femboy().modules().get(PlayerAlertModule.class)));
+		report.check("Player Alert's auto leave disconnects when a player comes into range and turns itself off",
+				left && multiplayerScreen && why != null && why.startsWith("Alice") && switchedOff, "left " + left + ", reason " + why
+						+ ", server list " + multiplayerScreen + ", auto leave off " + switchedOff);
+		context.setScreen(net.minecraft.client.gui.screens.TitleScreen::new);
 	}
 
 	/** The local test server at localhost counts as a test environment. */

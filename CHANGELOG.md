@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.8.0 - 2026-10-17
+
+### Added
+- **New GUI layout.** Home shows every module in category cards (category chips, search, a strip of what is on). Left-click a module to toggle it, right-click it for a settings panel that slides in with Settings, Keybinds and Info tabs and a Reset button. Larger window, rounded corners, logo and tagline, a profile chip in the header, a client status card in the sidebar, sliding highlights.
+- **Combat (sandbox):** AutoCrystal, AutoAnchor, Auto Pot. **Combat:** Aim Trainer.
+- **Movement (sandbox):** Anti Hunger.
+- **Visuals:** Entity Outlines (vanilla glowing outline); Entity ESP can show armor and held items above labels.
+- **Inventory:** Item Swap, Hotbar Profiles, Chest Organizer.
+- **World:** Structure Finder (singleplayer), Schematic Viewer (`.nbt`, `.schem`, `.litematic`), Material List.
+- **Player Alert:** auto leave when a player is detected, with a distance limit and a friends list.
+
+### Changed
+- Right-click on a category page opens the module's settings instead of toggling it.
+- Inventory Sorter and Chest Organizer merge partial stacks before sorting.
+- Crystal & Anchor Info: anchor damage now ignores the anchor block itself (vanilla removes it before the explosion), so estimates near anchors are no longer far too low.
+
 ## 0.7.0 - 2026-10-17
 
 ### Added

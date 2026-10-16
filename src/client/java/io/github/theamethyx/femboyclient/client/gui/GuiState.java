@@ -9,6 +9,8 @@ public final class GuiState {
 	public static String selectedModule;
 	public static ModuleCategory moduleFilter;
 	public static int settingsTab;
+	/** Module whose settings panel is open on Home, or null. */
+	public static String homeSettings;
 
 	private GuiState() {
 	}

@@ -26,6 +26,13 @@ public abstract class LocalPlayerMixin {
 		}
 	}
 
+	/** Anti Hunger: the sprint state reported to the server ({@code START/STOP_SPRINTING}); the client keeps sprinting. */
+	@com.llamalad7.mixinextras.injector.ModifyExpressionValue(method = "sendIsSprintingIfNeeded",
+			at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;isSprinting()Z"))
+	private boolean femboyclient$antiHunger(boolean sprinting) {
+		return io.github.theamethyx.femboyclient.client.modules.AntiHungerModule.reportedSprinting(sprinting);
+	}
+
 	/** No Slow: full input speed while using an item (vanilla multiplies by 0.2 in {@code itemUseSpeedMultiplier}). */
 	@org.spongepowered.asm.mixin.injection.Inject(method = "itemUseSpeedMultiplier", at = @org.spongepowered.asm.mixin.injection.At("RETURN"), cancellable = true)
 	private void femboyclient$noSlow(org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Float> cir) {

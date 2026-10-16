@@ -85,6 +85,15 @@ final class UiDriver {
 		context.waitTick();
 	}
 
+	/** Right-clicks the middle of a widget (after letting one frame pass, like {@link #click}). */
+	void rightClick(Widget widget) {
+		context.waitTick();
+		double[] windowPos = toWindow(widget.x() + widget.width() / 2.0, widget.y() + widget.height() / 2.0);
+		context.getInput().setCursorPos(windowPos[0], windowPos[1]);
+		context.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_RIGHT);
+		context.waitTick();
+	}
+
 	void type(String text) {
 		context.getInput().typeChars(text);
 		context.waitTick();

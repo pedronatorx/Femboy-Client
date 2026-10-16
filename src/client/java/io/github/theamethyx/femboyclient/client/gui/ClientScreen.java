@@ -32,7 +32,6 @@ import io.github.theamethyx.femboyclient.core.module.ModuleCategory;
  * to Minecraft GUI pixels.
  */
 public class ClientScreen extends Screen {
-	private static final int NAV_ITEM = 17;
 	/** Smallest virtual size the layout is designed for; "Auto" scale keeps at least this much room. */
 	private static final int MIN_WIDTH = 500;
 	private static final int MIN_HEIGHT = 290;
@@ -107,11 +106,11 @@ public class ClientScreen extends Screen {
 		vh = Math.round(height / f);
 		ui.setScreenSize(vw, vh);
 
-		panelW = Math.min(vw - 16, 600);
-		panelH = Math.min(vh - 16, 360);
+		panelW = Math.min(vw - 16, 880);
+		panelH = Math.min(vh - 16, 500);
 		panelX = (vw - panelW) / 2;
 		panelY = (vh - panelH) / 2;
-		sidebar = panelW >= 480 ? 104 : 92;
+		sidebar = panelW >= 640 ? 118 : panelW >= 480 ? 104 : 92;
 		layoutPage();
 	}
 
@@ -251,66 +250,92 @@ public class ClientScreen extends Screen {
 	}
 
 	private void renderPanel() {
-		ui.roundRect(panelX - 1, panelY - 1, panelW + 2, panelH + 2, 0x60000000);
-		ui.roundRect(panelX, panelY, panelW, panelH, Theme.PANEL);
-		ui.outline(panelX, panelY, panelW, panelH, Theme.BORDER);
-		ui.rect(panelX + 1, panelY + 1, sidebar, panelH - 2, Theme.SIDEBAR);
-		ui.rect(panelX + sidebar + 1, panelY + 1, 1, panelH - 2, Theme.BORDER);
+		ui.shadow(panelX, panelY, panelW, panelH, 6, 1.5f);
+		ui.roundRect(panelX, panelY, panelW, panelH, Theme.PANEL, 6);
+		ui.roundRect(panelX, panelY, sidebar + 1, panelH, Theme.SIDEBAR, 6);
+		ui.rect(panelX + sidebar - 5, panelY, 6, panelH, Theme.SIDEBAR);
+		ui.rect(panelX + sidebar + 1, panelY + 6, 1, panelH - 12, Theme.BORDER);
 	}
 
 	private void renderSidebar() {
 		int x = panelX + 1;
-		ui.icon(Icon.STAR, x + 9, panelY + 9, 10, Theme.ACCENT);
-		ui.textClipped("Femboy Client", x + 23, panelY + 10, sidebar - 28, Theme.TEXT);
+		// Logo: accent badge, name and tagline.
+		ui.roundRect(x + 7, panelY + 7, 16, 16, Theme.ACCENT, 4);
+		ui.icon(Icon.STAR, x + 11, panelY + 11, 8, 0xFFFFFFFF);
+		ui.textClipped("Femboy Client", x + 28, panelY + 7, sidebar - 32, Theme.ACCENT_STRONG);
+		ui.textScaled(ui.ellipsize("Play Your Way", Math.round((sidebar - 32) / 0.75f)), x + 28, panelY + 17, 0.75f, Theme.TEXT_MUTED);
 
 		int top = navTop();
 		float highlight = navHighlight.update(current, ui.frameSeconds(), ui.animate());
-		int highlightY = top + Math.round(highlight * NAV_ITEM);
-		ui.roundRect(x + 4, highlightY, sidebar - 8, NAV_ITEM - 2, Theme.ACCENT_TINT);
-		ui.rect(x + 4, highlightY + 3, 2, NAV_ITEM - 8, Theme.ACCENT);
+		int highlightY = top + Math.round(highlight * navItem());
+		ui.roundRect(x + 4, highlightY, sidebar - 8, navItem() - 2, Theme.withAlpha(Theme.ACCENT, 0.85f), 4);
 
 		for (int i = 0; i < pages.size(); i++) {
 			Page page = pages.get(i);
-			int itemY = top + i * NAV_ITEM;
-			boolean hot = ui.hovered(x + 4, itemY, sidebar - 8, NAV_ITEM - 2);
+			int itemY = top + i * navItem();
+			boolean hot = ui.hovered(x + 4, itemY, sidebar - 8, navItem() - 2);
 			if (hot && i != current) {
-				ui.roundRect(x + 4, itemY, sidebar - 8, NAV_ITEM - 2, Theme.withAlpha(Theme.SURFACE_HOVER, 0.8f));
+				ui.roundRect(x + 4, itemY, sidebar - 8, navItem() - 2, Theme.withAlpha(Theme.SURFACE_HOVER, 0.8f), 4);
 				ui.pointer();
 			}
 
-			int color = i == current || hot ? Theme.TEXT : Theme.TEXT_SECONDARY;
-			ui.icon(page.icon(), x + 10, itemY + 3, 9, i == current ? Theme.ACCENT : color);
+			int color = i == current ? 0xFFFFFFFF : hot ? Theme.TEXT : Theme.TEXT_SECONDARY;
+			ui.icon(page.icon(), x + 10, itemY + 3, 9, i == current ? 0xFFFFFFFF : Theme.lerp(color, Theme.ACCENT, 0.5f));
 			ui.textClipped(page.navLabel(), x + 23, itemY + 4, sidebar - 28, color);
 			if (hot) {
 				ui.tooltip(page, page.title() + ": " + page.subtitle());
 			}
 		}
 
-		// Footer: active profile and where the client is connected.
-		int footerY = panelY + panelH - 26;
-		ui.rect(x + 6, footerY - 4, sidebar - 12, 1, Theme.BORDER);
-		ui.icon(Icon.FOLDER, x + 8, footerY, 8, Theme.TEXT_MUTED);
-		ui.textClipped(femboy.config().activeProfile(), x + 20, footerY, sidebar - 26, Theme.TEXT_SECONDARY);
+		// Footer card: client status, active profile and where the client is connected.
+		int cardY = panelY + panelH - 44;
+		ui.roundRect(x + 5, cardY, sidebar - 10, 38, Theme.SURFACE, 4);
+		long enabled = femboy.modules().all().stream().filter(Module::isEnabled).count();
+		boolean errors = femboy.modules().all().stream().anyMatch(m -> m.lastError() != null);
+		ui.roundRect(x + 10, cardY + 6, 5, 5, errors ? Theme.ERROR : Theme.SUCCESS, 2);
+		ui.textClipped(errors ? "Module error" : "Client ready", x + 19, cardY + 5, sidebar - 28, errors ? Theme.ERROR : Theme.SUCCESS);
+		ui.textScaled(ui.ellipsize(enabled == 0 ? "No modules enabled" : enabled + " modules enabled", Math.round((sidebar - 24) / 0.75f)), x + 10, cardY + 16,
+				0.75f, Theme.TEXT_MUTED);
 		String where = femboy.modules().environment().describe();
-		ui.icon(Icon.INFO, x + 8, footerY + 11, 8, Theme.TEXT_MUTED);
-		ui.textClipped(where, x + 20, footerY + 11, sidebar - 26, Theme.TEXT_MUTED);
-		if (ui.hovered(x + 4, footerY - 2, sidebar - 8, 24)) {
-			ui.tooltip("footer", "Profile: " + femboy.config().activeProfile() + "\nEnvironment: " + where);
+		ui.textScaled(ui.ellipsize(femboy.config().activeProfile() + "  |  " + where, Math.round((sidebar - 24) / 0.75f)), x + 10, cardY + 26, 0.75f,
+				Theme.TEXT_SECONDARY);
+		if (ui.hovered(x + 5, cardY, sidebar - 10, 38)) {
+			ui.tooltip("footer", "Profile: " + femboy.config().activeProfile() + "\nEnvironment: " + where + "\nEnabled modules: " + enabled);
 		}
 	}
 
+	/** Height of one sidebar entry: roomier when the window is tall, never less than 15. */
+	private int navItem() {
+		return Math.max(15, Math.min(21, (panelH - 34 - 50) / Math.max(1, pages.size())));
+	}
+
 	private int navTop() {
-		return panelY + 30;
+		return panelY + 34;
 	}
 
 	private void renderHeader() {
 		Page page = pages.get(current);
 		int x = panelX + sidebar + Theme.PAD + 2;
 		int right = panelX + panelW - Theme.PAD;
-		ui.text(page.title(), x, panelY + 7, Theme.TEXT);
-		boolean cut = ui.textClipped(page.subtitle(), x, panelY + 18, right - x - 14, Theme.TEXT_MUTED);
-		if (cut && ui.hovered(x, panelY + 16, right - x - 14, 10)) {
+		ui.textScaled(page.title(), x, panelY + 5, 1.15f, Theme.TEXT);
+		int subtitleWidth = right - x - ui.textWidth(femboy.config().activeProfile()) - 50;
+		boolean cut = ui.textClipped(page.subtitle(), x, panelY + 18, subtitleWidth, Theme.TEXT_MUTED);
+		if (cut && ui.hovered(x, panelY + 16, subtitleWidth, 10)) {
 			ui.tooltip(page.subtitle(), page.subtitle());
+		}
+
+		// Profile chip: shows the active profile, opens the Profiles page.
+		String profile = femboy.config().activeProfile();
+		int chipWidth = ui.textWidth(profile) + 24;
+		int chipX = right - 18 - chipWidth;
+		boolean chipHot = ui.hovered(chipX, panelY + 5, chipWidth, 14);
+		ui.roundRect(chipX, panelY + 5, chipWidth, 14, chipHot ? Theme.SURFACE_HOVER : Theme.SURFACE, 4);
+		ui.icon(Icon.PLAYER, chipX + 4, panelY + 8, 8, Theme.ACCENT);
+		ui.text(profile, chipX + 15, panelY + 8, Theme.TEXT);
+		ui.icon(Icon.CHEVRON_DOWN, chipX + chipWidth - 9, panelY + 9, 6, Theme.TEXT_MUTED);
+		if (chipHot) {
+			ui.pointer();
+			ui.tooltip("profile-chip", "Active profile. Click to manage profiles.");
 		}
 
 		boolean closeHot = ui.hovered(right - 10, panelY + 6, 10, 10);
@@ -344,9 +369,16 @@ public class ClientScreen extends Screen {
 			return true;
 		}
 
+		String profile = femboy.config().activeProfile();
+		int chipWidth = ui.textWidth(profile) + 24;
+		if (UiContext.inside(mx, my, right - 18 - chipWidth, panelY + 5, chipWidth, 14)) {
+			showPage(pageIndex(page -> page instanceof ProfilesPage));
+			return true;
+		}
+
 		int top = navTop();
 		for (int i = 0; i < pages.size(); i++) {
-			if (UiContext.inside(mx, my, panelX + 5, top + i * NAV_ITEM, sidebar - 8, NAV_ITEM - 2)) {
+			if (UiContext.inside(mx, my, panelX + 5, top + i * navItem(), sidebar - 8, navItem() - 2)) {
 				showPage(i);
 				return true;
 			}

@@ -1,9 +1,14 @@
 package io.github.theamethyx.femboyclient.client;
 
 import io.github.theamethyx.femboyclient.client.modules.AimAssistModule;
+import io.github.theamethyx.femboyclient.client.modules.AimTrainerModule;
+import io.github.theamethyx.femboyclient.client.modules.AntiHungerModule;
+import io.github.theamethyx.femboyclient.client.modules.AutoAnchorModule;
 import io.github.theamethyx.femboyclient.client.modules.AutoArmorModule;
 import io.github.theamethyx.femboyclient.client.modules.AutoAttributeSwapModule;
 import io.github.theamethyx.femboyclient.client.modules.AutoCriticalsModule;
+import io.github.theamethyx.femboyclient.client.modules.AutoCrystalModule;
+import io.github.theamethyx.femboyclient.client.modules.AutoPotModule;
 import io.github.theamethyx.femboyclient.client.modules.AutoReconnectModule;
 import io.github.theamethyx.femboyclient.client.modules.AutoRefillModule;
 import io.github.theamethyx.femboyclient.client.modules.AutoStunSlamModule;
@@ -13,6 +18,7 @@ import io.github.theamethyx.femboyclient.client.modules.AutoWeaponSwitchModule;
 import io.github.theamethyx.femboyclient.client.modules.BetterChatModule;
 import io.github.theamethyx.femboyclient.client.modules.BlockCounterModule;
 import io.github.theamethyx.femboyclient.client.modules.BlockHighlightModule;
+import io.github.theamethyx.femboyclient.client.modules.ChestOrganizerModule;
 import io.github.theamethyx.femboyclient.client.modules.ChunkBordersModule;
 import io.github.theamethyx.femboyclient.client.modules.CombatInfoModule;
 import io.github.theamethyx.femboyclient.client.modules.CoordinatesHudModule;
@@ -21,6 +27,7 @@ import io.github.theamethyx.femboyclient.client.modules.EffectsModule;
 import io.github.theamethyx.femboyclient.client.modules.ElytraFlightModule;
 import io.github.theamethyx.femboyclient.client.modules.ElytraInfoModule;
 import io.github.theamethyx.femboyclient.client.modules.EntityEspModule;
+import io.github.theamethyx.femboyclient.client.modules.EntityOutlinesModule;
 import io.github.theamethyx.femboyclient.client.modules.ExplosionInfoModule;
 import io.github.theamethyx.femboyclient.client.modules.FlightModule;
 import io.github.theamethyx.femboyclient.client.modules.FreeCameraModule;
@@ -28,12 +35,15 @@ import io.github.theamethyx.femboyclient.client.modules.FullbrightModule;
 import io.github.theamethyx.femboyclient.client.modules.GeodeAnalyzerModule;
 import io.github.theamethyx.femboyclient.client.modules.HealthArmorModule;
 import io.github.theamethyx.femboyclient.client.modules.HitboxesModule;
+import io.github.theamethyx.femboyclient.client.modules.HotbarProfilesModule;
 import io.github.theamethyx.femboyclient.client.modules.InventorySorterModule;
 import io.github.theamethyx.femboyclient.client.modules.ItemCountersModule;
+import io.github.theamethyx.femboyclient.client.modules.ItemSwapModule;
 import io.github.theamethyx.femboyclient.client.modules.JavaRunnerModule;
 import io.github.theamethyx.femboyclient.client.modules.KeystrokesModule;
 import io.github.theamethyx.femboyclient.client.modules.KillAuraModule;
 import io.github.theamethyx.femboyclient.client.modules.LightLevelModule;
+import io.github.theamethyx.femboyclient.client.modules.MaterialListModule;
 import io.github.theamethyx.femboyclient.client.modules.ModuleListHudModule;
 import io.github.theamethyx.femboyclient.client.modules.MovementInfoModule;
 import io.github.theamethyx.femboyclient.client.modules.NoFallModule;
@@ -45,12 +55,14 @@ import io.github.theamethyx.femboyclient.client.modules.PlayerAlertModule;
 import io.github.theamethyx.femboyclient.client.modules.PlayerFinderModule;
 import io.github.theamethyx.femboyclient.client.modules.ReachModule;
 import io.github.theamethyx.femboyclient.client.modules.SafeWalkModule;
+import io.github.theamethyx.femboyclient.client.modules.SchematicViewerModule;
 import io.github.theamethyx.femboyclient.client.modules.ShulkerPreviewModule;
 import io.github.theamethyx.femboyclient.client.modules.SpeedModule;
 import io.github.theamethyx.femboyclient.client.modules.SprintModule;
 import io.github.theamethyx.femboyclient.client.modules.StepModule;
 import io.github.theamethyx.femboyclient.client.modules.StorageEspModule;
 import io.github.theamethyx.femboyclient.client.modules.StrafeModule;
+import io.github.theamethyx.femboyclient.client.modules.StructureFinderModule;
 import io.github.theamethyx.femboyclient.client.modules.TargetHudModule;
 import io.github.theamethyx.femboyclient.client.modules.TrackersModule;
 import io.github.theamethyx.femboyclient.client.modules.TrajectoriesModule;
@@ -77,6 +89,7 @@ public final class ModuleRegistry {
 		modules.register(new TargetHudModule());
 		modules.register(new WeaponInfoModule());
 		modules.register(new ExplosionInfoModule());
+		modules.register(new AimTrainerModule());
 
 		// Automation (test environments only)
 		modules.register(new KillAuraModule());
@@ -89,6 +102,9 @@ public final class ModuleRegistry {
 		modules.register(new AutoCriticalsModule());
 		modules.register(new WTapModule());
 		modules.register(new AutoWeaponSwitchModule());
+		modules.register(new AutoCrystalModule());
+		modules.register(new AutoAnchorModule());
+		modules.register(new AutoPotModule());
 
 		// Movement
 		modules.register(new FreeCameraModule());
@@ -101,6 +117,7 @@ public final class ModuleRegistry {
 		modules.register(new SafeWalkModule());
 		modules.register(new NoSlowModule());
 		modules.register(new NoFallModule());
+		modules.register(new AntiHungerModule());
 		modules.register(new MovementInfoModule());
 		modules.register(new ElytraInfoModule());
 
@@ -108,6 +125,7 @@ public final class ModuleRegistry {
 		modules.register(new EntityEspModule());
 		modules.register(new StorageEspModule());
 		modules.register(new HitboxesModule());
+		modules.register(new EntityOutlinesModule());
 		modules.register(new TrajectoriesModule());
 		modules.register(new FullbrightModule());
 		modules.register(new ChunkBordersModule());
@@ -125,6 +143,9 @@ public final class ModuleRegistry {
 		modules.register(new AutoRefillModule());
 		modules.register(new InventorySorterModule());
 		modules.register(new ShulkerPreviewModule());
+		modules.register(new ItemSwapModule());
+		modules.register(new HotbarProfilesModule());
+		modules.register(new ChestOrganizerModule());
 
 		// Trackers
 		modules.register(new PlayerFinderModule());
@@ -136,6 +157,9 @@ public final class ModuleRegistry {
 		modules.register(new GeodeAnalyzerModule());
 		modules.register(new BlockCounterModule());
 		modules.register(new DeathCoordinatesModule());
+		modules.register(new StructureFinderModule());
+		modules.register(new SchematicViewerModule());
+		modules.register(new MaterialListModule());
 
 		// HUD
 		modules.register(new CoordinatesHudModule());

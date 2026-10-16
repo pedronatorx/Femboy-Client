@@ -1,6 +1,6 @@
-# Verification report: Femboy Client 0.7.0
+# Verification report: Femboy Client 0.8.0
 
-Date: 2026-10-17. Sections up to "Servers and stability" were written for 0.4.0 and still pass; later additions are in the sections after it, ending with 0.7.0.
+Date: 2026-10-17. Sections up to "Servers and stability" were written for 0.4.0 and still pass; later additions are in the sections after it, ending with 0.8.0.
 
 ## Status values
 
@@ -253,11 +253,32 @@ Where possible, each module was checked against what the game really did in the 
 | Sprint | Verified in the running Minecraft client | Sprinting while walking forward |
 | Elytra Flight, Strafe Assist, Keystrokes key highlighting | Implemented, not tested | Compiled; no in-game check |
 
+## GUI layout and remaining modules (0.8.0)
+
+| Feature | Status | Evidence |
+|---|---|---|
+| Home grid, left-click toggles, right-click settings panel, Keybinds tab, Esc closes | Verified in the running Minecraft client | Right-click on Geode Analyzer opened its panel and left it off; left-click turned it on and off; screenshots `home-grid`, `home-settings-panel` |
+| Item Swap | Verified in the running Minecraft client | Totem swapped from inventory into the held slot and back (server agrees); golden apple selected in the hotbar and back |
+| Hotbar Profiles | Verified in the running Minecraft client | Saved layout restored after the items were moved to other slots (server: sword, pickaxe, cobblestone) |
+| Chest Organizer | Verified in the running Minecraft client | Buttons on the chest screen; Sort gave dirt 5, stone 7 (merged); Stack moved the stone but not the apples; Take emptied the chest (server agrees); screenshot `inventory-chest-organizer` |
+| Anti Hunger | Verified in the running Minecraft client | 30 ticks of sprinting: the server counted 808 cm of sprinting without it, 0 cm with it (the same server branch charges sprint hunger) |
+| Auto Pot | Verified in the running Minecraft client | At 6 health one healing potion was thrown; health rose to 10.8; slot and pitch restored |
+| AutoCrystal | Verified in the running Minecraft client | Placed 2 crystals on obsidian next to a husk, broke 1; the husk died |
+| AutoAnchor | Verified in the running Minecraft client | Placed, charged and detonated an anchor next to a husk in the overworld; the husk died |
+| Entity Outlines | Verified in the running Minecraft client | The husk glows with the vanilla outline only while on; screenshot `visuals-entity-outlines` |
+| Entity ESP equipment icons | Verified in the running Minecraft client | Husk label drawn with 2 icons (helmet, sword); screenshot `visuals-esp-equipment` |
+| Aim Trainer | Verified in the running Minecraft client | Aimed click = 1 hit with a new target, click at the sky = 1 miss |
+| Schematic Viewer | Verified in the running Minecraft client | Test-written `.nbt`, `.schem` (v2) and `.litematic` files read identically; placed schematic compared: 1 placed, 1 wrong |
+| Material List | Verified in the running Minecraft client | 1 oak planks left of 1, carrying 3 |
+| Structure Finder | Verified in the running Minecraft client | Normal world (seed 8675309): a plains village and a stronghold found; on the dedicated server it is unavailable with the seed explanation |
+| Player Alert auto leave | Verified in the running Minecraft client | A second player 6 blocks away: the client disconnected to the server list and auto leave turned itself off |
+| Moving Aim Trainer targets, Hotbar Profiles on profile switch, schematic rotation/layer | Implemented, not tested | Compiled; no in-game check |
+
 ## Not verified
 
 - **Visible window on the NVIDIA GPU:** all rendering was checked with Mesa llvmpipe under Xvfb. Real keyboard shortcuts in the code editor were not tried in a visible window.
 - **A second real client:** the other player in the tests is a server-side fake player; real movement and latency were not tested.
 - **Other server software:** Paper, proxies and anti-xray servers.
-- **Not built:** AutoCrystal, AutoAnchor, Auto Pot, Aim Trainer, Anti Hunger, Hotbar Profiles, Item Swap, Chest Organizer, Structure Finder, Material List, Schematic Viewer, nametag armor, shader entity outlines.
+- **Not built:** hidden (server-only) rotations or other stealth features, on purpose.
 - **Test harness:** one of three runs after the last change stopped when the Fabric test harness's network synchronizer failed while connecting to the dedicated server ("Network synchronizer in invalid state"). All checks run before that passed; the other two runs passed completely.
 - **Performance at scale:** very many entities or storage blocks, or a 16-chunk radius in a busy world.

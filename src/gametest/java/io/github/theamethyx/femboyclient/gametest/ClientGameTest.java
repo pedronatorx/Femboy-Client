@@ -21,6 +21,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContex
 import io.github.theamethyx.femboyclient.client.FemboyClient;
 import io.github.theamethyx.femboyclient.client.gui.ClientScreen;
 import io.github.theamethyx.femboyclient.client.gui.GuiState;
+import io.github.theamethyx.femboyclient.client.gui.page.HomePage;
 import io.github.theamethyx.femboyclient.client.gui.page.ModulesPage;
 import io.github.theamethyx.femboyclient.client.gui.page.SettingsPage;
 import io.github.theamethyx.femboyclient.client.gui.widget.Button;
@@ -30,6 +31,7 @@ import io.github.theamethyx.femboyclient.client.gui.widget.GeodePanel;
 import io.github.theamethyx.femboyclient.client.gui.widget.IdSetRow;
 import io.github.theamethyx.femboyclient.client.gui.widget.KeybindButton;
 import io.github.theamethyx.femboyclient.client.gui.widget.ModuleRow;
+import io.github.theamethyx.femboyclient.client.gui.widget.ModuleTile;
 import io.github.theamethyx.femboyclient.client.gui.widget.SettingRow;
 import io.github.theamethyx.femboyclient.client.gui.widget.TextField;
 import io.github.theamethyx.femboyclient.client.gui.widget.Widget;
@@ -72,7 +74,7 @@ public class ClientGameTest implements FabricClientGameTest {
 
 		report.check("Femboy Client entrypoint ran", context.computeOnClient(client -> FemboyClient.get() != null && FemboyClient.get().modules() != null));
 		int moduleCount = context.computeOnClient(client -> FemboyClient.get().modules().all().size());
-		report.check("All 60 modules registered", moduleCount == 60, String.valueOf(moduleCount));
+		report.check("All 72 modules registered", moduleCount == 72, String.valueOf(moduleCount));
 		FoundationTest.firstLaunch(context, report);
 		// Deterministic screenshots: no easing between frames.
 		context.runOnClient(client -> FemboyClient.get().options().animations.set(false));
@@ -105,6 +107,7 @@ public class ClientGameTest implements FabricClientGameTest {
 			InfoModulesTest.explosions(context, singleplayer, report);
 			AutomationTest.run(context, singleplayer, report);
 			SpecModulesTest.run(context, singleplayer, ui, report);
+			ExtraModulesTest.run(context, singleplayer, report);
 			AdvancedFeaturesTest.pages(context, ui, report);
 			AdvancedFeaturesTest.espOverhaul(context, singleplayer, report);
 			AdvancedFeaturesTest.trackers(context, singleplayer, report);
@@ -259,22 +262,51 @@ public class ClientGameTest implements FabricClientGameTest {
 	private static void moduleBrowser(ClientGameTestContext context, UiDriver ui, TestReport report) {
 		openMenu(context);
 		showPage(context, "Home");
+		context.takeScreenshot("home-grid");
 		TextField search = ui.find(TextField.class, field -> true);
 		ui.click(search);
 		ui.type("geode");
 		context.waitTicks(2);
-		List<String> listed = context.computeOnClient(client -> ((ClientScreen) client.screen).currentPage().descendants(ModuleRow.class)
-				.stream().map(row -> row.module().id()).toList());
+		List<String> listed = context.computeOnClient(client -> ((ClientScreen) client.screen).currentPage().descendants(ModuleTile.class)
+				.stream().map(tile -> tile.module().id()).toList());
 		report.check("Home search 'geode' lists the Geode Analyzer", listed.contains("geode_analyzer"), listed.toString());
 		context.takeScreenshot("home-search-geode");
 
-		ModuleRow row = ui.find(ModuleRow.class, r -> r.module().id().equals("geode_analyzer"));
-		ui.clickVirtual(row.x() + 12, row.y() + row.height() / 2.0);
+		ModuleTile tile = ui.find(ModuleTile.class, t -> t.module().id().equals("geode_analyzer"));
+		ui.rightClick(tile);
+		context.waitTicks(10);
+		String opened = context.computeOnClient(client -> ((ClientScreen) client.screen).currentPage() instanceof HomePage home
+				&& home.settingsModule() != null ? home.settingsModule().id() : "none");
+		boolean stillOff = context.computeOnClient(client -> !femboy().modules().get("geode_analyzer").isEnabled());
+		report.check("Right-clicking a module on Home opens its settings panel (and does not turn it on)", opened.equals("geode_analyzer") && stillOff,
+				opened + ", off " + stillOff);
+		context.takeScreenshot("home-settings-panel");
+
+		int keybindsTab = context.computeOnClient(client -> {
+			HomePage home = (HomePage) ((ClientScreen) client.screen).currentPage();
+			home.settingsPanel().showTab(1);
+			return home.settingsPanel().tab();
+		});
+		boolean keyField = context.computeOnClient(client -> !((ClientScreen) client.screen).currentPage().descendants(KeybindButton.class).isEmpty());
+		report.check("The settings panel's Keybinds tab shows the key field", keybindsTab == 1 && keyField);
+		ui.key(GLFW.GLFW_KEY_ESCAPE);
 		context.waitTicks(3);
+		boolean closed = context.computeOnClient(client -> client.screen instanceof ClientScreen screen && screen.currentPage() instanceof HomePage home
+				&& home.settingsModule() == null);
+		report.check("Escape closes the settings panel and keeps the menu open", closed);
+
+		ModuleTile again = ui.find(ModuleTile.class, t -> t.module().id().equals("geode_analyzer"));
+		ui.clickVirtual(again.x() + 30, again.y() + again.height() / 2.0);
+		boolean toggledOn = context.computeOnClient(client -> femboy().modules().get("geode_analyzer").isEnabled());
+		ui.clickVirtual(again.x() + 30, again.y() + again.height() / 2.0);
+		boolean toggledOff = context.computeOnClient(client -> !femboy().modules().get("geode_analyzer").isEnabled());
+		report.check("Left-clicking a module on Home turns it on, and again off", toggledOn && toggledOff);
+
+		openModule(context, GeodeAnalyzerModule.class);
 		String page = currentTitle(context);
 		String selected = context.computeOnClient(client -> ((ClientScreen) client.screen).currentPage() instanceof ModulesPage modules
 				&& modules.selected() != null ? modules.selected().id() : "none");
-		report.check("Clicking a module on Home opens it on its category page (World)", page.equals("World") && selected.equals("geode_analyzer"),
+		report.check("Opening a module shows it on its category page (World)", page.equals("World") && selected.equals("geode_analyzer"),
 				page + " / " + selected);
 
 		showPage(context, "Visuals");

@@ -35,6 +35,8 @@ public abstract class MultiPlayerGameModeMixin {
 			FemboyClient.get().combat().onAttack(local, target);
 			// Auto Weapon Switch (sandbox only) selects the strongest weapon before Auto Attribute Swap looks at the hand.
 			io.github.theamethyx.femboyclient.client.modules.AutoWeaponSwitchModule.beforeAttack(local, target);
+			// Anti Hunger (sandbox only) reports the real sprint state before the hit so sprint knockback still applies.
+			io.github.theamethyx.femboyclient.client.modules.AntiHungerModule.beforeAttack();
 		}
 
 		AutoAttributeSwapModule module = femboyclient$swap();
