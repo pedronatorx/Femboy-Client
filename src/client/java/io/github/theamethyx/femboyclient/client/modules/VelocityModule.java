@@ -31,7 +31,7 @@ public final class VelocityModule extends Module {
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return false;
+		return true;
 	}
 
 	/** Number of knockback updates changed since the module started (for tests). */

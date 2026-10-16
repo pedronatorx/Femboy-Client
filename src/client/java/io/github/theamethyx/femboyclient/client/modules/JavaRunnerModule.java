@@ -94,6 +94,11 @@ public final class JavaRunnerModule extends Module implements ClientHooks.Custom
 	private JavaRunner.Execution execution;
 	private List<String> pendingRisks = List.of();
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public JavaRunnerModule() {
 		super("java_runner", "Java Runner", "Write and run small Java programs in a separate process, with output, errors and limits.",
 				ModuleCategory.DEVELOPER, false, NO_KEY);

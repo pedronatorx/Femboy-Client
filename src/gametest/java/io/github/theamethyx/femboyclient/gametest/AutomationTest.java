@@ -75,6 +75,7 @@ final class AutomationTest {
 		server.runCommand("difficulty normal");
 		server.runCommand("clear @a");
 
+		sandboxStaysOffOnPublicServers(context, singleplayer, report);
 		killAura(context, singleplayer, report);
 		triggerBotAndAimAssist(context, singleplayer, report);
 		reach(context, singleplayer, report);
@@ -92,6 +93,33 @@ final class AutomationTest {
 		server.runCommand("tp @a 0.5 -60 0.5 0 15");
 		context.runOnClient(client -> femboy().modules().disableAll());
 		context.waitTicks(3);
+	}
+
+	/** Spec section 5: sandbox modules must not activate outside test environments. */
+	private static void sandboxStaysOffOnPublicServers(ClientGameTestContext context, TestSingleplayerContext singleplayer, TestReport report) {
+		var server = singleplayer.getServer();
+		server.runCommand("item replace entity @a weapon.mainhand with minecraft:iron_sword");
+		server.runCommand("tp @a 0.5 -60 0.5 0 0");
+		freshHusk(context, singleplayer, "0.5 -60 2.5");
+		List<String> sandbox = context.computeOnClient(client -> femboy().modules().all().stream()
+				.filter(Module::testEnvironmentOnly).map(Module::id).sorted().toList());
+		context.runOnClient(client -> {
+			io.github.theamethyx.femboyclient.client.ClientEnvironment.simulatePublicServer = true;
+			femboy().modules().all().stream().filter(Module::testEnvironmentOnly).forEach(m -> femboy().modules().setEnabled(m, true));
+		});
+		context.waitTicks(40);
+		List<String> running = context.computeOnClient(client -> femboy().modules().all().stream()
+				.filter(m -> m.testEnvironmentOnly() && m.isRunning()).map(Module::id).toList());
+		String reason = context.computeOnClient(client -> femboy().modules().availability(femboy().modules().get(KillAuraModule.class)).reason());
+		float health = huskHealth(singleplayer);
+		context.runOnClient(client -> io.github.theamethyx.femboyclient.client.ClientEnvironment.simulatePublicServer = false);
+		context.waitTicks(2);
+		long runningAgain = context.computeOnClient(client -> femboy().modules().all().stream().filter(m -> m.testEnvironmentOnly() && m.isRunning()).count());
+		context.runOnClient(client -> femboy().modules().all().stream().filter(Module::testEnvironmentOnly).forEach(m -> femboy().modules().setEnabled(m, false)));
+		server.runCommand("effect give @a instant_health 1 5");
+		report.check("Sandbox modules switched on while on a (simulated) public server stay off and do nothing; they start in a test environment",
+				sandbox.size() >= 8 && running.isEmpty() && health == 20 && reason.equals(Module.TEST_ENVIRONMENT_ONLY) && runningAgain == sandbox.size(),
+				"sandbox " + sandbox + "; running on public " + running + "; husk health " + health + "; reason '" + reason + "'; running in test env " + runningAgain);
 	}
 
 	private static void killAura(ClientGameTestContext context, TestSingleplayerContext singleplayer, TestReport report) {

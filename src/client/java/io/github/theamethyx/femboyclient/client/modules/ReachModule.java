@@ -33,7 +33,7 @@ public final class ReachModule extends Module {
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return false;
+		return true;
 	}
 
 	@Override

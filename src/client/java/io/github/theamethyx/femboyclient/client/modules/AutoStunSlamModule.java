@@ -70,7 +70,7 @@ public final class AutoStunSlamModule extends Module implements ClientHooks.HudB
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return false;
+		return true;
 	}
 
 	public String lastResult() {

@@ -43,6 +43,11 @@ public final class HealthArmorModule extends Module implements ClientHooks.HudBl
 
 	private final Map<EquipmentSlot, Boolean> wasLow = new EnumMap<>(EquipmentSlot.class);
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public HealthArmorModule() {
 		super("health_armor", "Health & Armor", "Health, food, armor and held-item durability with low-health and durability warnings.",
 				ModuleCategory.INVENTORY, false, NO_KEY);

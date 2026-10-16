@@ -70,6 +70,11 @@ public final class ExplosionInfoModule extends Module implements ClientHooks.Hud
 	private final List<BlockPos> spots = new ArrayList<>();
 	private Focus focus;
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public ExplosionInfoModule() {
 		super("explosion_info", "Crystal & Anchor Info", "Crystal placement preview and estimated explosion damage from crystals and respawn anchors.",
 				ModuleCategory.COMBAT, false, NO_KEY);

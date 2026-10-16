@@ -54,6 +54,11 @@ public final class ItemCountersModule extends Module implements ClientHooks.HudB
 	private Set<Item> counted = Set.of();
 	private Set<Item> refilled = Set.of();
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public ItemCountersModule() {
 		super("item_counters", "Item Counters", "Counts of totems, gapples, crystals, pearls, potions and other items, with refill reminders.",
 				ModuleCategory.INVENTORY, false, NO_KEY);

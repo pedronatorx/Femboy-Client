@@ -103,6 +103,35 @@ public abstract class Module {
 		return false;
 	}
 
+	/** What kind of module this is, shown as a badge and usable as a filter. */
+	public enum Tier {
+		VISUAL("Visual", "Shows information the client already has."),
+		ASSIST("Assist", "Calculates and reminds; never acts for you."),
+		AUTOMATION("Automation", "Acts for you within vanilla rules, on any server."),
+		SANDBOX("Sandbox", TEST_ENVIRONMENT_ONLY);
+
+		private final String label;
+		private final String meaning;
+
+		Tier(String label, String meaning) {
+			this.label = label;
+			this.meaning = meaning;
+		}
+
+		public String label() {
+			return label;
+		}
+
+		public String meaning() {
+			return meaning;
+		}
+	}
+
+	/** The module's tier; every test-environment-only module is {@link Tier#SANDBOX}. */
+	public Tier tier() {
+		return testEnvironmentOnly() ? Tier.SANDBOX : Tier.VISUAL;
+	}
+
 	/** Whether the module needs a loaded world to do anything useful. */
 	public boolean requiresWorld() {
 		return true;

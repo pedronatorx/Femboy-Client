@@ -93,6 +93,11 @@ public final class TargetHudModule extends Module implements ClientHooks.ScreenO
 	private boolean lockKeyWasDown;
 	private LivingEntity current;
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public TargetHudModule() {
 		super("target_hud", "Target HUD", "A card with your target's health, armor, distance, equipment and shield state.",
 				ModuleCategory.COMBAT, false, NO_KEY);

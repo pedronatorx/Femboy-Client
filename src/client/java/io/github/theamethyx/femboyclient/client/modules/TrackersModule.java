@@ -91,6 +91,11 @@ public final class TrackersModule extends Module implements ClientHooks.ScreenOv
 	private List<Indicator> lastIndicators = List.of();
 	private int ticksUntilUpdate;
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public TrackersModule() {
 		super("trackers", "Trackers", "Arrows at the screen edge pointing at players, mobs, waypoints and last-seen positions.",
 				ModuleCategory.TRACKERS, false, NO_KEY);

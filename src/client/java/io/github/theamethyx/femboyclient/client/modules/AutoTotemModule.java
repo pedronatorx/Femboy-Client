@@ -37,7 +37,7 @@ public final class AutoTotemModule extends Module {
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return false;
+		return true;
 	}
 
 	public int swaps() {

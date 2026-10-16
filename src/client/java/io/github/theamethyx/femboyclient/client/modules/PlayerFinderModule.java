@@ -81,6 +81,11 @@ public final class PlayerFinderModule extends Module implements ClientHooks.HudB
 	private long cachedAt;
 	private WaypointsModule.Waypoint trackedWaypoint;
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public PlayerFinderModule() {
 		super("player_finder", "Player Finder", "Online player list with search and sorting, plus navigation to players in range and to your waypoints.",
 				ModuleCategory.TRACKERS, false, NO_KEY);

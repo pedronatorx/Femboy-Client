@@ -40,7 +40,7 @@ public final class AimAssistModule extends Module {
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return false;
+		return true;
 	}
 
 	public LivingEntity target() {

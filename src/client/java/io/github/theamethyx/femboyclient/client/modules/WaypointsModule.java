@@ -58,6 +58,11 @@ public final class WaypointsModule extends Module implements ClientHooks.WorldRe
 	private final NumberSetting maxDistance = settings().add(new NumberSetting("max_distance", "Maximum distance",
 			"Hide waypoints farther away than this.", 1000, 16, 10000, 16, "blocks"));
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public WaypointsModule() {
 		super("waypoints", "Waypoints", "Save positions and see them as markers with names and distances.",
 				ModuleCategory.TRACKERS, false, NO_KEY);

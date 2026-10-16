@@ -32,6 +32,11 @@ public final class CombatInfoModule extends Module implements ClientHooks.HudBlo
 	private final BooleanSetting accuracy = settings().add(new BooleanSetting("accuracy", "Accuracy",
 			"Hits that landed out of attacks sent this session.", false));
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public CombatInfoModule() {
 		super("combat_info", "Combat Info", "Clicks per second, combo, reach and accuracy on the HUD.", ModuleCategory.COMBAT, false, NO_KEY);
 	}

@@ -45,6 +45,11 @@ public final class MovementInfoModule extends Module implements ClientHooks.HudB
 	private Vec3 previous;
 	private Vec3 motion = Vec3.ZERO;
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public MovementInfoModule() {
 		super("movement_info", "Movement Info", "Speed, vertical speed, fall distance and a landing and fall damage prediction.",
 				ModuleCategory.MOVEMENT, false, NO_KEY);

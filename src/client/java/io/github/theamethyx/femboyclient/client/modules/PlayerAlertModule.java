@@ -56,6 +56,11 @@ public final class PlayerAlertModule extends Module {
 	private String world;
 	private boolean baseline;
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public PlayerAlertModule() {
 		super("player_alert", "Player Alert", "Warns you when another player comes within your render distance.",
 				ModuleCategory.TRACKERS, false, NO_KEY);

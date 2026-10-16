@@ -40,6 +40,11 @@ public final class TrajectoriesModule extends Module implements ClientHooks.Worl
 
 	private Trajectory.Result last;
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public TrajectoriesModule() {
 		super("trajectories", "Trajectories", "The predicted path of arrows, tridents, pearls, potions and other projectiles you hold.",
 				ModuleCategory.VISUALS, false, NO_KEY);

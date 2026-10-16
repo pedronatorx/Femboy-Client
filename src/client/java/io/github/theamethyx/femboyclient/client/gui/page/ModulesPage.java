@@ -220,9 +220,13 @@ public class ModulesPage extends Page {
 			this.module = module;
 		}
 
+		private String description() {
+			return module.testEnvironmentOnly() ? module.description() + " " + Module.TEST_ENVIRONMENT_ONLY : module.description();
+		}
+
 		@Override
 		public int preferredHeight(UiContext ui, int width) {
-			return 26 + ui.wrappedHeight(module.description(), width - 12) + 14;
+			return 26 + ui.wrappedHeight(description(), width - 12) + 14;
 		}
 
 		@Override
@@ -230,8 +234,16 @@ public class ModulesPage extends Page {
 			ui.roundRect(x, y, width, height, Theme.SURFACE);
 			ui.icon(Icon.byName(module.category().icon()), x + 6, y + 6, 9, Theme.ACCENT);
 			ui.textClipped(module.name(), x + 19, y + 7, width - 25, Theme.TEXT);
-			ui.text(module.category().label(), x + 6, y + 18, Theme.TEXT_MUTED);
-			int used = ui.wrapped(module.description(), x + 6, y + 30, width - 12, Theme.TEXT_SECONDARY);
+			Module.Tier level = module.tier();
+			int badgeColor = level == Module.Tier.SANDBOX ? Theme.WARNING : level == Module.Tier.AUTOMATION ? Theme.INFO : Theme.ACCENT_STRONG;
+			int badgeWidth = ui.textWidth(level.label()) + 8;
+			ui.roundRect(x + 6, y + 17, badgeWidth, 10, Theme.withAlpha(badgeColor, 0.18f));
+			ui.text(level.label(), x + 10, y + 18, badgeColor);
+			ui.text(module.category().label(), x + 12 + badgeWidth, y + 18, Theme.TEXT_MUTED);
+			if (ui.hovered(x + 6, y + 17, badgeWidth, 10)) {
+				ui.tooltip(this, level.label() + ": " + level.meaning());
+			}
+			int used = ui.wrapped(description(), x + 6, y + 30, width - 12, Theme.TEXT_SECONDARY);
 
 			ModuleRow.StatusView status = ModuleRow.status(module, modules);
 			ui.rect(x + 6, y + 33 + used, 4, 4, status.color());

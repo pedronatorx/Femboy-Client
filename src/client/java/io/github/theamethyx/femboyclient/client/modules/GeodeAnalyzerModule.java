@@ -74,6 +74,11 @@ public final class GeodeAnalyzerModule extends Module implements ClientHooks.Wor
 	private boolean paused;
 	private String selectedId;
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public GeodeAnalyzerModule() {
 		super("geode_analyzer", "Geode Analyzer",
 				"Finds amethyst geodes in loaded chunks and reports exact growth-stage counts, completeness and evidence quality.",

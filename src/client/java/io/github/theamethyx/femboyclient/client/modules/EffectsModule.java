@@ -31,6 +31,11 @@ public final class EffectsModule extends Module implements ClientHooks.HudBlock 
 	private final BooleanSetting harmful = settings().add(new BooleanSetting("harmful", "Show harmful effects",
 			"Also list effects such as Poison and Weakness (in red).", true));
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public EffectsModule() {
 		super("effects", "Effects", "Your active potion effects with level and remaining time; expiring and harmful ones highlighted.",
 				ModuleCategory.INVENTORY, false, NO_KEY);

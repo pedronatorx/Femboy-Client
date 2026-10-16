@@ -41,6 +41,11 @@ public final class ElytraInfoModule extends Module implements ClientHooks.HudBlo
 
 	private boolean obstacleAhead;
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public ElytraInfoModule() {
 		super("elytra_info", "Elytra Info", "Flight speed, height, durability, rockets and a collision warning while gliding.",
 				ModuleCategory.MOVEMENT, false, NO_KEY);

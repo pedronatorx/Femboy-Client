@@ -234,6 +234,11 @@ public final class AutoAttributeSwapModule extends Module implements ClientHooks
 	private String lastSkip;
 	private LocalPlayer owner;
 
+	@Override
+	public Tier tier() {
+		return Tier.AUTOMATION;
+	}
+
 	public AutoAttributeSwapModule() {
 		super("auto_attribute_swap", "Auto Attribute Swap",
 				"Switches to the right weapon for a single hit (axe against shields, mace while falling, ...) and straight back.",

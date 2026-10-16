@@ -13,6 +13,12 @@ import io.github.theamethyx.femboyclient.core.module.PrivateNetwork;
 public final class ClientEnvironment implements EnvironmentPolicy {
 	private final Minecraft client;
 
+	/**
+	 * Test hook that can only restrict: when true, no connection counts as a test environment, so the in-game tests can
+	 * show that sandbox modules stay off on a public server without needing one. It never enables anything.
+	 */
+	public static volatile boolean simulatePublicServer;
+
 	public ClientEnvironment(Minecraft client) {
 		this.client = client;
 	}
@@ -24,7 +30,7 @@ public final class ClientEnvironment implements EnvironmentPolicy {
 
 	@Override
 	public boolean testEnvironment() {
-		if (!inWorld()) {
+		if (!inWorld() || simulatePublicServer) {
 			return false;
 		}
 

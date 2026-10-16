@@ -54,6 +54,11 @@ public final class WeaponInfoModule extends Module implements ClientHooks.HudBlo
 	private final BooleanSetting onlyWhenRelevant = settings().add(new BooleanSetting("only_relevant", "Hide when not holding a weapon",
 			"Show nothing while you hold something that is not a weapon.", true));
 
+	@Override
+	public Tier tier() {
+		return Tier.ASSIST;
+	}
+
 	public WeaponInfoModule() {
 		super("weapon_info", "Weapon Info", "Timing and status for the weapon in your hand: axe, mace, spear, bow, crossbow and trident.",
 				ModuleCategory.COMBAT, false, NO_KEY);
