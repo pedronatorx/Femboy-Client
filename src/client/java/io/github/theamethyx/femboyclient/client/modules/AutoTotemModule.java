@@ -20,6 +20,26 @@ public final class AutoTotemModule extends Module {
 	/** Button number vanilla uses for the offhand swap in inventory clicks. */
 	private static final int OFFHAND_BUTTON = 40;
 
+	public enum OffhandItem implements io.github.theamethyx.femboyclient.core.setting.EnumSetting.Labeled {
+		TOTEM("Totem of Undying", Items.TOTEM_OF_UNDYING), SHIELD("Shield", Items.SHIELD), GOLDEN_APPLE("Golden apple", Items.GOLDEN_APPLE),
+		END_CRYSTAL("End crystal", Items.END_CRYSTAL);
+
+		private final String label;
+		final net.minecraft.world.item.Item item;
+
+		OffhandItem(String label, net.minecraft.world.item.Item item) {
+			this.label = label;
+			this.item = item;
+		}
+
+		@Override
+		public String label() {
+			return label;
+		}
+	}
+
+	private final io.github.theamethyx.femboyclient.core.setting.EnumSetting<OffhandItem> item = settings().add(
+			new io.github.theamethyx.femboyclient.core.setting.EnumSetting<>("item", "Item", "What to keep in your offhand.", OffhandItem.TOTEM));
 	private final NumberSetting delay = settings().add(new NumberSetting("delay", "Delay",
 			"Wait this long after the offhand empties before swapping a totem in.", 0, 0, 2000, 25, "ms"));
 	private final BooleanSetting replaceItems = settings().add(new BooleanSetting("replace_items", "Replace other offhand items",
@@ -31,7 +51,7 @@ public final class AutoTotemModule extends Module {
 	private int swaps;
 
 	public AutoTotemModule() {
-		super("auto_totem", "AutoTotem", "Keeps a Totem of Undying in your offhand by swapping one in from your inventory.",
+		super("auto_totem", "Auto Offhand", "Keeps a totem (or a shield, golden apple or end crystal) in your offhand from your inventory.",
 				ModuleCategory.AUTOMATION, false, NO_KEY);
 	}
 
@@ -49,7 +69,7 @@ public final class AutoTotemModule extends Module {
 		Minecraft client = Minecraft.getInstance();
 		LocalPlayer player = client.player;
 		var offhand = player.getOffhandItem();
-		boolean needed = !offhand.is(Items.TOTEM_OF_UNDYING) && (offhand.isEmpty() || replaceItems.get()) && player.getHealth() <= health.get();
+		boolean needed = !offhand.is(item.get().item) && (offhand.isEmpty() || replaceItems.get()) && player.getHealth() <= health.get();
 		if (!needed || client.gameMode == null || (client.screen != null && !(client.screen instanceof InventoryScreen))) {
 			missingSince = -1;
 			return;
@@ -66,7 +86,7 @@ public final class AutoTotemModule extends Module {
 
 		Inventory inventory = player.getInventory();
 		for (int i = 0; i < Inventory.INVENTORY_SIZE; i++) {
-			if (inventory.getItem(i).is(Items.TOTEM_OF_UNDYING)) {
+			if (inventory.getItem(i).is(item.get().item)) {
 				// Inventory menu slots: 9-35 main inventory, 36-44 hotbar.
 				int menuSlot = i < Inventory.getSelectionSize() ? 36 + i : i;
 				client.gameMode.handleInventoryMouseClick(player.inventoryMenu.containerId, menuSlot, OFFHAND_BUTTON, ClickType.SWAP, player);

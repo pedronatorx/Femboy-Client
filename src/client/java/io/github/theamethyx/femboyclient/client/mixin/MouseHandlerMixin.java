@@ -42,7 +42,17 @@ public abstract class MouseHandlerMixin {
 		if (camera != null && camera.isActive()) {
 			camera.turn(dx, dy);
 		} else {
-			original.call(player, dx, dy);
+			double divisor = io.github.theamethyx.femboyclient.client.modules.ZoomModule.mouseDivisor();
+			original.call(player, dx / divisor, dy / divisor);
+		}
+	}
+
+	/** Zoom: while zooming, the scroll wheel changes the zoom instead of the selected hotbar slot. */
+	@org.spongepowered.asm.mixin.injection.Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
+	private void femboyclient$zoomScroll(long window, double horizontal, double vertical,
+			org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
+		if (minecraft.screen == null && io.github.theamethyx.femboyclient.client.modules.ZoomModule.onScroll(vertical)) {
+			ci.cancel();
 		}
 	}
 }

@@ -43,4 +43,31 @@ public final class ItemChoices {
 
 		return Set.copyOf(items);
 	}
+
+	private static List<IdSetSetting.Choice> blocks;
+
+	/** Every registered block as a choice. */
+	public static List<IdSetSetting.Choice> blocks() {
+		if (blocks == null) {
+			List<IdSetSetting.Choice> choices = new ArrayList<>();
+			for (net.minecraft.world.level.block.Block block : BuiltInRegistries.BLOCK) {
+				String id = BuiltInRegistries.BLOCK.getKey(block).toString();
+				choices.add(new IdSetSetting.Choice(id, block.getName().getString(), id.endsWith("_ore") || id.contains("debris") ? "Ores" : "Blocks"));
+			}
+
+			choices.sort(Comparator.comparing((IdSetSetting.Choice c) -> c.group().equals("Ores") ? 0 : 1).thenComparing(c -> c.label().toLowerCase(Locale.ROOT)));
+			blocks = List.copyOf(choices);
+		}
+
+		return blocks;
+	}
+
+	public static Set<net.minecraft.world.level.block.Block> resolveBlocks(Set<String> ids) {
+		Set<net.minecraft.world.level.block.Block> result = new HashSet<>();
+		for (String id : ids) {
+			BuiltInRegistries.BLOCK.getOptional(Identifier.parse(id)).ifPresent(result::add);
+		}
+
+		return Set.copyOf(result);
+	}
 }

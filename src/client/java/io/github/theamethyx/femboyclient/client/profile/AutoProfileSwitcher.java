@@ -21,6 +21,8 @@ import io.github.theamethyx.femboyclient.core.config.ProfileRule;
  */
 public final class AutoProfileSwitcher {
 	private String lastDesired;
+	private String candidate;
+	private int stableTicks;
 	private String lastProblem;
 	private int switches;
 
@@ -39,7 +41,13 @@ public final class AutoProfileSwitcher {
 
 		String desired = ProfileRule.select(femboy.config().profileRules(), classify(player.getMainHandItem()), player.isFallFlying(),
 				dimension(client.level));
-		if (desired == null || desired.equals(lastDesired)) {
+		// Debounce: the same rule result must hold for the configured delay, so scrolling past items does not flicker.
+		if (desired == null || !desired.equals(candidate)) {
+			candidate = desired;
+			stableTicks = 0;
+		}
+
+		if (desired == null || desired.equals(lastDesired) || ++stableTicks < femboy.options().profileDelay.intValue()) {
 			return;
 		}
 
@@ -58,7 +66,7 @@ public final class AutoProfileSwitcher {
 
 		switches++;
 		if (femboy.options().profileMessages.get()) {
-			player.displayClientMessage(Component.literal("Profile: " + desired), true);
+			io.github.theamethyx.femboyclient.client.hud.Notifications.show("Profile", desired, io.github.theamethyx.femboyclient.client.gui.Theme.ACCENT);
 		}
 	}
 
@@ -93,6 +101,8 @@ public final class AutoProfileSwitcher {
 		if (stack.is(Items.TOTEM_OF_UNDYING)) return ProfileRule.Trigger.TOTEM;
 		if (stack.is(Items.GOLDEN_APPLE) || stack.is(Items.ENCHANTED_GOLDEN_APPLE)) return ProfileRule.Trigger.GOLDEN_APPLE;
 		if (stack.is(Items.FIREWORK_ROCKET)) return ProfileRule.Trigger.FIREWORK;
+		if (stack.is(ItemTags.PICKAXES) || stack.is(ItemTags.SHOVELS)) return ProfileRule.Trigger.PICKAXE;
+		if (stack.getItem() instanceof net.minecraft.world.item.BlockItem) return ProfileRule.Trigger.BLOCK;
 		return null;
 	}
 

@@ -4,13 +4,13 @@ This report evaluates what amethyst growth-stage observations can and cannot tel
 
 ## Setup
 
-- Geode center: 11730416, 42, 3523878
-- Sweep geodes: 40 (feature seeds 2001-2040)
 - Exposure levels (random ticks): [0, 10, 20, 35, 52, 75, 100, 130, 180, 300, 520, 800, 1300, 2000]
 - Harvest arm: 12 geodes: 1300 random ticks, then 70% of clusters removed, then 26 more random ticks
 - Method: vanilla minecraft:amethyst_geode feature in a stone cube, growth by calling BlockState.randomTick on every budding block with a seeded RandomSource; observations by the analyzer's grouping code on server block data
 - World seed: 0
 - Minecraft: 1.21.11
+- Geode center: -14804512, 42, 7854547
+- Sweep geodes: 40 (feature seeds 2001-2040)
 - Samples: 668 observations; 668 used, 0 incomplete observations excluded
 - Split by geode: 35 training geodes, 17 held-out test geodes (every third geode by id). Repeated observations of one geode never span both sets.
 - Exposure unit: random ticks received by each budding block. One hour of a loaded, randomly ticking chunk at the default random tick speed (3) is 52.7 random ticks.
@@ -21,10 +21,10 @@ This report evaluates what amethyst growth-stage observations can and cannot tel
 
 | Hypothesis | Verdict | Test samples (pos/neg) | Threshold | Precision | Recall | False-positive rate | False-negative rate |
 |---|---|---|---|---|---|---|---|
-| H1 Cluster share separates short from long exposure | **SUPPORTED** | 196 (105/91) | 0.670 | 100.0% | 92.4% | 0.0% | 7.6% |
-| H1b Cluster share among large buds and clusters separates short from long exposure | **SUPPORTED** | 196 (105/91) | 0.826 | 92.2% | 90.5% | 8.8% | 9.5% |
-| H2 Cluster share distinguishes durations beyond saturation | **UNSUPPORTED** | 77 (38/39) | 0.167 | 49.4% | 100.0% | 100.0% | 0.0% |
-| H3 Any cluster indicates exposure (naive rule) | **UNSUPPORTED** | 214 (165/49) | 1.000 | 80.1% | 95.2% | 79.6% | 4.8% |
+| H1 Cluster share separates short from long exposure | **SUPPORTED** | 198 (105/93) | 0.645 | 98.0% | 94.3% | 2.2% | 5.7% |
+| H1b Cluster share among large buds and clusters separates short from long exposure | **SUPPORTED** | 196 (105/91) | 0.848 | 96.0% | 90.5% | 4.4% | 9.5% |
+| H2 Cluster share distinguishes durations beyond saturation | **UNSUPPORTED** | 77 (38/39) | 0.286 | 49.4% | 100.0% | 100.0% | 0.0% |
+| H3 Any cluster indicates exposure (naive rule) | **UNSUPPORTED** | 214 (165/49) | 1.000 | 80.5% | 95.2% | 77.6% | 4.8% |
 
 ### H1: Cluster share separates short from long exposure
 
@@ -32,29 +32,29 @@ Statement: Geodes whose budding blocks were randomly ticked for at least 2 hours
 
 - Label: positive when exposure >= 105.5 random ticks (2.0 h)
 - Rule: clusters / all growth objects >= threshold, threshold fitted on training geodes (Youden's J)
-- Verdict: **SUPPORTED**. Meets all pre-registered criteria on held-out geodes (balanced accuracy 0.96, false-positive rate 0.00, false-negative rate 0.08).
-- Training: 405 samples; held-out test: 196 samples
-- Test precision: 100.0% (97/97; 95% CI 96.2-100.0%)
-- Test recall: 92.4% (97/105; 95% CI 85.7-96.1%)
-- Test false-positive rate: 0.0% (0/91; 95% CI 0.0-4.1%)
-- Test false-negative rate: 7.6% (8/105; 95% CI 3.9-14.3%)
-- Balanced accuracy: test 0.962, training 0.958 (a large gap would indicate overfitting)
-- Calibration of a logistic model p = 1/(1+exp(-(-7.85 + 13.32 x))) fitted on training geodes: Brier score 0.034, expected calibration error 0.044 on test geodes
+- Verdict: **SUPPORTED**. Meets all pre-registered criteria on held-out geodes (balanced accuracy 0.96, false-positive rate 0.02, false-negative rate 0.06).
+- Training: 406 samples; held-out test: 198 samples
+- Test precision: 98.0% (99/101; 95% CI 93.1-99.5%)
+- Test recall: 94.3% (99/105; 95% CI 88.1-97.4%)
+- Test false-positive rate: 2.2% (2/93; 95% CI 0.6-7.5%)
+- Test false-negative rate: 5.7% (6/105; 95% CI 2.6-11.9%)
+- Balanced accuracy: test 0.961, training 0.967 (a large gap would indicate overfitting)
+- Calibration of a logistic model p = 1/(1+exp(-(-8.62 + 14.47 x))) fitted on training geodes: Brier score 0.033, expected calibration error 0.030 on test geodes
 
 | Predicted probability | Test samples | Mean predicted | Observed positive rate |
 |---|---:|---:|---:|
-| 0.0-0.2 | 82 | 2.4% | 3.7% |
-| 0.2-0.4 | 5 | 28.1% | 20.0% |
-| 0.4-0.6 | 8 | 51.0% | 0.0% |
-| 0.6-0.8 | 4 | 67.5% | 100.0% |
-| 0.8-1.0 | 97 | 98.2% | 100.0% |
+| 0.0-0.2 | 88 | 2.1% | 4.5% |
+| 0.2-0.4 | 3 | 33.3% | 0.0% |
+| 0.4-0.6 | 5 | 47.2% | 20.0% |
+| 0.6-0.8 | 8 | 73.2% | 75.0% |
+| 0.8-1.0 | 94 | 98.7% | 100.0% |
 
 Performance by experimental condition (held-out geodes):
 
 | Condition | Samples | Positives | Accuracy | False-positive rate | False-negative rate |
 |---|---:|---:|---:|---:|---:|
-| sweep | 182 | 91 | 97.8% | 0.0% | 4.4% |
-| partial-scan | 2 | 2 | 100.0% | n/a | 0.0% |
+| sweep | 182 | 91 | 97.8% | 2.2% | 2.2% |
+| partial-scan | 4 | 2 | 100.0% | 0.0% | 0.0% |
 | harvest-baseline | 4 | 4 | 100.0% | n/a | 0.0% |
 | harvested | 4 | 4 | 100.0% | n/a | 0.0% |
 | harvested-regrowth | 4 | 4 | 0.0% | n/a | 100.0% |
@@ -65,32 +65,32 @@ Statement: Same as H1 but using clusters / (large buds + clusters), which ignore
 
 - Label: positive when exposure >= 105.5 random ticks (2.0 h)
 - Rule: clusters / (large + clusters) >= threshold, threshold fitted on training geodes (Youden's J)
-- Verdict: **SUPPORTED**. Meets all pre-registered criteria on held-out geodes (balanced accuracy 0.91, false-positive rate 0.09, false-negative rate 0.10).
-- Training: 401 samples; held-out test: 196 samples
-- Test precision: 92.2% (95/103; 95% CI 85.4-96.0%)
+- Verdict: **SUPPORTED**. Meets all pre-registered criteria on held-out geodes (balanced accuracy 0.93, false-positive rate 0.04, false-negative rate 0.10).
+- Training: 406 samples; held-out test: 196 samples
+- Test precision: 96.0% (95/99; 95% CI 90.1-98.4%)
 - Test recall: 90.5% (95/105; 95% CI 83.4-94.7%)
-- Test false-positive rate: 8.8% (8/91; 95% CI 4.5-16.4%)
+- Test false-positive rate: 4.4% (4/91; 95% CI 1.7-10.8%)
 - Test false-negative rate: 9.5% (10/105; 95% CI 5.3-16.6%)
-- Balanced accuracy: test 0.908, training 0.915 (a large gap would indicate overfitting)
-- Calibration of a logistic model p = 1/(1+exp(-(-13.67 + 16.72 x))) fitted on training geodes: Brier score 0.069, expected calibration error 0.035 on test geodes
+- Balanced accuracy: test 0.930, training 0.930 (a large gap would indicate overfitting)
+- Calibration of a logistic model p = 1/(1+exp(-(-15.62 + 19.18 x))) fitted on training geodes: Brier score 0.052, expected calibration error 0.012 on test geodes
 
 | Predicted probability | Test samples | Mean predicted | Observed positive rate |
 |---|---:|---:|---:|
-| 0.0-0.2 | 66 | 2.7% | 1.5% |
-| 0.2-0.4 | 20 | 28.8% | 35.0% |
-| 0.4-0.6 | 9 | 48.9% | 22.2% |
-| 0.6-0.8 | 11 | 72.9% | 90.9% |
-| 0.8-1.0 | 90 | 94.9% | 94.4% |
+| 0.0-0.2 | 71 | 2.7% | 1.4% |
+| 0.2-0.4 | 18 | 28.0% | 27.8% |
+| 0.4-0.6 | 6 | 44.6% | 50.0% |
+| 0.6-0.8 | 9 | 71.0% | 77.8% |
+| 0.8-1.0 | 92 | 96.1% | 96.7% |
 
 Performance by experimental condition (held-out geodes):
 
 | Condition | Samples | Positives | Accuracy | False-positive rate | False-negative rate |
 |---|---:|---:|---:|---:|---:|
-| sweep | 182 | 91 | 91.8% | 8.8% | 7.7% |
+| sweep | 182 | 91 | 93.4% | 4.4% | 8.8% |
 | partial-scan | 2 | 2 | 100.0% | n/a | 0.0% |
 | harvest-baseline | 4 | 4 | 100.0% | n/a | 0.0% |
 | harvested | 4 | 4 | 100.0% | n/a | 0.0% |
-| harvested-regrowth | 4 | 4 | 25.0% | n/a | 75.0% |
+| harvested-regrowth | 4 | 4 | 50.0% | n/a | 50.0% |
 
 ### H2: Cluster share distinguishes durations beyond saturation
 
@@ -105,7 +105,7 @@ Statement: Among geodes exposed for at least 5 hours, those exposed for at least
 - Test false-positive rate: 100.0% (39/39; 95% CI 91.0-100.0%)
 - Test false-negative rate: 0.0% (0/38; 95% CI 0.0-9.2%)
 - Balanced accuracy: test 0.500, training 0.500 (a large gap would indicate overfitting)
-- Calibration of a logistic model p = 1/(1+exp(-(7.70 + -7.84 x))) fitted on training geodes: Brier score 0.239, expected calibration error 0.001 on test geodes
+- Calibration of a logistic model p = 1/(1+exp(-(7.35 + -7.50 x))) fitted on training geodes: Brier score 0.238, expected calibration error 0.001 on test geodes
 
 | Predicted probability | Test samples | Mean predicted | Observed positive rate |
 |---|---:|---:|---:|
@@ -113,7 +113,7 @@ Statement: Among geodes exposed for at least 5 hours, those exposed for at least
 | 0.2-0.4 | 0 | - | - |
 | 0.4-0.6 | 73 | 46.6% | 46.6% |
 | 0.6-0.8 | 0 | - | - |
-| 0.8-1.0 | 4 | 98.9% | 100.0% |
+| 0.8-1.0 | 4 | 98.5% | 100.0% |
 
 Performance by experimental condition (held-out geodes):
 
@@ -130,28 +130,28 @@ Statement: A geode containing at least one fully grown cluster has been exposed 
 
 - Label: positive when exposure >= 26.4 random ticks (0.5 h)
 - Rule: cluster count >= threshold, threshold fixed in advance
-- Verdict: **UNSUPPORTED**. Performance on held-out geodes is close to chance (balanced accuracy 0.58, false-positive rate 0.80, false-negative rate 0.05).
+- Verdict: **UNSUPPORTED**. Performance on held-out geodes is close to chance (balanced accuracy 0.59, false-positive rate 0.78, false-negative rate 0.05).
 - Training: 454 samples; held-out test: 214 samples
-- Test precision: 80.1% (157/196; 95% CI 74.0-85.1%)
+- Test precision: 80.5% (157/195; 95% CI 74.4-85.5%)
 - Test recall: 95.2% (157/165; 95% CI 90.7-97.5%)
-- Test false-positive rate: 79.6% (39/49; 95% CI 66.4-88.5%)
+- Test false-positive rate: 77.6% (38/49; 95% CI 64.1-87.0%)
 - Test false-negative rate: 4.8% (8/165; 95% CI 2.5-9.3%)
-- Balanced accuracy: test 0.578, training 0.637 (a large gap would indicate overfitting)
-- Calibration of a logistic model p = 1/(1+exp(-(-1.17 + 0.38 x))) fitted on training geodes: Brier score 0.087, expected calibration error 0.029 on test geodes
+- Balanced accuracy: test 0.588, training 0.596 (a large gap would indicate overfitting)
+- Calibration of a logistic model p = 1/(1+exp(-(-1.50 + 0.37 x))) fitted on training geodes: Brier score 0.078, expected calibration error 0.068 on test geodes
 
 | Predicted probability | Test samples | Mean predicted | Observed positive rate |
 |---|---:|---:|---:|
-| 0.0-0.2 | 0 | - | - |
-| 0.2-0.4 | 42 | 30.6% | 26.2% |
-| 0.4-0.6 | 20 | 53.1% | 40.0% |
-| 0.6-0.8 | 12 | 72.1% | 66.7% |
-| 0.8-1.0 | 140 | 97.8% | 98.6% |
+| 0.0-0.2 | 19 | 18.2% | 42.1% |
+| 0.2-0.4 | 30 | 33.2% | 13.3% |
+| 0.4-0.6 | 12 | 51.3% | 41.7% |
+| 0.6-0.8 | 10 | 68.1% | 60.0% |
+| 0.8-1.0 | 143 | 97.9% | 99.3% |
 
 Performance by experimental condition (held-out geodes):
 
 | Condition | Samples | Positives | Accuracy | False-positive rate | False-negative rate |
 |---|---:|---:|---:|---:|---:|
-| sweep | 182 | 143 | 78.6% | 100.0% | 0.0% |
+| sweep | 182 | 143 | 79.1% | 97.4% | 0.0% |
 | partial-scan | 20 | 10 | 60.0% | 0.0% | 80.0% |
 | harvest-baseline | 4 | 4 | 100.0% | n/a | 0.0% |
 | harvested | 4 | 4 | 100.0% | n/a | 0.0% |
@@ -161,16 +161,16 @@ Performance by experimental condition (held-out geodes):
 
 | Random ticks | Hours at default speed | Samples | Mean cluster share | SD | Min | Max |
 |---:|---:|---:|---:|---:|---:|---:|
-| 0 | 0.0 | 40 | 21.7% | 0.152 | 0.0% | 60.0% |
-| 10 | 0.2 | 40 | 16.2% | 0.103 | 0.0% | 41.2% |
-| 20 | 0.4 | 40 | 14.7% | 0.091 | 0.0% | 38.5% |
-| 35 | 0.7 | 40 | 17.1% | 0.084 | 0.0% | 37.0% |
-| 52 | 1.0 | 40 | 23.9% | 0.079 | 6.7% | 39.3% |
-| 75 | 1.4 | 40 | 36.1% | 0.086 | 17.1% | 53.8% |
-| 100 | 1.9 | 40 | 54.3% | 0.099 | 27.0% | 69.2% |
-| 130 | 2.5 | 40 | 69.3% | 0.071 | 51.3% | 80.6% |
-| 180 | 3.4 | 40 | 88.6% | 0.063 | 73.7% | 100.0% |
-| 300 | 5.7 | 40 | 99.5% | 0.011 | 96.7% | 100.0% |
+| 0 | 0.0 | 40 | 23.5% | 0.150 | 0.0% | 60.0% |
+| 10 | 0.2 | 40 | 15.0% | 0.079 | 0.0% | 31.3% |
+| 20 | 0.4 | 40 | 14.8% | 0.064 | 4.5% | 27.3% |
+| 35 | 0.7 | 40 | 18.3% | 0.071 | 8.3% | 44.4% |
+| 52 | 1.0 | 40 | 25.6% | 0.067 | 15.4% | 46.7% |
+| 75 | 1.4 | 40 | 39.8% | 0.075 | 23.4% | 53.3% |
+| 100 | 1.9 | 40 | 53.6% | 0.081 | 37.8% | 72.0% |
+| 130 | 2.5 | 40 | 69.7% | 0.062 | 55.2% | 82.5% |
+| 180 | 3.4 | 40 | 89.0% | 0.046 | 76.7% | 97.3% |
+| 300 | 5.7 | 40 | 99.4% | 0.011 | 96.4% | 100.0% |
 | 520 | 9.9 | 40 | 100.0% | 0.000 | 100.0% | 100.0% |
 | 800 | 15.2 | 40 | 100.0% | 0.000 | 100.0% | 100.0% |
 | 1300 | 24.7 | 40 | 100.0% | 0.000 | 100.0% | 100.0% |
@@ -180,11 +180,11 @@ Repeated observations: in 40 of 40 sweep geodes the cluster count never decrease
 
 ## Findings derived from the data
 
-- The mean cluster share is not monotone in exposure: it fell from 21.7% at 0 to 16.2% at 10 random ticks. New small buds on free faces add to the denominator before any of them matures, so a higher share does not simply mean longer exposure.
-- The share saturates: from 300 random ticks (about 5.7 h at default speed) the mean is 99.5%, so longer exposure leaves no further trace in this statistic.
-- Freshly generated geodes already have a mean cluster share of 21.7% (range 0.0-60.0%) from world generation alone.
+- The mean cluster share is not monotone in exposure: it fell from 23.5% at 0 to 15.0% at 10 random ticks. New small buds on free faces add to the denominator before any of them matures, so a higher share does not simply mean longer exposure.
+- The share saturates: from 300 random ticks (about 5.7 h at default speed) the mean is 99.4%, so longer exposure leaves no further trace in this statistic.
+- Freshly generated geodes already have a mean cluster share of 23.5% (range 0.0-60.0%) from world generation alone.
 - H1: in the 'harvested-regrowth' condition 4 of 4 long-exposure geodes were missed (held-out set; small sample).
-- H1b: in the 'harvested-regrowth' condition 3 of 4 long-exposure geodes were missed (held-out set; small sample).
+- H1b: in the 'harvested-regrowth' condition 2 of 4 long-exposure geodes were missed (held-out set; small sample).
 - H3: in the 'partial-scan' condition 8 of 10 long-exposure geodes were missed (held-out set; small sample).
 - 40 of 40 repeatedly observed geodes never lost a cluster between observations (expected: growth never reverses without block removal).
 

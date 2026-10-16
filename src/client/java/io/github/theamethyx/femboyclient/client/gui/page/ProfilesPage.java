@@ -130,7 +130,7 @@ public class ProfilesPage extends Page {
 
 		rows.add(new ConfigPage.SectionTitle("Automatic switching", "Rules are checked from the top; the first one that matches "
 				+ "chooses the profile. When none matches, the current profile stays."));
-		rows.addAll(SettingRow.rowsFor(List.of(femboy.options().autoProfile, femboy.options().profileMessages)));
+		rows.addAll(SettingRow.rowsFor(List.of(femboy.options().autoProfile, femboy.options().profileDelay, femboy.options().profileMessages)));
 		String problem = femboy.profileSwitcher().lastProblem();
 		if (problem != null) {
 			rows.add(new ModulesPage.Message("Last automatic switch failed: " + problem));
@@ -376,8 +376,9 @@ public class ProfilesPage extends Page {
 				report("Added a rule: " + preset.trigger().label() + " switches to '" + preset.profile()
 						+ "'. Turn on 'Switch profiles automatically' below to use it.", true);
 			}));
-			rule.enabledWhen(() -> exists() && !hasRule());
-			rule.tooltip("Add an automatic switching rule: " + preset.trigger().label() + " uses this profile.");
+			rule.enabledWhen(() -> exists() && preset.trigger() != null && !hasRule());
+			rule.tooltip(preset.trigger() == null ? "No held item suits this profile; switch to it by hand or add your own rule below."
+					: "Add an automatic switching rule: " + preset.trigger().label() + " uses this profile.");
 		}
 
 		private boolean exists() {
@@ -385,7 +386,7 @@ public class ProfilesPage extends Page {
 		}
 
 		private boolean hasRule() {
-			return femboy.config().profileRules().stream().anyMatch(r -> r.profile().equals(preset.profile()) && r.item() == preset.trigger());
+			return preset.trigger() != null && femboy.config().profileRules().stream().anyMatch(r -> r.profile().equals(preset.profile()) && r.item() == preset.trigger());
 		}
 
 		private void install() {

@@ -33,6 +33,8 @@ public abstract class MultiPlayerGameModeMixin {
 		if (FemboyClient.get() != null && player instanceof net.minecraft.client.player.LocalPlayer local) {
 			// Combat statistics (reach, combo) for the combat HUD modules; only reads state.
 			FemboyClient.get().combat().onAttack(local, target);
+			// Auto Weapon Switch (sandbox only) selects the strongest weapon before Auto Attribute Swap looks at the hand.
+			io.github.theamethyx.femboyclient.client.modules.AutoWeaponSwitchModule.beforeAttack(local, target);
 		}
 
 		AutoAttributeSwapModule module = femboyclient$swap();
@@ -44,11 +46,22 @@ public abstract class MultiPlayerGameModeMixin {
 
 	@Inject(method = "attack", at = @At("RETURN"))
 	private void femboyclient$swapBackAfterAttack(Player player, Entity target, CallbackInfo ci) {
+		if (player instanceof net.minecraft.client.player.LocalPlayer local) {
+			io.github.theamethyx.femboyclient.client.modules.WTapModule.afterAttack(local);
+		}
+
 		AutoAttributeSwapModule module = femboyclient$swap();
 		if (module != null) {
 			MultiPlayerGameModeAccessor self = (MultiPlayerGameModeAccessor) this;
 			FemboyClient.get().modules().runGuarded(module, io.github.theamethyx.femboyclient.core.module.ModuleManager.Phase.TICK,
 					() -> module.afterAttack(player, self::femboyclient$ensureHasSentCarriedItem));
 		}
+	}
+
+	/** Auto Tool: picks the fastest hotbar tool when mining starts or continues (read-only otherwise). */
+	@Inject(method = {"startDestroyBlock", "continueDestroyBlock"}, at = @At("HEAD"))
+	private void femboyclient$autoTool(net.minecraft.core.BlockPos pos, net.minecraft.core.Direction direction,
+			org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Boolean> cir) {
+		io.github.theamethyx.femboyclient.client.modules.AutoToolModule.onMining(pos);
 	}
 }

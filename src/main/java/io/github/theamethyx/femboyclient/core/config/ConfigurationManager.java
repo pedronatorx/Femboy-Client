@@ -50,6 +50,8 @@ public final class ConfigurationManager {
 	private final LongSupplier clock;
 	private final List<String> lastReport = new ArrayList<>();
 	private final List<ProfileRule> profileRules = new ArrayList<>();
+	/** Client-wide data that is not a plain setting (e.g. the HUD layout), stored under "sections" in the global file. */
+	private final java.util.Map<String, JsonElement> sections = new java.util.LinkedHashMap<>();
 
 	private String activeProfile = DEFAULT_PROFILE;
 	private boolean dirty;
@@ -83,6 +85,7 @@ public final class ConfigurationManager {
 			activeProfile = DEFAULT_PROFILE;
 			globalSettings.resetAll();
 			profileRules.clear();
+			sections.clear();
 
 			if (global != null) {
 				checkSchema(global, "Global settings", report);
@@ -91,6 +94,10 @@ public final class ConfigurationManager {
 				}
 
 				profileRules.addAll(ProfileRule.fromJson(global.get("profileRules"), report));
+				if (global.get("sections") instanceof JsonObject saved) {
+					saved.entrySet().forEach(entry -> sections.put(entry.getKey(), entry.getValue().deepCopy()));
+				}
+
 				if (global.get("activeProfile") instanceof JsonPrimitive primitive && primitive.isString()) {
 					String name = primitive.getAsString();
 					if (isValidProfileName(name) && Files.exists(profileFile(name))) {
@@ -193,6 +200,9 @@ public final class ConfigurationManager {
 		json.addProperty("activeProfile", activeProfile);
 		json.add("settings", globalSettings.toJson());
 		json.add("profileRules", ProfileRule.toJson(profileRules));
+		JsonObject savedSections = new JsonObject();
+		sections.forEach((key, value) -> savedSections.add(key, value.deepCopy()));
+		json.add("sections", savedSections);
 		return json;
 	}
 
@@ -487,6 +497,24 @@ public final class ConfigurationManager {
 
 	public boolean profileExists(String name) {
 		return name.equals(activeProfile) || (isValidProfileName(name) && Files.exists(profileFile(name)));
+	}
+
+	// ----- client-wide sections --------------------------------------------------------------
+
+	/** A copy of a stored section, or {@code null}. The caller validates the content. */
+	public JsonElement section(String key) {
+		JsonElement value = sections.get(key);
+		return value == null ? null : value.deepCopy();
+	}
+
+	public void setSection(String key, JsonElement value) {
+		if (value == null) {
+			sections.remove(key);
+		} else {
+			sections.put(key, value.deepCopy());
+		}
+
+		markDirty();
 	}
 
 	// ----- automatic switching rules ---------------------------------------------------------

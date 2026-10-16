@@ -30,6 +30,20 @@ public final class ClientHooks {
 		}
 	}
 
+	/**
+	 * A graphical HUD element with a fixed size (e.g. Keystrokes). It is stacked in its corner like text blocks and can be
+	 * dragged in the HUD editor. Returning a width of 0 hides it this frame.
+	 */
+	public interface HudWidget {
+		HudAnchor hudAnchor();
+
+		int hudWidth(UiContext ui);
+
+		int hudHeight(UiContext ui);
+
+		void drawHud(UiContext ui, int x, int y);
+	}
+
 	/** Draws freely on the HUD layer, e.g. labels projected from world positions. */
 	public interface ScreenOverlay {
 		void renderOverlay(UiContext ui, int screenWidth, int screenHeight, float partialTick);

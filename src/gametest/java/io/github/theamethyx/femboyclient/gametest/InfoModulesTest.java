@@ -73,8 +73,8 @@ final class InfoModulesTest {
 
 			return all;
 		});
-		report.check("All 10 presets use only existing modules and valid setting values",
-				warnings.isEmpty() && context.computeOnClient(client -> Presets.all().size()) == 10, warnings.toString());
+		report.check("All 17 presets use only existing modules and valid setting values",
+				warnings.isEmpty() && context.computeOnClient(client -> Presets.all().size()) == 17, warnings.toString());
 
 		String switching = context.computeOnClient(client -> {
 			var config = femboy().config();

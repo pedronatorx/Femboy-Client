@@ -1,8 +1,8 @@
 # Femboy Client
 
-A client-side Fabric mod for **Minecraft Java Edition 1.21.11**: a clean ClickGUI with combat information, movement, visual, inventory, tracking and HUD modules, profiles with automatic switching, and ten ready-made PvP presets.
+A client-side Fabric mod for **Minecraft Java Edition 1.21.11**: a themeable ClickGUI with 60 combat, automation, movement, visual, inventory, tracking, world and utility modules, a drag-and-drop HUD editor, profiles with automatic switching, and 17 ready-made presets.
 
-Everything is **off on first start**; nothing runs until you turn it on or install a preset. Information, visual and HUD modules work on every server. The **Automation** modules and Flight work only in a **test environment**: singleplayer, or a server you reach at a private address (your own PC, your LAN, or a VPN such as Tailscale or ZeroTier). There are no prompts or allowlists; elsewhere they simply stay off and say why. Femboy Client contains nothing that hides it from anti-cheat systems, and some servers' rules forbid clients like this, so check before you use it there.
+Everything is **off on first start**; nothing runs until you turn it on or install a preset. Every module shows a **tier** badge: *Visual* and *Assist* modules (information, ESP, HUD) and *Automation* modules that only manage your own items (Auto Attribute Swap's spear reach and weapon rules, Auto Tool, Inventory Sorter, Sprint) work on every server. **Sandbox** modules (combat automation, movement changes, Auto Armor, Auto Refill, Auto Offhand) work only in a **test environment**: singleplayer, or a server you reach at a private address (your own PC, your LAN, or a VPN such as Tailscale or ZeroTier). There are no prompts or allowlists; elsewhere they simply stay off and their description says why. Femboy Client contains nothing that hides it from anti-cheat systems, and some servers' rules forbid clients like this, so check before you use it there.
 
 ![Home page](docs/screenshots/0012_gui-1280x720-0-home.png)
 
@@ -58,17 +58,21 @@ The sidebar has twelve sections. Every module has an on/off switch, a key (click
 | Section | Contents |
 |---|---|
 | **Home** | Search across all modules with a category filter (click a module to open it), session status, module health, frame rate |
-| **Combat** | Auto Attribute Swap, Combat Info, Target HUD, Weapon Info, Crystal & Anchor Info |
-| **Automation** | KillAura, Trigger Bot, Aim Assist, Reach, Velocity, Auto StunSlam, AutoTotem (test environments only) |
-| **Movement** | Free Camera, Flight (test environments only), Movement Info, Elytra Info |
-| **Visuals** | Entity ESP, Storage ESP, Hitboxes, Trajectories, Fullbright, Chunk Borders |
-| **Inventory** | Item Counters, Health & Armor, Effects |
+| **Combat** | Auto Attribute Swap, Combat Info, Target HUD, Weapon Info, Crystal & Anchor Info, Auto Criticals\*, Sprint Reset\*, Auto Weapon Switch\* |
+| **Automation** | KillAura\*, Trigger Bot\*, Aim Assist\*, Reach\*, Velocity\*, Auto StunSlam\*, Auto Offhand\* |
+| **Movement** | Free Camera, Sprint, Movement Info, Elytra Info, Flight\*, Elytra Flight\*, Speed\*, Strafe Assist\*, Step\*, Safe Walk\*, No Slow\*, No Fall\* |
+| **Visuals** | Entity ESP, Storage ESP, Ore ESP, Hitboxes, Trajectories, Block Highlight, Light Level, Fullbright, Zoom, Chunk Borders |
+| **Inventory** | Item Counters, Health & Armor, Effects, Auto Tool, Inventory Sorter, Shulker Preview, Auto Armor\*, Auto Refill\* |
 | **Trackers** | Player Finder, Trackers, Player Alert, Waypoints |
-| **World** | Geode Analyzer |
-| **HUD** | Coordinates, Performance, Module List |
+| **World** | Geode Analyzer, Block Counter, Death Coordinates |
+| **Utilities** | Coordinates, Performance, Module List, Keystrokes, Notifications, Better Chat, Auto Reconnect |
 | **Developer** | Java Runner |
-| **Profiles** | Your profiles (use, copy, export, import, delete, reset), the ten presets, automatic switching rules |
-| **Settings** | General tab: emergency off, client options (menu scale, animations, tooltips, automatic switching), config folder. Diagnostics tab: frame timing, time per module, message log |
+| **Profiles** | Your profiles (use, copy, export, import, delete, reset), the 17 presets, automatic switching rules and delay |
+| **Settings** | General tab: emergency off, **Edit HUD layout**, client options (theme, custom accent color, menu scale, animations, tooltips, automatic switching), config folder. Diagnostics tab: frame timing, time per module, message log |
+
+\* Sandbox tier: test environments only (see [Test environments](#test-environments)).
+
+**Themes:** Femboy (navy, purple, magenta; the default), Charcoal, Midnight magenta and Deep ocean, plus an optional custom accent color. **HUD editor:** drag any HUD block to place it anywhere (positions are stored relative to the screen size, so they survive resizing), right-click a block to send it back to its corner, R resets all.
 
 ### Modules
 
@@ -85,8 +89,24 @@ The sidebar has twelve sections. Every module has an on/off switch, a key (click
 | **Reach** | Longer attack (+0–3 blocks) and block reach (+0–1). Vanilla servers accept up to +3 and +1; more is rejected by the server. |
 | **Velocity** | Keep 0–100% of horizontal and vertical knockback from hits and explosions. |
 | **Auto StunSlam** | While falling onto a target with a raised shield: axe hit (disables the shield), mace smash, back to your slot. Minimum fall, delay between hits (0 = same tick), cooldown. |
-| **AutoTotem** | Keeps a totem in your offhand, with a delay, a health threshold and whether to replace other offhand items. |
+| **Auto Offhand** | Keeps a totem, shield, golden apple or end crystal in your offhand, with a delay, a health threshold and whether to replace other offhand items. |
+| **Auto Criticals** | Jumps when you click a target on the ground so the hit lands while falling (a real critical, no fake packets). |
+| **Sprint Reset** | W-tap: releases sprint briefly after a hit so the next hit has sprint knockback again. |
+| **Auto Weapon Switch** | Selects the hotbar weapon with the highest attack damage while you look at a living target. |
 | **Flight** | Hover-and-move or creative-style flying. Dedicated servers kick flying players unless `allow-flight=true`. |
+| **Elytra Flight** | Controlled elytra flight while gliding: forward, up, down and hover, with adjustable speed. |
+| **Speed, Strafe Assist, Step, Safe Walk, No Slow, No Fall** | Faster ground movement; air control toward your keys; walk up full blocks (step-height attribute); don't walk off edges; full speed while eating or blocking; no fall damage (tells the server you are on the ground after a set fall distance). |
+| **Sprint** | Keeps sprint on while you move forward. Works on every server. |
+| **Ore ESP** | Highlights chosen ores within a chunk radius, optionally only those touching air; scanned in time-limited steps. |
+| **Block Highlight, Light Level** | Outlines the block you look at in a chosen color; marks spots where hostile mobs can spawn (block light 0; red now, yellow only at night). |
+| **Zoom** | Hold a key to zoom in; scroll to change the zoom; mouse sensitivity drops with the zoom. |
+| **Auto Tool** | Selects the best hotbar tool while you mine and switches back afterwards. |
+| **Inventory Sorter** | A Sort button in your inventory that orders items by type and amount, merging stacks. |
+| **Shulker Preview** | Shows a shulker box's contents in its tooltip. |
+| **Auto Armor, Auto Refill** | Equips better armor from your inventory; refills a hotbar stack from the inventory when it runs low. |
+| **Block Counter** | Counts chosen blocks around you with scan progress (`Scanned 81/81 chunks`). |
+| **Death Coordinates** | Remembers where you died, shows it on the HUD and adds a waypoint. |
+| **Keystrokes, Notifications, Better Chat, Auto Reconnect** | WASD, mouse and space display; toasts for module and profile changes; timestamps and stacking of repeated chat lines with longer history; reconnects to the last server after a disconnect, with a delay. |
 | **Free Camera** | Fly the camera with its own rotation while your player stays put. Works on servers. See below. |
 | **Movement Info** | Speed, vertical speed, fall distance and a landing prediction with the fall damage vanilla would deal (landing block included: water, slime, hay, beds...), red when it would kill you. |
 | **Elytra Info** | Speed, height, pitch, elytra durability, rockets, and a warning when your current direction hits a block within a set time. |
@@ -118,8 +138,8 @@ A **profile** stores which modules are on, every setting and every key. Changes 
 - **Create** a profile on the Profiles page: type a name and press Create (it starts as a copy of the current one). **Use** switches to it; the current profile is saved first, and modules that are off in the new profile are turned off.
 - **Copy** duplicates a profile, **Export** copies it to the clipboard and saves it under `config/femboyclient/exports/`, **Import** creates a profile from text on the clipboard. Every imported value is checked; unknown modules and invalid values are dropped and replaced by defaults, and you are told which.
 - **Reset the current profile** turns every module off and restores defaults (two clicks).
-- **Presets:** Sword PvP, Axe PvP, Mace PvP, Spear + Mace PvP, Crystal PvP, Anchor PvP, Pot PvP, UHC / Survival, Elytra PvP and Bow / Crossbow. **Install** creates a normal profile from the preset; edit it like any other. **Reset** puts the preset's settings back. Presets turn on information and visual modules only. Automation that fits a style is configured but left off: Auto Attribute Swap (axe, mace, spear + mace), KillAura and Trigger Bot (sword, axe), Auto StunSlam (mace, spear + mace), AutoTotem (crystal, anchor).
-- **Automatic switching:** add rules such as "Mace, any dimension → mace_pvp" (or press **Add rule** next to a preset), then turn on *Switch profiles automatically*. Rules are checked from the top; the first match wins (held item or gliding, optionally a dimension). If nothing matches, the profile stays. A profile you pick by hand stays until your held item changes to something another rule matches. A weapon Auto Attribute Swap holds for a single hit never changes the profile.
+- **Presets:** Sword PvP, Axe PvP, Mace PvP, Spear PvP, Spear + Mace PvP, Crystal PvP, Anchor PvP, Pot PvP, UHC / Survival, Survival / SMP, Elytra PvP, Bow / Crossbow, Building, Mining, Exploration, Performance and Local Testing. **Install** creates a normal profile from the preset; edit it like any other. **Reset** puts the preset's settings back. Presets turn on information and visual modules only. Automation that fits a style is configured but left off: Auto Attribute Swap (axe, mace, spear + mace), KillAura and Trigger Bot (sword, axe), Auto StunSlam (mace, spear + mace), AutoTotem (crystal, anchor).
+- **Automatic switching:** add rules such as "Mace, any dimension → mace_pvp" (or press **Add rule** next to a preset), then turn on *Switch profiles automatically*. Rules are checked from the top; the first match wins (held item or gliding, optionally a dimension). If nothing matches, the profile stays. A rule result must hold for the **switch delay** (default 4 ticks, 0–40) before the profile changes, so scrolling past items doesn't flicker between profiles. A profile you pick by hand stays until your held item changes to something another rule matches. A weapon Auto Attribute Swap holds for a single hit never changes the profile.
 
 ## Emergency off
 
@@ -127,11 +147,11 @@ A **profile** stores which modules are on, every setting and every key. Changes 
 
 ## Test environments
 
-Automation modules (KillAura, Trigger Bot, Aim Assist, Reach, Velocity, Auto StunSlam, AutoTotem) and Flight run only in singleplayer or on a server whose address is private: loopback (`127.x`, `::1`), LAN (`10.x`, `172.16–31.x`, `192.168.x`), link-local, the `100.64–127.x` range used by Tailscale and similar VPNs, and IPv6 unique local addresses. The check uses the address actually connected to, not the name in your server list. To use them on remote test servers, put those servers on a VPN with you. On any other server they show "Only in singleplayer and on servers in your own network (LAN or VPN)" and stay off; you never get a prompt.
+Sandbox-tier modules (marked \* above, plus the Spear lunge part of Auto Attribute Swap) run only in singleplayer or on a server whose address is private: loopback (`127.x`, `::1`), LAN (`10.x`, `172.16–31.x`, `192.168.x`), link-local, the `100.64–127.x` range used by Tailscale and similar VPNs, and IPv6 unique local addresses. The check uses the address actually connected to, not the name in your server list. To use them on remote test servers, put those servers on a VPN with you. On any other server they show "Only in singleplayer and on servers in your own network (LAN or VPN)" and stay off; you never get a prompt.
 
 Nothing here hides anything from anti-cheat or server checks (no fake rotations, no packet tricks, no anti-kick).
 
-**Not built yet:** AutoCrystal, AutoAnchor, Auto Pot, Auto Armor, Auto Lunge Swap and an Aim Trainer.
+**Not built yet:** AutoCrystal, AutoAnchor, Auto Pot, Aim Trainer, Anti Hunger, Hotbar Profiles, Item Swap, Chest Organizer, Structure Finder, Material List, Schematic Viewer, armor in nametags and shader entity outlines.
 
 ### Geode Analyzer
 

@@ -111,15 +111,15 @@ final class FoundationTest {
 		context.waitTicks(3);
 		String before = state(context);
 		context.runOnClient(client -> femboy().options().autoProfile.set(true));
-		context.waitTicks(3);
+		context.waitTicks(8);
 		String unmatched = state(context);
 		report.check("Holding an item no rule mentions keeps the current profile", unmatched.equals(before) && unmatched.startsWith("default"), unmatched);
 
 		context.runOnClient(client -> client.player.getInventory().setSelectedSlot(0));
-		context.waitTicks(3);
+		context.waitTicks(8);
 		String sword = state(context);
 		context.runOnClient(client -> client.player.getInventory().setSelectedSlot(1));
-		context.waitTicks(3);
+		context.waitTicks(8);
 		String mace = state(context);
 		report.check("Holding a sword switches to its profile and turns its modules on", sword.equals("auto_sword fullbright=true coords=false"), sword);
 		report.check("Switching to the mace changes profile and turns modules outside it off", mace.equals("auto_mace fullbright=false coords=true"), mace);
@@ -129,7 +129,7 @@ final class FoundationTest {
 		context.waitTicks(5);
 		String manual = state(context);
 		context.runOnClient(client -> client.player.getInventory().setSelectedSlot(0));
-		context.waitTicks(3);
+		context.waitTicks(8);
 		String back = state(context);
 		report.check("A hand-picked profile is kept until the held item changes", manual.startsWith("default ") && back.startsWith("auto_sword "),
 				manual + " -> " + back);

@@ -68,6 +68,9 @@ public class ConfigPage extends Page {
 				+ "Controls > Key Binds under 'Femboy Client' (currently " + ClientKeys.disableAll.getTranslatedKeyMessage().getString() + ")."));
 		rows.add(new DisableAllRow());
 
+		rows.add(new SectionTitle("HUD layout", "Drag HUD blocks anywhere on the screen. Turn on the HUD modules you want to place first."));
+		rows.add(new HudEditorRow());
+
 		rows.add(new SectionTitle("Client options", "Apply to every profile. Profiles have their own page."));
 		rows.addAll(SettingRow.rowsFor(femboy.options().settings.all()));
 
@@ -117,6 +120,28 @@ public class ConfigPage extends Page {
 		public void render(UiContext ui) {
 			ui.text(title, x + 2, y + 4, Theme.ACCENT_STRONG);
 			ui.wrapped(description, x + 2, y + 15, width - 4, Theme.TEXT_MUTED);
+		}
+	}
+
+	private final class HudEditorRow extends Container {
+		private final Button button;
+
+		HudEditorRow() {
+			button = add(new Button(() -> "Edit HUD layout" + (femboy.hud().layout().size() > 0 ? " (" + femboy.hud().layout().size() + " moved)" : ""),
+					Button.Style.SECONDARY, () -> net.minecraft.client.Minecraft.getInstance().setScreen(
+					new io.github.theamethyx.femboyclient.client.gui.HudEditorScreen(net.minecraft.client.Minecraft.getInstance().screen, femboy.hud())))
+					.icon(Icon.HUD));
+			button.tooltip("Open the HUD editor: drag blocks, right-click to put one back in its corner, R to reset all.");
+		}
+
+		@Override
+		public int preferredHeight(UiContext ui, int width) {
+			return 16;
+		}
+
+		@Override
+		protected void onLayout() {
+			button.setBounds(x, y, width, 16);
 		}
 	}
 

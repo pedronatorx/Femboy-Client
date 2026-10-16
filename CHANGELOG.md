@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.7.0 - 2026-10-17
+
+### Added
+- **Themes:** Femboy (navy, purple, magenta; new default), Charcoal, Midnight magenta and Deep ocean, with an optional custom accent color.
+- **HUD editor** (Settings → Edit HUD layout): drag HUD blocks anywhere, right-click to send one back to its corner, R to reset all. Positions are stored as screen fractions.
+- **Module tiers** shown on every module: Visual, Assist, Automation, Sandbox. Sandbox modules say in their description that they run only in test environments.
+- **Combat:** Auto Criticals, Sprint Reset (W-tap), Auto Weapon Switch (all sandbox).
+- **Movement:** Sprint; Elytra Flight, Speed, Strafe Assist, Step, Safe Walk, No Slow, No Fall (sandbox).
+- **Visuals:** Ore ESP, Block Highlight, Light Level, Zoom.
+- **Inventory:** Auto Tool, Inventory Sorter, Shulker Preview; Auto Armor and Auto Refill (sandbox).
+- **World:** Block Counter (with scan progress), Death Coordinates.
+- **Utilities** (was HUD): Keystrokes, Notifications (toasts), Better Chat, Auto Reconnect.
+- **Seven new presets:** Spear PvP, Survival / SMP, Building, Mining, Exploration, Performance, Local Testing (17 in all).
+- **Profile switching:** pickaxe/shovel and block triggers, and a switch delay (default 4 ticks) against flicker.
+
+### Changed
+- AutoTotem is now **Auto Offhand** (totem, shield, golden apple or end crystal).
+- The test-environment restriction on automation modules, removed in commit 4102b2b, is restored.
+
 ## 0.6.1 - 2026-10-15
 
 ### Changed

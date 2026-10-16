@@ -1,6 +1,6 @@
-# Verification report: Femboy Client 0.6.1
+# Verification report: Femboy Client 0.7.0
 
-Date: 2026-10-15. Sections up to "Servers and stability" were written for 0.4.0 and still pass; 0.5.0 additions are in the sections after it.
+Date: 2026-10-17. Sections up to "Servers and stability" were written for 0.4.0 and still pass; later additions are in the sections after it, ending with 0.7.0.
 
 ## Status values
 
@@ -218,11 +218,46 @@ Where possible, each module was checked against what the game really did in the 
 | Auto Attribute Swap: spear reach | Verified in the running Minecraft client | Husk 3.5 blocks away: a sword click did nothing; with the rule one click jabbed it with the spear (20 → 14.1) and returned to the sword slot on client and server |
 | Auto Attribute Swap: spear lunge | Verified in the running Minecraft client | Holding attack with bread: nothing without the rule; with it 6 lunges in 20 ticks (Lunge III spear, 150 ms cooldown), 18.1 blocks forward, server position within 0.01, slot stayed on the bread |
 
+## GUI and new modules (0.7.0)
+
+| Feature | Status | Evidence |
+|---|---|---|
+| Themes and custom accent | Verified in the running Minecraft client | Switching to Midnight magenta changes the accent to #E05CC8; a custom accent #33CC99 overrides it; screenshot `theme-midnight-magenta` |
+| HUD editor | Verified in the running Minecraft client | A block dragged with the mouse is stored and drawn at the new position; right-click returns it to its corner; screenshot `hud-editor` |
+| Sandbox gating of every Sandbox-tier module | Verified in the running Minecraft client | On a simulated public server none of them runs while enabled; in singleplayer all of them run |
+| Zoom | Verified in the running Minecraft client | Field of view 70 → 17.5 while zooming |
+| Ore ESP | Verified in the running Minecraft client | Both placed diamond ores found; "touching air only" keeps the exposed one; screenshot `visuals-ore-esp` |
+| Block Counter | Verified in the running Minecraft client | Diamond Ore = 2, scanned 81/81 chunks |
+| Light Level | Verified in the running Minecraft client | A dark spot is marked and disappears after a torch is placed; screenshot `visuals-light-level` |
+| Block Highlight | Verified in the running Minecraft client | The block under the crosshair is reported |
+| Better Chat | Verified in the running Minecraft client | A repeated line is stacked with a timestamp: `[00:07] femboy repeat x2` |
+| Notifications | Verified in the running Minecraft client | A module toggle appears as a toast; screenshot `utilities-notification` |
+| Auto Reconnect | Verified in the running Minecraft client | After a disconnect the screen shows "Reconnecting in 60 s"; the reconnect itself was not run |
+| Death Coordinates | Verified in the running Minecraft client | Death at 3 / -60 / 7 recorded with a waypoint |
+| Auto Tool | Verified in the running Minecraft client | Slot 1 (pickaxe) selected while mining stone, back to slot 0 afterwards |
+| Inventory Sorter | Verified in the running Minecraft client | Mixed slots sorted and merged on the server: apple 1, dirt 10, stone 8 |
+| Auto Armor | Verified in the running Minecraft client | Leather chestplate swapped for the diamond one from the inventory (server agrees) |
+| Auto Refill | Verified in the running Minecraft client | A hotbar stack of 1 golden apple topped up to 11 (server) |
+| Auto Offhand | Verified in the running Minecraft client | Shield moved to the offhand |
+| Speed | Verified in the running Minecraft client | 15.3 blocks in the test time vs 4.1 without |
+| No Slow | Verified in the running Minecraft client | Walking while drawing a bow: 4.06 blocks vs 0.81 without |
+| Step | Verified in the running Minecraft client | Walked onto a 1-block wall: y -59.00 vs -60.00 without |
+| Safe Walk | Verified in the running Minecraft client | Stayed on the ledge at y -58.00; fell to -60.00 without |
+| No Fall | Verified in the running Minecraft client | 20-block fall (17 damage without it): health stayed 20 |
+| Auto Weapon Switch | Verified in the running Minecraft client | Switched to the sword slot when aiming; the hit took the husk to 14.1 |
+| Auto Criticals | Verified in the running Minecraft client | Hit dealt 8.86 (critical) |
+| Sprint Reset | Verified in the running Minecraft client | Sprint paused after the hit and resumed |
+| All 17 presets | Verified in the running Minecraft client | Each preset validated against the registered modules: no warnings |
+| Profile switch delay | Verified in the running Minecraft client | Automatic switching still passes with the 4-tick delay |
+| Shulker Preview | Verified in the running Minecraft client | A shulker box gets the item-grid tooltip (first item diamond) only while on; the drawn tooltip was not screenshotted |
+| Sprint | Verified in the running Minecraft client | Sprinting while walking forward |
+| Elytra Flight, Strafe Assist, Keystrokes key highlighting | Implemented, not tested | Compiled; no in-game check |
+
 ## Not verified
 
 - **Visible window on the NVIDIA GPU:** all rendering was checked with Mesa llvmpipe under Xvfb. Real keyboard shortcuts in the code editor were not tried in a visible window.
 - **A second real client:** the other player in the tests is a server-side fake player; real movement and latency were not tested.
 - **Other server software:** Paper, proxies and anti-xray servers.
-- **Not built:** KillAura, Trigger Bot, automatic aiming, AutoCrystal, AutoAnchor, Auto StunSlam, Auto Lunge Swap, AutoTotem, Auto Armor, Auto Pot, Flight, Aim Trainer.
+- **Not built:** AutoCrystal, AutoAnchor, Auto Pot, Aim Trainer, Anti Hunger, Hotbar Profiles, Item Swap, Chest Organizer, Structure Finder, Material List, Schematic Viewer, nametag armor, shader entity outlines.
 - **Test harness:** one of three runs after the last change stopped when the Fabric test harness's network synchronizer failed while connecting to the dedicated server ("Network synchronizer in invalid state"). All checks run before that passed; the other two runs passed completely.
 - **Performance at scale:** very many entities or storage blocks, or a 16-chunk radius in a busy world.

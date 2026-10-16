@@ -9,7 +9,7 @@ public enum ModuleCategory {
 	INVENTORY("Inventory", "inventory", "Item counters, refill reminders, equipment durability, health and effects."),
 	TRACKERS("Trackers", "trackers", "Player list, trackers, alerts and waypoints."),
 	WORLD("World", "analysis", "World information: geode analysis."),
-	HUD("HUD", "hud", "On-screen information such as coordinates and performance."),
+	HUD("Utilities", "hud", "HUD panels (coordinates, performance, keystrokes) and tools such as Better Chat, Auto Reconnect and notifications."),
 	DEVELOPER("Developer", "developer", "Tools for writing and testing small Java programs.");
 
 	private final String label;

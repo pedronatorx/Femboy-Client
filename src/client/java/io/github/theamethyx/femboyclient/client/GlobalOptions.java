@@ -1,6 +1,8 @@
 package io.github.theamethyx.femboyclient.client;
 
+import io.github.theamethyx.femboyclient.client.gui.Theme;
 import io.github.theamethyx.femboyclient.core.setting.BooleanSetting;
+import io.github.theamethyx.femboyclient.core.setting.ColorSetting;
 import io.github.theamethyx.femboyclient.core.setting.EnumSetting;
 import io.github.theamethyx.femboyclient.core.setting.ModuleSettings;
 
@@ -30,6 +32,20 @@ public final class GlobalOptions {
 			"Size of this menu. 'Auto' uses the largest sharp size at or below Minecraft's GUI scale that leaves enough room "
 					+ "for the layout. Fixed sizes may be cut off on small windows.", MenuScale.AUTO));
 
+	public final EnumSetting<Theme.Palette> theme = settings.add(new EnumSetting<>("theme", "Theme",
+			"Colors of the menu and HUD.", Theme.Palette.FEMBOY));
+	public final BooleanSetting customAccent = settings.add(new BooleanSetting("custom_accent", "Custom accent color",
+			"Use your own accent color instead of the theme's.", false));
+	public final ColorSetting accent = settings.add(new ColorSetting("accent", "Accent color",
+			"Accent for highlights, switches and selected items.", 0xA66BFF)).visibleWhen(customAccent::get);
+
+	{
+		Runnable applyTheme = () -> Theme.apply(theme.get(), customAccent.get() ? accent.get() : null);
+		theme.onChange(value -> applyTheme.run());
+		customAccent.onChange(value -> applyTheme.run());
+		accent.onChange(value -> applyTheme.run());
+	}
+
 	public final BooleanSetting animations = settings.add(new BooleanSetting("animations", "Animations",
 			"Smoothly animate panels, toggles and sliders. Turn off for an instant, static interface.", true));
 
@@ -41,6 +57,9 @@ public final class GlobalOptions {
 	public final BooleanSetting autoProfile = settings.add(new BooleanSetting("auto_profile", "Switch profiles automatically",
 			"Switch to another profile when what you hold (or the dimension) matches one of your rules on the Profiles page. "
 					+ "Choosing a profile by hand stays in effect until your held item changes to something another rule matches.", false));
+	public final io.github.theamethyx.femboyclient.core.setting.NumberSetting profileDelay = settings.add(new io.github.theamethyx.femboyclient.core.setting.NumberSetting(
+			"profile_delay", "Switch delay", "The held item must match a rule this long before the profile switches, so scrolling "
+					+ "through the hotbar does not flicker between profiles.", 4, 0, 40, 1, "ticks"));
 	public final BooleanSetting profileMessages = settings.add(new BooleanSetting("profile_messages", "Profile switch messages",
 			"Show the new profile's name above the hotbar after an automatic switch.", true));
 }

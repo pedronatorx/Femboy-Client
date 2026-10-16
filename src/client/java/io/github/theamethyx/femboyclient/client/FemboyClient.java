@@ -38,6 +38,7 @@ public final class FemboyClient implements ClientModInitializer {
 	private ConfigurationManager config;
 	private GlobalOptions options;
 	private WorldRenderDispatcher worldRender;
+	private HudManager hud;
 	private final AutoProfileSwitcher profileSwitcher = new AutoProfileSwitcher();
 	private final CombatTracker combat = new CombatTracker();
 
@@ -76,10 +77,14 @@ public final class FemboyClient implements ClientModInitializer {
 				+ (report.isEmpty() ? "" : " (" + report.size() + " configuration problem(s) recovered, see Diagnostics)"));
 
 		ClientKeys.register();
-		new HudManager(modules).register();
+		hud = new HudManager(modules, new io.github.theamethyx.femboyclient.client.hud.HudLayout(config));
+		hud.register();
 		worldRender = new WorldRenderDispatcher(modules, diagnostics);
 		worldRender.register();
 		ClientTickEvents.END_CLIENT_TICK.register(this::onEndTick);
+		io.github.theamethyx.femboyclient.client.modules.AutoReconnectModule.registerEvents();
+		io.github.theamethyx.femboyclient.client.modules.InventorySorterModule.registerEvents();
+		io.github.theamethyx.femboyclient.client.modules.ShulkerPreviewModule.registerTooltip();
 		WorldRenderEvents.START_MAIN.register(context -> performance.markFrame(System.nanoTime()));
 		ClientLifecycleEvents.CLIENT_STOPPING.register(this::onStopping);
 	}
@@ -136,7 +141,8 @@ public final class FemboyClient implements ClientModInitializer {
 			Module module = toggled.getFirst();
 			String state = module.isEnabled() ? "enabled" : "disabled";
 			String extra = toggled.size() > 1 ? " (+" + (toggled.size() - 1) + " more on this key)" : "";
-			client.player.displayClientMessage(Component.literal(module.name() + " " + state + extra), true);
+			io.github.theamethyx.femboyclient.client.hud.Notifications.show(module.name(), state + extra,
+					module.isEnabled() ? io.github.theamethyx.femboyclient.client.gui.Theme.SUCCESS : io.github.theamethyx.femboyclient.client.gui.Theme.TEXT_MUTED);
 		}
 	}
 
@@ -149,6 +155,10 @@ public final class FemboyClient implements ClientModInitializer {
 	private long comboTimeoutMillis() {
 		var info = modules.get(io.github.theamethyx.femboyclient.client.modules.CombatInfoModule.class);
 		return info == null ? 3000 : info.comboTimeoutMillis();
+	}
+
+	public HudManager hud() {
+		return hud;
 	}
 
 	public CombatTracker combat() {

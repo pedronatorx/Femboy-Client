@@ -3,15 +3,19 @@
 	"package": "io.github.theamethyx.femboyclient.client.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
+		"ChatComponentMixin",
 		"ClientPacketListenerMixin",
+		"GameRendererAccessor",
 		"GameRendererMixin",
+		"ItemStackMixin",
 		"KeyboardHandlerMixin",
 		"LightTextureMixin",
 		"LocalPlayerMixin",
 		"MinecraftMixin",
 		"MouseHandlerMixin",
 		"MultiPlayerGameModeAccessor",
-		"MultiPlayerGameModeMixin"
+		"MultiPlayerGameModeMixin",
+		"PlayerMovementMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

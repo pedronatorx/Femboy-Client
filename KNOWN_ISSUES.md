@@ -2,7 +2,7 @@
 
 ## Limitations
 
-- **Server rules.** All modules run on every server. Many servers forbid ESP, free cameras and similar clients, and their anti-cheat may notice them. Femboy Client does nothing to hide itself.
+- **Server rules.** Visual, Assist and most Automation-tier modules run on every server; Sandbox modules run only in test environments. Many servers forbid ESP, free cameras and similar clients, and their anti-cheat may notice them. Femboy Client does nothing to hide itself.
 - **Player Finder and Player Alert only know about players within your range.** The server sends a player's position only while they are within its entity tracking range (roughly your render distance; servers can set it lower). Anyone further away is "Position unknown".
   - "Last seen" positions are where someone was when they left your range, not where they are.
   - Server API integration (for servers you control) is not implemented.
@@ -66,6 +66,10 @@
   - vanilla geodes in a flat test world;
   - exposure produced by calling the game's random-tick code;
   - exposure between 0 and about 38 hours.
+- **Not built (0.7.0 spec):** Anti Hunger, Hotbar Profiles, Item Swap, Chest Organizer, Structure Finder, Material List, Schematic Viewer, armor in nametags, shader-based entity outlines, AutoCrystal, AutoAnchor, Auto Pot, Aim Trainer. Player, item and projectile ESP, tracers, health bars and distance are options of Entity ESP; CPS and reach are in Combat Info; ping and FPS in Performance; durability alerts in Health & Armor.
+- **Ore ESP and Block Counter** see only what the server sent; anti-xray servers send fake ores.
+- **No Fall** tells the server you are on the ground; it does not help when the server checks falls itself.
+- **HUD editor:** the name label of a block dragged to the very top can overlap the help panel.
 
 ## Test environment notes
 
@@ -79,6 +83,8 @@
 - Not tested in game in 0.5.0: Elytra Info in flight, the spear charge windows and Lunge (no spear test), bow and crossbow paths (only a thrown snowball was compared with a real throw), anchor explosions, armored or enchanted targets in damage estimates, the lock key pressed on a real keyboard (the test calls the same method).
 - The second player in the multiplayer test is a Fabric fake player added on the server, not a second real client. The server sends it to the client like any player, but movement over time and real network latency were not tested.
 - The test harness sends key events without modifier flags, so the code editor also checks the keyboard state for Ctrl. Real keyboard shortcuts were not exercised in a visible window.
+- Not tested in game in 0.7.0: Elytra Flight, Strafe Assist, Keystrokes key highlighting (only its placement), the drawn Shulker Preview tooltip (only its data), the menu scale option with the new themes, Auto Reconnect actually reconnecting (only the countdown screen).
+- The in-game tests sometimes stop with "Network synchronizer in invalid state" when the machine is short on memory (another Minecraft client running); a rerun passes.
 - Performance was measured with Mesa software rendering (254 zombies: about 26 ms per frame with ESP, health, tracers and Trackers on vs. 24 ms with them off). Numbers on a real GPU will differ.
 
 ## Unverified assumptions

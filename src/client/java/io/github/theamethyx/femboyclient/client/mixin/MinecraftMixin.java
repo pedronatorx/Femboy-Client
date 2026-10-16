@@ -26,6 +26,12 @@ public abstract class MinecraftMixin {
 			return;
 		}
 
+		// Auto Criticals (sandbox only) postpones a charged hit on the ground to the fall of a jump.
+		if (io.github.theamethyx.femboyclient.client.modules.AutoCriticalsModule.onAttackClick()) {
+			cir.setReturnValue(false);
+			return;
+		}
+
 		// Auto Attribute Swap's spear parts: a jab at a target beyond normal reach, or a lunge click while holding food or
 		// wind charges. When one of them handles the click, vanilla's own swing or miss for it is skipped.
 		io.github.theamethyx.femboyclient.client.FemboyClient femboy = io.github.theamethyx.femboyclient.client.FemboyClient.get();

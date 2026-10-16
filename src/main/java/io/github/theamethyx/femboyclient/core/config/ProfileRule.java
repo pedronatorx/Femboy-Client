@@ -41,6 +41,8 @@ public record ProfileRule(Trigger item, Dimension dimension, String profile) {
 		TOTEM("Totem of Undying"),
 		GOLDEN_APPLE("Golden apple"),
 		FIREWORK("Firework rocket"),
+		PICKAXE("Pickaxe or shovel"),
+		BLOCK("A block"),
 		GLIDING("Gliding with an elytra"),
 		EMPTY_HAND("Empty hand");
 

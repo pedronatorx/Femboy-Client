@@ -14,7 +14,10 @@ import io.github.theamethyx.femboyclient.core.config.ProfileRule;
  * (Auto Attribute Swap, KillAura, Trigger Bot, Auto StunSlam, AutoTotem) is configured where it fits but left off.
  */
 public final class Presets {
-	/** A preset: the profile name it installs as, a title and description, the module data, and the item that suits it. */
+	/**
+	 * A preset: the profile name it installs as, a title and description, the module data, and the item that suits it
+	 * ({@code null} when no held item fits, e.g. Performance).
+	 */
 	public record Preset(String profile, String title, String description, JsonObject modules, ProfileRule.Trigger trigger) {
 	}
 
@@ -113,6 +116,71 @@ public final class Presets {
 						.on("target_hud", "distance", true, "max_distance", 96.0)
 						.on("item_counters", "items", ids("arrow", "spectral_arrow", "tipped_arrow", "firework_rocket"))
 						.build(), ProfileRule.Trigger.BOW));
+		list.add(new Preset("spear_pvp", "Spear PvP", "Spear charge windows and Lunge status, target distance, reach and the spear parts of "
+				+ "Auto Attribute Swap (left off).",
+				new Builder()
+						.on("weapon_info", "axe", false, "mace", false, "ranged", false)
+						.on("target_hud", "distance", true)
+						.on("combat_info", "reach", true)
+						.off("auto_attribute_swap", "spear_enabled", true, "axe_enabled", false, "mace_enabled", false)
+						.build(), ProfileRule.Trigger.SPEAR));
+		list.add(new Preset("survival_smp", "Survival / SMP", "Health, food and durability, coordinates, waypoints, death coordinates, "
+				+ "shulker previews, Auto Tool and the inventory Sort button.",
+				new Builder()
+						.on("health_armor", "alerts", true)
+						.on("coordinates_hud")
+						.on("waypoints")
+						.on("death_coordinates")
+						.on("shulker_preview")
+						.on("auto_tool")
+						.on("inventory_sorter")
+						.on("item_counters", "items", ids("golden_apple", "totem_of_undying", "ender_pearl", "torch"))
+						.build(), null));
+		list.add(new Preset("building", "Building", "Block highlight, coordinates with chunk position, chunk borders, light levels and zoom.",
+				new Builder()
+						.on("block_highlight")
+						.on("coordinates_hud", "chunk", true)
+						.on("chunk_borders")
+						.on("light_level")
+						.on("zoom")
+						.build(), ProfileRule.Trigger.BLOCK));
+		list.add(new Preset("mining", "Mining", "Auto Tool, light levels, a diamond and debris counter, durability and death coordinates. "
+				+ "Ore ESP is set up but left off (many servers forbid it).",
+				new Builder()
+						.on("auto_tool")
+						.on("light_level")
+						.on("block_counter")
+						.on("health_armor", "only_low", true)
+						.on("coordinates_hud")
+						.on("death_coordinates")
+						.off("ore_esp", "radius", 4.0)
+						.build(), ProfileRule.Trigger.PICKAXE));
+		list.add(new Preset("exploration", "Exploration", "Coordinates, waypoints and trackers, death coordinates, movement and elytra info, zoom.",
+				new Builder()
+						.on("coordinates_hud")
+						.on("waypoints")
+						.on("trackers")
+						.on("death_coordinates")
+						.on("movement_info")
+						.on("elytra_info")
+						.on("zoom")
+						.build(), null));
+		list.add(new Preset("performance", "Performance", "Only the performance panel: frame rate, frame time, ping and memory.",
+				new Builder()
+						.on("performance_hud")
+						.build(), null));
+		list.add(new Preset("local_testing", "Local Testing", "For singleplayer and your test servers: hitboxes, combat info, target HUD and "
+				+ "performance on; KillAura, Velocity, Reach and Flight set up but off.",
+				new Builder()
+						.on("hitboxes")
+						.on("combat_info", "accuracy", true)
+						.on("target_hud")
+						.on("performance_hud")
+						.off("kill_aura")
+						.off("velocity")
+						.off("reach")
+						.off("flight")
+						.build(), null));
 		return list;
 	}
 
