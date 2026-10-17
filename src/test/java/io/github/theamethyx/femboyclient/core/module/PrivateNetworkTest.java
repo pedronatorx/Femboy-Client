@@ -42,7 +42,7 @@ class PrivateNetworkTest {
 
 		@Override
 		public boolean testEnvironmentOnly() {
-			return true;
+			return false;
 		}
 	}
 

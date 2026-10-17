@@ -24,7 +24,7 @@ public final class WTapModule extends Module {
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return true;
+		return false;
 	}
 
 	public int resets() {

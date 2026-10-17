@@ -21,7 +21,7 @@ public final class SpeedModule extends Module {
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return true;
+		return false;
 	}
 
 	@Override

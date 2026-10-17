@@ -69,7 +69,7 @@ public final class AutoPotModule extends Module implements ClientHooks.HudBlock 
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return true;
+		return false;
 	}
 
 	public int throwsMade() {

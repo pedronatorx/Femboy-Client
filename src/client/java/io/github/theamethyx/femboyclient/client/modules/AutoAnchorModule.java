@@ -61,7 +61,7 @@ public final class AutoAnchorModule extends Module implements ClientHooks.HudBlo
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return true;
+		return false;
 	}
 
 	public int explosions() {

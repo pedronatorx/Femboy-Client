@@ -30,7 +30,7 @@ public final class AntiHungerModule extends Module {
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return true;
+		return false;
 	}
 
 	@Override

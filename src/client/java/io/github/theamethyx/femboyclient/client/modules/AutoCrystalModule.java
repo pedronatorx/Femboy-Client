@@ -66,7 +66,7 @@ public final class AutoCrystalModule extends Module implements ClientHooks.HudBl
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return true;
+		return false;
 	}
 
 	public int placed() {

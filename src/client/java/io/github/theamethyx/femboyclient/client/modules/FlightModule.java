@@ -51,7 +51,7 @@ public final class FlightModule extends Module {
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return true;
+		return false;
 	}
 
 	@Override

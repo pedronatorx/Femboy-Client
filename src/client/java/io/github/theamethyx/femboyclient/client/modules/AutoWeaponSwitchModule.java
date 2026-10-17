@@ -25,7 +25,7 @@ public final class AutoWeaponSwitchModule extends Module {
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return true;
+		return false;
 	}
 
 	public int switches() {

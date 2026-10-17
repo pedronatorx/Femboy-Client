@@ -12,7 +12,7 @@ public final class NoSlowModule extends Module {
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return true;
+		return false;
 	}
 
 	public static boolean active() {

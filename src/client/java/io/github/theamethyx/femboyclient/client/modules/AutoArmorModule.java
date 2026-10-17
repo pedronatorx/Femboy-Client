@@ -36,7 +36,7 @@ public final class AutoArmorModule extends Module {
 
 	@Override
 	public boolean testEnvironmentOnly() {
-		return true;
+		return false;
 	}
 
 	public int equipped() {
