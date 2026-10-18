@@ -23,6 +23,7 @@ class ModuleManagerTest {
 	private final MutableEnvironment environment = new MutableEnvironment();
 	private DiagnosticLogger diagnostics;
 	private ModuleManager manager;
+	private long now = 1_000_000;
 
 	static final class MutableEnvironment implements EnvironmentPolicy {
 		boolean inWorld = true;
@@ -83,7 +84,7 @@ class ModuleManagerTest {
 	@BeforeEach
 	void setUp() {
 		diagnostics = new DiagnosticLogger();
-		manager = new ModuleManager(diagnostics, new PerformanceMonitor(), environment);
+		manager = new ModuleManager(diagnostics, new PerformanceMonitor(), environment, () -> now);
 	}
 
 	@Test
@@ -127,9 +128,11 @@ class ModuleManagerTest {
 	}
 
 	@Test
-	void aFailingModuleIsDisabledWithoutAffectingOthers() {
+	void aFailingModuleIsSuspendedWithoutAffectingOthersAndRestarts() {
 		RecordingModule broken = manager.register(new RecordingModule("broken", "Broken", Module.NO_KEY));
 		RecordingModule healthy = manager.register(new RecordingModule("healthy", "Healthy", Module.NO_KEY));
+		List<Boolean> reported = new ArrayList<>();
+		manager.addFailureListener((module, phase, reason, turnedOff) -> reported.add(turnedOff));
 		broken.failOnTick = new IllegalStateException("boom");
 		manager.setEnabled(broken, true);
 		manager.setEnabled(healthy, true);
@@ -137,18 +140,110 @@ class ModuleManagerTest {
 		manager.tick();
 		manager.tick();
 
-		assertFalse(broken.isEnabled());
+		assertTrue(broken.isEnabled(), "one failure only suspends the module");
 		assertFalse(broken.isRunning());
 		assertNotNull(broken.lastError());
 		assertTrue(broken.lastError().contains("boom"));
 		assertEquals(List.of("register", "enable", "tick", "disable"), broken.events);
 		assertEquals(2, healthy.events.stream().filter("tick"::equals).count());
 		assertEquals(1, diagnostics.errorCount());
+		assertEquals(List.of(false), reported);
+		assertEquals(ModuleHealth.State.SUSPENDED, manager.health(broken).state());
+		assertTrue(manager.health(broken).reason().contains("Restarts in 5 s"), manager.health(broken).reason());
+
+		// The suspension ends and the module starts again by itself.
+		broken.failOnTick = null;
+		now += ModuleManager.SUSPEND_MILLIS;
+		manager.tick();
+		assertTrue(broken.isRunning());
+		assertEquals(List.of("register", "enable", "tick", "disable", "enable", "tick"), broken.events);
+		assertEquals(ModuleHealth.State.ACTIVE, manager.health(broken).state());
+		assertTrue(manager.health(broken).lastSuccessMillis() >= 0);
+	}
+
+	@Test
+	void repeatedFailuresTurnTheModuleOffUntilTheUserRetries() {
+		RecordingModule broken = manager.register(new RecordingModule("broken", "Broken", Module.NO_KEY));
+		List<Boolean> reported = new ArrayList<>();
+		manager.addFailureListener((module, phase, reason, turnedOff) -> reported.add(turnedOff));
+		broken.failOnTick = new IllegalStateException("boom");
+		manager.setEnabled(broken, true);
+
+		for (int i = 0; i < 6; i++) {
+			manager.tick();
+			now += 11_000;
+		}
+
+		assertEquals(List.of(false, false, true), reported, "suspended twice, then turned off");
+		assertFalse(broken.isEnabled());
+		assertFalse(broken.isRunning());
+		ModuleHealth health = manager.health(broken);
+		assertEquals(ModuleHealth.State.ERROR, health.state());
+		assertTrue(health.reason().contains("3 errors within a minute"), health.reason());
+		assertEquals(3, broken.errorCount());
 
 		broken.failOnTick = null;
 		manager.setEnabled(broken, true);
 		assertNull(broken.lastError(), "re-enabling clears the error");
+		assertNull(broken.offReason());
 		assertTrue(broken.isRunning());
+	}
+
+	@Test
+	void failuresFarApartNeverTurnAModuleOff() {
+		RecordingModule flaky = manager.register(new RecordingModule("flaky", "Flaky", Module.NO_KEY));
+		flaky.failOnTick = new IllegalStateException("rare");
+		manager.setEnabled(flaky, true);
+		for (int i = 0; i < 5; i++) {
+			manager.tick();
+			now += ModuleManager.FAILURE_WINDOW_MILLIS + 1;
+		}
+
+		assertTrue(flaky.isEnabled(), "one failure a minute is suspended each time but never turned off");
+		assertEquals(5, flaky.errorCount());
+	}
+
+	@Test
+	void healthTellsWaitingUnsupportedAndOffApart() {
+		RecordingModule plain = manager.register(new RecordingModule("plain", "Plain", Module.NO_KEY));
+		RecordingModule sandbox = manager.register(new RecordingModule("sandbox", "Sandbox", Module.NO_KEY) {
+			@Override
+			public boolean testEnvironmentOnly() {
+				return true;
+			}
+
+			@Override
+			public String workload() {
+				return "12 targets";
+			}
+		});
+
+		assertEquals(ModuleHealth.State.OFF, manager.health(plain).state());
+		environment.inWorld = false;
+		manager.setEnabled(plain, true);
+		assertEquals(ModuleHealth.State.WAITING, manager.health(plain).state());
+		environment.inWorld = true;
+		manager.tick();
+		assertEquals(ModuleHealth.State.ACTIVE, manager.health(plain).state());
+		assertNull(manager.health(plain).workload());
+
+		manager.setEnabled(sandbox, true);
+		assertEquals(ModuleHealth.State.UNSUPPORTED, manager.health(sandbox).state());
+		assertEquals(Module.TEST_ENVIRONMENT_ONLY, manager.health(sandbox).reason());
+		assertNull(manager.health(sandbox).workload(), "only running modules describe their work");
+	}
+
+	@Test
+	void aliasesHelpSearchWithoutRenamingAnything() {
+		RecordingModule blocks = manager.register(new RecordingModule("block_esp", "Block ESP", Module.NO_KEY) {
+			@Override
+			public List<String> aliases() {
+				return List.of("ore esp");
+			}
+		});
+		manager.register(new RecordingModule("other", "Other", Module.NO_KEY));
+
+		assertEquals(List.of(blocks), manager.search("ore", null));
 	}
 
 	@Test

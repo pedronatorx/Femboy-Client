@@ -39,6 +39,7 @@ public final class CombatTracker {
 	private int bestCombo;
 	private double lastReach = Double.NaN;
 	private int ownHurtTime;
+	private long lastHurtMillis;
 
 	private static final class PendingHit {
 		final int entityId;
@@ -95,7 +96,8 @@ public final class CombatTracker {
 		trim(rightClicks, now);
 
 		// Taking damage ends the combo.
-		if (player.hurtTime > ownHurtTime && combo > 0) {
+		if (player.hurtTime > ownHurtTime) {
+			lastHurtMillis = now;
 			combo = 0;
 		}
 
@@ -140,6 +142,15 @@ public final class CombatTracker {
 		bestCombo = 0;
 		lastReach = Double.NaN;
 		ownHurtTime = 0;
+	}
+
+	/**
+	 * Whether you attacked or were hurt within the last {@code windowMillis} (used by HUD visibility conditions and
+	 * rules). Being hurt by a fall counts too: the client cannot always tell damage sources apart.
+	 */
+	public boolean inCombat(long windowMillis) {
+		long now = System.currentTimeMillis();
+		return now - lastAttackMillis < windowMillis || now - lastHurtMillis < windowMillis;
 	}
 
 	public int leftCps() {

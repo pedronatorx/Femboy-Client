@@ -391,4 +391,14 @@ public final class TrackersModule extends Module implements ClientHooks.ScreenOv
 
 		return new int[] {(int) Math.round((ndc.x + 1) / 2 * screenWidth), (int) Math.round((1 - ndc.y) / 2 * screenHeight)};
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("tracers", "arrows", "target lines");
+	}
+
+	@Override
+	public String workload() {
+		return lastIndicators().size() + " indicators, " + lines().drawn() + " lines";
+	}
 }

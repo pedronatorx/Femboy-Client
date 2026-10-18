@@ -1,12 +1,12 @@
 Femboy Client client game test report
-Started: 2026-10-18T02:13:44.018277341
+Started: 2026-10-18T11:38:59.725260896
 
 PASS  Femboy Client entrypoint ran
-PASS  All 72 modules registered  -- 72
+PASS  All 77 modules registered  -- 77
 PASS  No module is on by default  -- []
 PASS  No module is on at the first start  -- []
 PASS  Right Shift opens the Femboy Client screen
-PASS  Sidebar is exactly Home, Combat, Automation, Movement, Visuals, Inventory, World, Profiles, Settings  -- [Home, Combat, Automation, Movement, Visuals, Inventory, World, Profiles, Settings]
+PASS  Sidebar is exactly Home, Combat, Automation, Movement, Visuals, Inventory, World, Trackers, Profiles, Settings  -- [Home, Combat, Automation, Movement, Visuals, Inventory, World, Trackers, Profiles, Settings]
 PASS  No development pages (Scenarios, Analysis, Results, Dashboard) remain
 PASS  Every page rendered at 854x480 and 1280x720
 PASS  Escape closes the Femboy Client screen
@@ -55,7 +55,7 @@ PASS  At least one geode card is listed
 PASS  Clicking a geode card shows its exact counts and details
 PASS  A waypoint can be added at the player position  -- null
 PASS  In singleplayer the list has no other players (yourself excluded by default)  -- 0 entries
-PASS  With 'Include yourself' your own entry is listed with a known position  -- [Entry[id=2654e3c3-150d-3857-a426-0b141796a4e0, name=Player0, ping=0, gameMode=Creative, knowledge=IN_RANGE, position=(0.5, -60.0, 0.5), seenAt=1792282460312]]
+PASS  With 'Include yourself' your own entry is listed with a known position  -- [Entry[id=2654e3c3-150d-3857-a426-0b141796a4e0, name=Player0, ping=0, gameMode=Creative, knowledge=IN_RANGE, position=(0.5, -60.0, 0.5), seenAt=1792316375923]]
 PASS  The waypoint of this world is offered as a navigation target
 PASS  Clicking the waypoint starts navigation to it  -- Target[name=Spawn, position=(0.5, -59.5, 0.5), note=waypoint, color=-9524993]
 PASS  Stopping navigation clears the target
@@ -78,7 +78,7 @@ PASS  Clicking a dropdown opens its option list
 PASS  Choosing 'Cyan' in the dropdown changes the setting  -- CYAN
 PASS  The module Reset button restores all of a module's settings
 PASS  Clicking a color swatch sets that color  -- #F29E4C
-PASS  Settings has a Diagnostics tab
+PASS  Settings has a Developer tab (health monitor, diagnostics and the log)
 PASS  Emergency key turns every module off, returns the camera and pauses automatic profiles  -- free camera was detached: true; on [], camera on player true, auto profile false
 PASS  Hold-mode key: module runs while the key is held and stops on release  -- on while held true, off after release true
 PASS  Test profiles and switching rules created  -- ok
@@ -89,10 +89,10 @@ PASS  A hand-picked profile is kept until the held item changes  -- default full
 NOTE  Automatic profile switches during the test: 3
 PASS  Profiles page: Export copies the profile to the clipboard  -- {
   "femboyClientProfile": "auto_mace",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "modules": {
    
-PASS  All 17 presets use only existing modules and valid setting values  -- []
+PASS  All 24 presets use only existing modules and valid setting values  -- []
 PASS  Switching preset profiles turns on exactly each preset's modules (no leftovers)  -- sword_pvp=[combat_info, health_armor, target_hud, weapon_info] crystal_pvp=[explosion_info, health_armor, item_counters, target_hud] elytra_pvp=[elytra_info, health_armor, item_counters, target_hud] sword_pvp=[combat_info, health_armor, target_hud, weapon_info]
 PASS  Resetting the active preset profile restores its settings and turns extra modules off  -- accuracy=true hitboxes=false
 PASS  A real left click on a mob counts a click, an attack, a landed hit and the reach (2.70 m)  -- attacks=1 landed=1 combo=1 cps=1 reach=2.70
@@ -106,7 +106,7 @@ PASS  Item Counters: reminds to refill totems that are only in the inventory  --
 PASS  Health & Armor lists the nearly broken chestplate with its durability  -- [Health: 20.0, Food: 20  sat 4.0, Diamond Chestplate: 8  2%]
 PASS  Effects lists Speed II with its remaining time  -- [Speed II: 0:29]
 PASS  Hitboxes draws both zombies, and none once hostile mobs are filtered out  -- drawn 2, filtered 0
-PASS  Trajectories: a real snowball lands within 2 blocks of the predicted point  -- predicted (0.5, -55.19158995772563, 14.0), last server position (0.4705879630485321, -55.21523582016058, 13.806549548821126) (10 ticks), horizontal error 0.20
+PASS  Trajectories: a real snowball lands within 2 blocks of the predicted point  -- predicted (0.5, -55.19158995772563, 14.0), last server position (0.5236829919451356, -55.31299244002429, 13.795803621724996) (10 ticks), horizontal error 0.21
 PASS  Crystal & Anchor Info: obsidian within reach is a placement spot and under the crosshair it is the focus  -- spot true, focus Focus[label=Crystal here, center=(0.5, -60.0, 2.5), power=6.0, note=null, removed=null]; Block{minecraft:obsidian} [] (0.5, -60.0, 2.4309332234547383)
 PASS  Crystal damage estimate (no armor, Normal) matches the damage really taken within 0.5  -- estimate 14.13, taken 14.13
 PASS  Singleplayer counts as a test environment, so automation modules can run
@@ -120,10 +120,10 @@ PASS  Flight: hovers in survival, rises with jump (server agrees), falls again w
 PASS  AutoTotem moves a totem from the inventory into the offhand (client and server)  -- client true, server true, slot emptied true
 PASS  Test target holds up a shield (server and client agree)  -- server true, client true
 PASS  Auto StunSlam falling onto a shielding player: axe disables the shield, mace damages through it, slot restored  -- Axe and mace hit Bob; shield disabled true; health 20 -> 13.2; slot client 2 server 2 (mace = 2); max fall 4.8, crosshair on Bob true
-PASS  Spear reach: out of sword reach a click does nothing; with the rule it jabs with the spear and returns to the sword  -- without rule health 20.0; with rule hit true (health 14.1); slot client 0 server 0; SwapRecord[rule=SPEAR, item=Iron Spear, fromSlot=0, toSlot=1, target=Husk, at=1792282503970, usedForHit=true, restored=true, note=jabbed and switched back in the same tick]
-PASS  Spear lunge: holding attack with bread jabs the Lunge spear repeatedly and dashes forward; slot stays on the bread  -- without rule moved 0.00; with rule 6 lunges, moved 18.2 blocks forward (server agrees within 0.00); slot client 3 server 3
+PASS  Spear reach: out of sword reach a click does nothing; with the rule it jabs with the spear and returns to the sword  -- without rule health 20.0; with rule hit true (health 14.1); slot client 0 server 0; SwapRecord[rule=SPEAR, item=Iron Spear, fromSlot=0, toSlot=1, target=Husk, at=1792316419674, usedForHit=true, restored=true, note=jabbed and switched back in the same tick]
+PASS  Spear lunge: holding attack with bread jabs the Lunge spear repeatedly and dashes forward; slot stays on the bread  -- without rule moved 0.00; with rule 6 lunges, moved 18.1 blocks forward (server agrees within 0.01); slot client 3 server 3
 PASS  Theme selector switches the menu colors; a custom accent overrides the theme's; default is the navy/magenta Femboy theme  -- default FF9D6BFF, midnight magenta FFE05CC8, custom FF33CC99, back FF9D6BFF
-PASS  HUD editor: Coordinates and the Keystrokes widget are placed; dragging Coordinates moves it and saves the position  -- placed [coordinates_hud, keystrokes]; moved Placed[moduleId=coordinates_hud, name=Coordinates, x=200, y=120, width=114, height=37, custom=true]; saved {"coordinates_hud":[0.4683841,0.5]}
+PASS  HUD editor: Coordinates and the Keystrokes widget are placed; dragging Coordinates moves it and saves the position  -- placed [coordinates_hud, keystrokes]; moved Placed[moduleId=coordinates_hud, name=Coordinates, x=201, y=121, width=114, height=37, custom=true, hidden=false, scale=1.0]; saved {"version":2,"active":"Default","layouts":{"Default":{"elements":{"coordinates_hud":{"ax":0.5,"ay":0.5,"dx":44,"dy":19}}}}}
 PASS  HUD editor reset puts blocks back into their corners
 PASS  Zoom divides the field of view by the zoom factor (4x)  -- fov 70.0 -> 17.5
 PASS  Block ESP finds both placed diamond ores; 'only exposed' keeps just the one touching air  -- all [BlockPos{x=5, y=-62, z=5}, BlockPos{x=6, y=-61, z=5}], exposed [BlockPos{x=6, y=-61, z=5}]
@@ -131,9 +131,9 @@ PASS  Block Counter counts the 2 diamond ores in loaded chunks and shows full sc
 PASS  Light Level marks grass with block light 0 as a spawn spot and stops once a torch lights it  -- before torch true, after torch false
 PASS  Block Highlight outlines the block under the crosshair  -- MutableBlockPos{x=0, y=-61, z=2} vs MutableBlockPos{x=0, y=-61, z=2}
 PASS  Notifications shows client messages as toasts while on  -- 1 toast(s)
-PASS  Better Chat adds a timestamp and stacks a repeated message into one line with x2  -- 1|[02:15] femboy repeat x2
+PASS  Better Chat adds a timestamp and stacks a repeated message into one line with x2  -- 1|[11:40] femboy repeat x2
 PASS  Auto Reconnect adds a reconnect button with a countdown to the disconnected screen  -- Reconnecting in 60 s
-PASS  Death Coordinates records where you died and saves a waypoint  -- Death[x=3, y=-60, z=7, dimension=minecraft:overworld, at=1792282513764], waypoint true
+PASS  Death Coordinates records where you died and saves a waypoint  -- Death[x=3, y=-60, z=7, dimension=minecraft:overworld, at=1792316429615], waypoint true
 PASS  Shulker Preview gives shulker boxes an item-grid tooltip only while on  -- on true, off true
 PASS  Auto Tool selects the pickaxe while mining stone and switches back afterwards  -- while mining slot 1, after 0
 PASS  Inventory Sorter orders the main inventory by item, merging stacks of the same item (server agrees)  -- minecraft:apple 1, minecraft:dirt 10, minecraft:stone 8, minecraft:air 0, 
@@ -185,7 +185,7 @@ PASS  Health can be limited to chosen categories  -- DrawnLabel[name=Target, x=1
 PASS  Long names are shortened to the maximum name width  -- DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true, equipment=0]
 PASS  Labels of entities at the same spot do not overlap  -- [DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=Stacked A, x=236, y=87, width=41, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=Stacked B, x=235, y=66, width=41, height=20, healthBar=true, healthText=true, equipment=0]]
 PASS  Labels are drawn at 854x480 as well  -- [DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=Stacked A, x=236, y=87, width=41, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=Stacked B, x=235, y=66, width=41, height=20, healthBar=true, healthText=true, equipment=0]]
-NOTE  254 zombies in view (Mesa software rendering): average frame 22.7 ms with ESP (labels, health, tracers) and Trackers, 20.0 ms without. Average cost per call: entity_esp/tick 0.091 ms, entity_esp/render_world 0.077 ms, entity_esp/render_hud 0.200 ms, trackers/render_hud 0.109 ms, 
+NOTE  254 zombies in view (Mesa software rendering): average frame 23.7 ms with ESP (labels, health, tracers) and Trackers, 20.9 ms without. Average cost per call: entity_esp/tick 0.113 ms, entity_esp/render_world 0.084 ms, entity_esp/render_hud 0.190 ms, trackers/render_hud 0.091 ms, 
 PASS  With 254 entities, ESP keeps to its highlight limit (64)  -- 64 tracked
 PASS  No module errors with many entities
 PASS  Trackers: a mob in front gets an on-screen marker  -- Indicator[name=Ahead, source=HOSTILE, onScreen=true, x=214, y=134, label=Ahead · 8m]
@@ -216,10 +216,10 @@ PASS  Java Runner: compile errors are shown with the line number  -- COMPILE_ERR
 PASS  Java Runner: runtime exceptions are shown  -- FAILED: Exception: java.lang.IllegalStateException: boom
     at run (line 1)
 PASS  Java Runner: the game itself is not reachable (compile error)  -- COMPILE_ERROR: Line 1: package net.minecraft.client does not exist
-PASS  Minecraft keeps ticking while a program runs (20 ticks while the worker loops)  -- 20 ticks took 1.01 s, still running: true
-PASS  Java Runner: an endless loop is stopped at the time limit  -- TIMED_OUT, pid 214342
+PASS  Minecraft keeps ticking while a program runs (20 ticks while the worker loops)  -- 20 ticks took 1.00 s, still running: true
+PASS  Java Runner: an endless loop is stopped at the time limit  -- TIMED_OUT, pid 254019
 PASS  Java Runner: Stop kills the program  -- STOPPED
-PASS  Java Runner: excessive output is cut off  -- OUTPUT_LIMIT, 133 lines
+PASS  Java Runner: excessive output is cut off  -- OUTPUT_LIMIT, 128 lines
 PASS  Java Runner: code that deletes files asks for confirmation and does not run yet  -- [deletes files]
 PASS  Java Runner: Cancel runs nothing
 PASS  Java Runner: the 'Module overview' example runs  -- FINISHED: Module                 Enabled  Running
@@ -294,7 +294,12 @@ Module List            off      -
 Keystrokes             off      -
 Notifications          off      -
 Better Chat            off      -
+Mention Alerts         off      -
+Compass                off      -
+Session Stats          off      -
+Experience             off      -
 Auto Reconnect         off      -
+Shape Planner          off      -
 Java Runner            on       running
 PASS  Block ESP (formerly Ore ESP) highlights both placed diamond ores  -- [BlockPos{x=3, y=-60, z=6}, BlockPos{x=-3, y=-62, z=6}]
 PASS  Block ESP follows a broken and a placed ore within 3 ticks, without re-reading any chunk  -- gone true, back true, chunk reads 243 -> 243, single-block updates 0 -> 2
@@ -314,6 +319,37 @@ PASS  The profile selector in the header opens the profile list  -- ProfileMenu
 PASS  The bell opens the notification list and marks the messages read  -- NotificationList
 PASS  Resetting a category asks for a second click, then restores its modules (Chunk Borders radius 3 -> 1)  -- 3.0 / 'Click again to reset' / 1.0
 PASS  The menu keeps working with reduced motion
+PASS  Ctrl+K opens the command palette; typing finds Coordinates first and Enter turns it on  -- CommandPalette / Coordinates / true (focus before: nothing)
+PASS  Tab on a module in the palette opens its settings instead (Block ESP)  -- block_esp
+PASS  Aliases find renamed modules: 'ore esp' finds Block ESP  -- Block ESP
+PASS  Escape closes the palette  -- none
+PASS  The palette jumps to a settings tab (Appearance)  -- Appearance
+PASS  The quick wheel lists favorites first and toggles the chosen one (Chunk Borders)  -- [Chunk Borders, Coordinates, Block ESP, Entity ESP, Hitboxes, Trackers, Aim Assist, KillAura] / true
+PASS  Toggled modules appear under recently used
+PASS  Theme Studio presets apply (High contrast: white text on black)  -- []
+PASS  Themes save, export and import; invalid imported values are skipped and listed  -- ok
+PASS  Corner style and panel opacity change the drawing  -- 1.6 / 204
+PASS  Applying the defaults restores the original look  -- f20f1121 vs f20f1121
+PASS  HUD editor: an element can be placed anywhere  -- Placed[moduleId=coordinates_hud, name=Coordinates, x=201, y=121, width=114, height=37, custom=true, hidden=false, scale=1.0]
+PASS  HUD editor: scaling makes the element larger (1.5x)  -- Placed[moduleId=coordinates_hud, name=Coordinates, x=201, y=121, width=114, height=37, custom=true, hidden=false, scale=1.0] -> Placed[moduleId=coordinates_hud, name=Coordinates, x=172, y=111, width=171, height=56, custom=true, hidden=false, scale=1.5]
+PASS  Hidden elements show faintly in the editor and not in the game  -- true / true
+PASS  Undo reverts the last changes (visibility, then scale)
+PASS  An element set to show only in combat stays hidden out of combat
+PASS  Layouts are independent and can be switched  -- ok
+PASS  Profiles: diff, per-profile HUD layout, history, rename and revert  -- ok
+PASS  A restore point brings back earlier settings  -- ok
+PASS  The configuration validator checks every profile  -- {default=[]}
+PASS  Rules run on their trigger: a notification and a visual module turned on  -- true / true
+PASS  Rules cannot turn on automation modules, and dry runs only record  -- false / true / true
+PASS  The timeline records profile switches, rules and markers, and search finds them
+PASS  The on/off comparison measures both halves and leaves the module as it was  -- null / [Result[module=Chunk Borders, seconds=2, frameMsOn=18.92788735185185, frameMsOff=24.928816, clientUsOn=92.80423148148148, clientUsOff=6.135841463414634, framesOn=108, framesOff=82, finishedAt=1792316551776]] / true
+PASS  Automation modules cannot be compared (switching them on would make them act)  -- Only visual and assist modules can be profiled: switching KillAura on would make it act.
+PASS  The health monitor reports module states (Kill Aura off)  -- OFF
+PASS  A diagnostic report can be exported
+PASS  Repeated notifications are folded into one with a count  -- 3
+PASS  Compass, Experience, Session Stats and Shape Planner show on the HUD  -- [compass, session_stats, shape_planner, xp_info]
+PASS  Shape Planner plans a hollow sphere and draws its outlines  -- 278 / 278 blocks planned, 174 outlines drawn
+PASS  Mention Alerts match your name and keywords as whole words, not your own messages
 PASS  No module errors were logged during the run
 PASS  Structure Finder finds the nearest stronghold in a normal singleplayer world  -- [Found[id=minecraft:village_plains, label=Village plains, pos=BlockPos{x=-304, y=0, z=-320}], Found[id=minecraft:stronghold, label=Stronghold, pos=BlockPos{x=1376, y=0, z=848}]]
 NOTE  Natural world (seed 8675309): 2 geode(s) in the scanned area, 2 complete
@@ -328,16 +364,16 @@ PASS  Every module runs on a dedicated server (no server list, no pausing)
 PASS  A dedicated server at localhost counts as a test environment (private address)  -- Server localhost:25565 (your network)
 PASS  A second player on the server reaches the client
 PASS  Player Alert warns when the player comes into range  -- [Alice (5 m ↑) is in range]
-PASS  Player Finder lists the player in range with their real position  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=IN_RANGE, position=(3.5, -29.0, 4.5), seenAt=1792282674966]
+PASS  Player Finder lists the player in range with their real position  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=IN_RANGE, position=(-3.5, -29.0, -1.5), seenAt=1792316609931]
 PASS  Entity ESP highlights the other player
 PASS  Player Alert reports when the player leaves range (setting on)  -- [Alice left your range, Alice (5 m ↑) is in range]
-PASS  Player Finder keeps the last seen position once the player is out of range  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=LAST_SEEN, position=(3.5, -29.0, 4.5), seenAt=1792282675157]
+PASS  Player Finder keeps the last seen position once the player is out of range  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=LAST_SEEN, position=(-3.5, -29.0, -1.5), seenAt=1792316610138]
 PASS  Trackers point to the last seen position, labelled with its age  -- [Indicator[name=Alice, source=LAST_SEEN, onScreen=true, x=214, y=114, label=Alice · 5m · last seen 0 s ago]]
 PASS  A player who logs off disappears from Player Finder
 PASS  Trackers drop a player who logged off
 PASS  Attribute swap: by default the axe is only used against a raised shield (no swap on a normal mob)  -- sword 0->1, axe 0->0
 PASS  Attribute swap: the server applied the hit with the axe (axe lost durability, sword did not)  -- sword 1->1, axe 0->2
-PASS  Attribute swap: switched back to the sword in the same tick, on client and server  -- client 0, server 0, SwapRecord[rule=AXE, item=Iron Axe, fromSlot=0, toSlot=1, target=Dummy, at=1792282678414, usedForHit=true, restored=true, note=switched back in the same tick]
+PASS  Attribute swap: switched back to the sword in the same tick, on client and server  -- client 0, server 0, SwapRecord[rule=AXE, item=Iron Axe, fromSlot=0, toSlot=1, target=Dummy, at=1792316613373, usedForHit=true, restored=true, note=switched back in the same tick]
 PASS  Attribute swap: no second swap during the axe's cooldown (1 s)  -- sword 1->2, axe 2->2, skip: Axe on cooldown
 PASS  Attribute swap: a longer per-item cooldown (3 s) blocks swaps for longer  -- axe 2->4->4
 PASS  Attribute swap: with a swap-back delay the axe stays selected for those ticks, then the sword returns  -- right after 1, later 0, server 0
@@ -350,10 +386,10 @@ PASS  The server keeps receiving the player's updates during free camera  -- ser
 PASS  The player stays put on the server and on the client  -- server moved 0.000, client moved 0.000
 PASS  Disabling the free camera returns the view to the player
 PASS  No rubber-band: server and client agree on the position after the camera returns  -- server-client difference 0.000
-PASS  After the camera returns, clicking works again (control: swing, block broken)  -- swung=true, aimed=true (BlockPos{x=-2, y=-34, z=4} pitch 90.0, expected BlockPos{x=-2, y=-30, z=4}), server: Block{minecraft:air}, held 0 minecraft:air, mode CREATIVE, at (-1.5, -30.14510670065164, 4.5)
+PASS  After the camera returns, clicking works again (control: swing, block broken)  -- swung=true, aimed=true (BlockPos{x=-9, y=-34, z=-2} pitch 90.0, expected BlockPos{x=-9, y=-30, z=-2}), server: Block{minecraft:air}, held 1 minecraft:rotten_flesh, mode CREATIVE, at (-8.5, -30.14510670065164, -1.5)
 PASS  Structure Finder is unavailable on a server and says why (no world seed)  -- Needs the world seed, so it only works in singleplayer (servers never send the seed).
 PASS  Player Alert's auto leave disconnects when a player comes into range and turns itself off  -- left true, reason Alice was 6 blocks away, server list true, auto leave off true
 NOTE  Ignored known offline-test noise: missing X11 cursor shapes (Xvfb), anisotropic filtering option, Realms and account-properties requests failing without a real login.
 PASS  No render-thread, server-thread or client-code errors in the client log
 
-Result: PASSED (266 checks passed, 265 s)
+Result: PASSED (297 checks passed, 285 s)

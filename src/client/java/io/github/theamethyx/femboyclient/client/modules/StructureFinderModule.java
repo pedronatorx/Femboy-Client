@@ -79,7 +79,7 @@ public final class StructureFinderModule extends Module implements ClientHooks.H
 			return base;
 		}
 
-		return Minecraft.getInstance().getSingleplayerServer() == null ? Availability.unavailable(NEEDS_SEED) : base;
+		return Minecraft.getInstance().getSingleplayerServer() == null ? Availability.environment(NEEDS_SEED) : base;
 	}
 
 	public List<Found> found() {

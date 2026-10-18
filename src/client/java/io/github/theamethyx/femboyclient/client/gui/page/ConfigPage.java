@@ -34,12 +34,12 @@ public class ConfigPage extends Page {
 
 	@Override
 	public String navLabel() {
-		return "Settings";
+		return "General";
 	}
 
 	@Override
 	public String subtitle() {
-		return "Emergency off, client options and config files.";
+		return "Emergency off, client options, backups and config files.";
 	}
 
 	@Override
@@ -71,8 +71,32 @@ public class ConfigPage extends Page {
 		rows.add(new SectionTitle("HUD layout", "Drag HUD blocks anywhere on the screen. Turn on the HUD modules you want to place first."));
 		rows.add(new HudEditorRow());
 
-		rows.add(new SectionTitle("Client options", "Apply to every profile. Profiles have their own page."));
-		rows.addAll(SettingRow.rowsFor("options", femboy.options().settings.all()));
+		rows.add(new SectionTitle("Client options", "The look (theme, motion) is on the Appearance tab. Profiles have their own page."));
+		rows.addAll(SettingRow.rowsFor("options", femboy.options().settings.all().stream()
+				.filter(setting -> !io.github.theamethyx.femboyclient.client.GlobalOptions.THEME_SECTION.equals(setting.section())
+						&& !io.github.theamethyx.femboyclient.client.GlobalOptions.MOTION_SECTION.equals(setting.section())
+						&& !io.github.theamethyx.femboyclient.client.GlobalOptions.SMART_SECTION.equals(setting.section()))
+				.<io.github.theamethyx.femboyclient.core.setting.Setting<?>>map(setting -> setting).toList()));
+
+		rows.add(new SectionTitle("Restore points", "Copies of all settings and profiles. One is made automatically before a restore, "
+				+ "a full reset, replacing a profile with a preset, and a configuration format update; the newest "
+				+ ConfigurationManager.MAX_RESTORE_POINTS + " are kept."));
+		rows.add(new CreateRestorePoint());
+		List<ConfigurationManager.RestorePoint> points = config.restorePoints();
+		for (int i = 0; i < Math.min(8, points.size()); i++) {
+			rows.add(new RestorePointRow(points.get(i)));
+		}
+
+		if (points.isEmpty()) {
+			rows.add(new ModulesPage.Message("No restore points yet."));
+		} else if (points.size() > 8) {
+			rows.add(new ModulesPage.Message((points.size() - 8) + " older restore point(s) are in the restore-points folder."));
+		}
+
+		rows.add(new SectionTitle("Reset everything", "Puts client options, the HUD layout, switching rules and every module of the active "
+				+ "profile back to a fresh installation's state (all modules off). Other profiles are kept, and a restore point is made "
+				+ "first, so this can be undone above."));
+		rows.add(new ResetEverything());
 
 		rows.add(new SectionTitle("Files", "Stored in " + config.root().toAbsolutePath()));
 		rows.add(new FileActions());
@@ -168,6 +192,86 @@ public class ConfigPage extends Page {
 		}
 	}
 
+	private final class CreateRestorePoint extends Container {
+		private final Button button = add(new Button("Create a restore point now", Button.Style.SECONDARY, () -> {
+			String problem = femboy.config().createRestorePoint("Made by hand");
+			report(problem == null ? "Restore point created." : problem, problem == null);
+			rebuild();
+		}).icon(Icon.SAVE));
+
+		@Override
+		public int preferredHeight(UiContext ui, int width) {
+			return 16;
+		}
+
+		@Override
+		protected void onLayout() {
+			button.setBounds(x, y, width, 16);
+		}
+	}
+
+	private static final java.time.format.DateTimeFormatter WHEN = java.time.format.DateTimeFormatter.ofPattern("d MMM HH:mm")
+			.withZone(java.time.ZoneId.systemDefault());
+
+	private final class RestorePointRow extends Container {
+		private final ConfigurationManager.RestorePoint point;
+
+		RestorePointRow(ConfigurationManager.RestorePoint point) {
+			this.point = point;
+			add(new io.github.theamethyx.femboyclient.client.gui.widget.ConfirmButton("Restore", "Click again", Button.Style.SECONDARY, () -> {
+				String problem = femboy.config().restore(point.id());
+				report(problem == null ? "Restored '" + point.label() + "'. The state before it is the newest restore point." : problem, problem == null);
+				rebuild();
+			}).icon(Icon.UNDO)).tooltip("Put these settings back (two clicks). Your current state is saved as a restore point first.");
+			add(new io.github.theamethyx.femboyclient.client.gui.widget.ConfirmButton("", "Delete?", Button.Style.DANGER, () -> {
+				String problem = femboy.config().deleteRestorePoint(point.id());
+				report(problem == null ? "Deleted the restore point." : problem, problem == null);
+				rebuild();
+			}).icon(Icon.TRASH)).tooltip("Delete this restore point (two clicks).");
+		}
+
+		@Override
+		public int preferredHeight(UiContext ui, int width) {
+			return 22;
+		}
+
+		@Override
+		protected void onLayout() {
+			children.get(1).setBounds(x + width - 46, y + 3, 44, 16);
+			children.get(0).setBounds(x + width - 46 - Theme.GAP - 76, y + 3, 76, 16);
+		}
+
+		@Override
+		public void render(UiContext ui) {
+			ui.roundRect(x, y, width, height, Theme.SURFACE);
+			ui.icon(Icon.CLOCK, x + 5, y + 7, 8, Theme.ACCENT);
+			String when = point.createdMillis() == 0 ? point.id() : WHEN.format(java.time.Instant.ofEpochMilli(point.createdMillis()));
+			ui.textClipped(point.label(), x + 17, y + 3, width - 150, Theme.TEXT);
+			ui.textScaled(ui.ellipsize(when + "  ·  " + point.profiles().size() + " profile(s): " + String.join(", ", point.profiles()),
+					Math.round((width - 150) / 0.75f)), x + 17, y + 13, 0.75f, Theme.TEXT_MUTED);
+			super.render(ui);
+		}
+	}
+
+	private final class ResetEverything extends Container {
+		private final Button button = add(new io.github.theamethyx.femboyclient.client.gui.widget.ConfirmButton("Reset everything to defaults",
+				"Click again to reset everything", Button.Style.DANGER, () -> {
+			String problem = femboy.config().resetEverything();
+			report(problem == null ? "Everything is back to defaults. The previous state is the newest restore point." : problem, problem == null);
+			rebuild();
+		}).icon(Icon.RESET));
+
+		@Override
+		public int preferredHeight(UiContext ui, int width) {
+			return 16;
+		}
+
+		@Override
+		protected void onLayout() {
+			button.setBounds(x, y, width, 16);
+		}
+	}
+
 	private final class FileActions extends Container {
 		private final Button open;
 		private final Button save;
@@ -181,7 +285,16 @@ public class ConfigPage extends Page {
 				rebuild();
 			}).icon(Icon.CHECK));
 			save.tooltip("Write all settings to disk immediately (normally done automatically).");
+			reload = add(new io.github.theamethyx.femboyclient.client.gui.widget.ConfirmButton("Reload from disk", "Click again to reload",
+					Button.Style.SECONDARY, () -> {
+				List<String> problems = femboy.config().load();
+				report(problems.isEmpty() ? "Reloaded the files from disk." : "Reloaded; " + problems.size() + " problem(s) recovered (listed below).", true);
+				rebuild();
+			}).icon(Icon.RESET));
+			reload.tooltip("Read the configuration files again, for example after editing them by hand. Changes not yet saved are lost (two clicks).");
 		}
+
+		private final Button reload;
 
 		@Override
 		public int preferredHeight(UiContext ui, int width) {
@@ -190,9 +303,10 @@ public class ConfigPage extends Page {
 
 		@Override
 		protected void onLayout() {
-			int half = (width - Theme.GAP) / 2;
-			open.setBounds(x, y, half, 16);
-			save.setBounds(x + half + Theme.GAP, y, width - half - Theme.GAP, 16);
+			int third = (width - 2 * Theme.GAP) / 3;
+			open.setBounds(x, y, third, 16);
+			save.setBounds(x + third + Theme.GAP, y, third, 16);
+			reload.setBounds(x + 2 * (third + Theme.GAP), y, width - 2 * (third + Theme.GAP), 16);
 		}
 	}
 }

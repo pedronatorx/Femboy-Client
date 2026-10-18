@@ -80,7 +80,7 @@ class ResourceFilesTest {
 		assertArrayEquals(new int[] {128, 128}, icon);
 		// The icon atlas holds 8 x 6 cells of 32 px; Icon.java uses the same layout.
 		String gui = "src/client/resources/assets/femboyclient/textures/gui/";
-		assertArrayEquals(new int[] {256, 192}, pngSize(gui + "icons.png"));
+		assertArrayEquals(new int[] {256, 224}, pngSize(gui + "icons.png"));
 		// The smooth-shape textures UiContext draws with (tools/make_gui_art.py).
 		assertArrayEquals(new int[] {64, 64}, pngSize(gui + "round.png"));
 		assertArrayEquals(new int[] {64, 64}, pngSize(gui + "shadow.png"));

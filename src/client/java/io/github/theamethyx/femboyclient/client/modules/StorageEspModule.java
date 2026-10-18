@@ -416,4 +416,14 @@ public final class StorageEspModule extends Module implements ClientHooks.WorldR
 
 		EspRenderer.drawLabels(ui, targets, screenWidth, screenHeight, limit, EspRenderer.LabelStyle.DEFAULT);
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("chest esp", "container esp");
+	}
+
+	@Override
+	public String workload() {
+		return highlighted().size() + " containers, " + lines().drawn() + " lines, " + scans() + " scans";
+	}
 }

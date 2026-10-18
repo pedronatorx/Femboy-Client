@@ -63,8 +63,24 @@ public class ClientScreen extends Screen {
 	private int panelX, panelY, panelW, panelH, sidebar;
 	private int current;
 
+	private boolean paletteOnOpen;
+
 	public ClientScreen() {
 		super(Component.literal("Femboy Client"));
+	}
+
+	/** The menu with the command palette already open (the palette's own key). */
+	public static ClientScreen withPalette() {
+		ClientScreen screen = new ClientScreen();
+		screen.paletteOnOpen = true;
+		return screen;
+	}
+
+	/** Opens the command palette over the current page. */
+	public CommandPalette openPalette() {
+		CommandPalette palette = new CommandPalette(this, ui);
+		ui.openOverlay(palette);
+		return palette;
 	}
 
 	@Override
@@ -79,8 +95,10 @@ public class ClientScreen extends Screen {
 			addCategoryPage("Visuals", "ESP with target lines, highlights, HUD panels and screen tools.", Icon.VISUAL, ModuleCategory.VISUALS,
 					ModuleCategory.HUD);
 			addCategoryPage("Inventory", "Item counters, refills, armor, sorting and hotbar layouts.", Icon.STORAGE, ModuleCategory.INVENTORY);
-			addCategoryPage("World", "World tools, players, alerts, waypoints, trackers and the Java runner.", Icon.GLOBE, ModuleCategory.WORLD,
-					ModuleCategory.TRACKERS, ModuleCategory.DEVELOPER);
+			addCategoryPage("World", "World analysis, schematics, building tools and the Java runner.", Icon.GLOBE, ModuleCategory.WORLD,
+					ModuleCategory.DEVELOPER);
+			addCategoryPage("Trackers", "Find players and places: trackers with target lines, alerts, waypoints and death points.", Icon.TARGET,
+					ModuleCategory.TRACKERS);
 			pages.add(new ProfilesPage(ui));
 			pages.add(new SettingsPage(ui));
 			current = Math.max(0, Math.min(pages.size() - 1, GuiState.page));
@@ -94,6 +112,10 @@ public class ClientScreen extends Screen {
 		ui.closeOverlay();
 		ui.focus(null);
 		applyScale();
+		if (paletteOnOpen) {
+			paletteOnOpen = false;
+			openPalette();
+		}
 	}
 
 	/** A category page; only added when at least one of its categories has modules. */
@@ -187,6 +209,7 @@ public class ClientScreen extends Screen {
 
 	/** Shows a module on its category page, selected. */
 	public void openModule(Module module) {
+		femboy.quickAccess().touch(module);
 		GuiState.selectedModule = module.id();
 		for (int i = 0; i < pages.size(); i++) {
 			if (pages.get(i) instanceof ModulesPage modulesPage && modulesPage.categories().contains(module.category())) {
@@ -222,6 +245,10 @@ public class ClientScreen extends Screen {
 
 	public int pageCount() {
 		return pages.size();
+	}
+
+	public Page page(int index) {
+		return pages.get(index);
 	}
 
 	/** Navigation labels in sidebar order (used by automated UI tests). */
@@ -283,7 +310,7 @@ public class ClientScreen extends Screen {
 		ui.glow(panelX + panelW * 4 / 5, panelY + panelH * 5 / 6, Math.max(120, panelW / 3), Theme.withAlpha(Theme.ACCENT_2, 0.18f * t));
 		// Fixed sparkle positions (relative to the screen), so they do not jump between frames.
 		int[][] sparkles = {{7, 12, 6}, {91, 9, 5}, {12, 88, 5}, {86, 84, 7}, {50, 4, 4}, {96, 47, 4}, {3, 52, 4}};
-		for (int[] s : sparkles) {
+		for (int[] s : Theme.BACKDROP_ART ? sparkles : new int[0][]) {
 			int sx = vw * s[0] / 100;
 			int sy = vh * s[1] / 100;
 			if (sx > panelX - 8 && sx < panelX + panelW + 8 && sy > panelY - 8 && sy < panelY + panelH + 8) {
@@ -380,7 +407,7 @@ public class ClientScreen extends Screen {
 
 			int color = i == current ? 0xFFFFFFFF : hot ? Theme.TEXT : Theme.TEXT_SECONDARY;
 			int textY = itemY + (navItem() - 3 - 8) / 2;
-			ui.icon(page.icon(), x + 11, textY, 9, i == current ? 0xFFFFFFFF : Theme.lerp(color, Theme.ACCENT, 0.45f));
+			ui.icon(page.icon(), x + 11, textY, 9, i == current ? 0xFFFFFFFF : Theme.ACCENT_ICONS ? Theme.lerp(color, Theme.ACCENT, 0.45f) : color);
 			ui.textClipped(page.navLabel(), x + 25, textY + 1, sidebar - 32, color);
 			if (hot) {
 				ui.tooltip(page, page.title() + ": " + page.subtitle());
@@ -431,6 +458,15 @@ public class ClientScreen extends Screen {
 		return bellX() - 6 - profileChipWidth();
 	}
 
+	private int paletteX() {
+		return search.x() - 18;
+	}
+
+	/** {x, y, width, height} of the command palette button (used by automated UI tests). */
+	public int[] paletteButtonBounds() {
+		return new int[] {paletteX(), panelY + 9, 15, 15};
+	}
+
 	private int unreadNotifications() {
 		int unread = 0;
 		for (Notifications.Toast toast : Notifications.history()) {
@@ -446,13 +482,24 @@ public class ClientScreen extends Screen {
 		Page page = pages.get(current);
 		int x = contentX();
 		ui.textScaled(page.title(), x, panelY + 8, 1.2f, Theme.TEXT);
-		int subtitleWidth = search.x() - x - 8;
+		int subtitleWidth = paletteX() - x - 8;
 		boolean cut = ui.textClipped(page.subtitle(), x, panelY + 21, subtitleWidth, Theme.TEXT_MUTED);
 		if (cut && ui.hovered(x, panelY + 19, subtitleWidth, 10)) {
 			ui.tooltip(page.subtitle(), page.subtitle());
 		}
 
 		search.render(ui);
+
+		// Command palette button, left of the search field.
+		int px = paletteX();
+		boolean paletteHot = ui.hovered(px, panelY + 9, 15, 15);
+		if (paletteHot) {
+			ui.roundRect(px, panelY + 9, 15, 15, Theme.SURFACE_HOVER, 5);
+			ui.pointer();
+			ui.tooltip("palette", "Command palette (Ctrl+K): find and run modules, pages, profiles, settings and actions.");
+		}
+
+		ui.icon(Icon.COMMAND, px + 3, panelY + 12, 9, paletteHot ? Theme.TEXT : Theme.TEXT_MUTED);
 
 		// Profile selector: the active profile; a click opens the list.
 		String profile = femboy.config().activeProfile();
@@ -579,7 +626,7 @@ public class ClientScreen extends Screen {
 			} else if (index >= 0 && index < names.size()) {
 				String name = names.get(index);
 				String problem = femboy.config().switchProfile(name);
-				Notifications.show("Profile", problem == null ? "switched to " + name : problem, problem == null ? Theme.SUCCESS : Theme.ERROR);
+				Notifications.post(Notifications.Category.PROFILE, "Profile", problem == null ? "switched to " + name : problem, problem == null ? Theme.SUCCESS : Theme.ERROR);
 			}
 
 			return true;
@@ -663,6 +710,11 @@ public class ClientScreen extends Screen {
 			return true;
 		}
 
+		if (UiContext.inside(mx, my, paletteX(), panelY + 9, 15, 15)) {
+			openPalette();
+			return true;
+		}
+
 		if (search.mouseClicked(ui, mx, my, button)) {
 			return true;
 		}
@@ -709,6 +761,10 @@ public class ClientScreen extends Screen {
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
+		if (ui.overlay() instanceof CommandPalette palette) {
+			return palette.mouseScrolled(ui, toVirtual(mouseX), toVirtual(mouseY), vertical);
+		}
+
 		if (ui.overlay() != null) {
 			ui.closeOverlay();
 			return true;
@@ -719,6 +775,16 @@ public class ClientScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
+		if (ui.overlay() instanceof CommandPalette palette) {
+			palette.keyPressed(ui, event);
+			return true;
+		}
+
+		if (control(event) && (event.key() == GLFW.GLFW_KEY_K || event.key() == GLFW.GLFW_KEY_P) && (ui.focused() == null || ui.focused() == search)) {
+			openPalette();
+			return true;
+		}
+
 		if (ui.overlay() != null && event.key() == GLFW.GLFW_KEY_ESCAPE) {
 			// An open list (profiles, notifications, a dropdown) closes first, whatever has the keyboard.
 			ui.closeOverlay();
@@ -747,12 +813,12 @@ public class ClientScreen extends Screen {
 			return true;
 		}
 
-		if (event.hasControlDown() && event.key() == GLFW.GLFW_KEY_F) {
+		if (control(event) && event.key() == GLFW.GLFW_KEY_F) {
 			ui.focus(search);
 			return true;
 		}
 
-		if (event.hasControlDown() && event.key() == GLFW.GLFW_KEY_TAB) {
+		if (control(event) && event.key() == GLFW.GLFW_KEY_TAB) {
 			showPage((current + (event.hasShiftDown() ? pages.size() - 1 : 1)) % pages.size());
 			return true;
 		}
@@ -766,6 +832,10 @@ public class ClientScreen extends Screen {
 
 	@Override
 	public boolean charTyped(CharacterEvent event) {
+		if (ui.overlay() instanceof CommandPalette palette) {
+			return palette.charTyped(ui, event);
+		}
+
 		Widget focused = ui.focused();
 		if (focused != null) {
 			return focused.charTyped(ui, event);
@@ -777,5 +847,12 @@ public class ClientScreen extends Screen {
 	@Override
 	public void removed() {
 		femboy.config().tick();
+	}
+
+	/** Ctrl (Cmd on macOS) is held: from the event, or from the window's key state when the event lacks it. */
+	private boolean control(KeyEvent event) {
+		var window = minecraft.getWindow();
+		return event.hasControlDownWithQuirk() || com.mojang.blaze3d.platform.InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_CONTROL)
+				|| com.mojang.blaze3d.platform.InputConstants.isKeyDown(window, GLFW.GLFW_KEY_RIGHT_CONTROL);
 	}
 }

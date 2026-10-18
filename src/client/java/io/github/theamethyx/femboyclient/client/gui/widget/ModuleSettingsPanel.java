@@ -44,6 +44,37 @@ public class ModuleSettingsPanel extends Container {
 			}
 		}).icon(Icon.RESET));
 		reset.tooltip("Restore this module's settings, key, key mode and on/off state to the defaults.");
+		star = add(new FavoriteStar());
+	}
+
+	private final FavoriteStar star;
+
+	/** Star in the header: marks the module as a favorite (Home, command palette, quick toggle wheel). */
+	private final class FavoriteStar extends Widget {
+		@Override
+		public void render(UiContext ui) {
+			if (module == null) {
+				return;
+			}
+
+			boolean favorite = FemboyClient.get().quickAccess().isFavorite(module);
+			boolean hot = hovered(ui);
+			ui.icon(Icon.STAR, x + 2, y + 2, 10, favorite ? Theme.WARNING : hot ? Theme.TEXT : Theme.TEXT_MUTED);
+			if (hot) {
+				ui.pointer();
+				ui.tooltip(this, favorite ? "Remove from favorites." : "Add to favorites: shown on Home, first in the command palette and on the quick toggle wheel.");
+			}
+		}
+
+		@Override
+		public boolean mouseClicked(UiContext ui, double mouseX, double mouseY, int button) {
+			if (module == null || button != 0 || !contains(mouseX, mouseY)) {
+				return false;
+			}
+
+			FemboyClient.get().quickAccess().toggleFavorite(module);
+			return true;
+		}
 	}
 
 	public Module module() {
@@ -88,6 +119,7 @@ public class ModuleSettingsPanel extends Container {
 
 		int top = y + headerHeight();
 		toggle.setBounds(x + width - ToggleSwitch.WIDTH - 22, y + 9, ToggleSwitch.WIDTH, ToggleSwitch.HEIGHT);
+		star.setBounds(x + width - ToggleSwitch.WIDTH - 40, y + 6, 14, 14);
 		content.setBounds(x + 6, top + TAB_HEIGHT + 6, width - 12, height - (top - y) - TAB_HEIGHT - 6 - FOOTER - 4);
 		reset.setBounds(x + 6, y + height - FOOTER, width - 12, 16);
 	}
@@ -176,7 +208,7 @@ public class ModuleSettingsPanel extends Container {
 		// Header: icon, name, badges, description.
 		ui.gradientRect(x + 8, y + 7, 20, 20, Theme.ACCENT, Theme.ACCENT_2, 6);
 		ui.icon(Icon.byName(module.category().icon()), x + 13, y + 12, 10, 0xFFFFFFFF);
-		ui.textScaled(ui.ellipsize(module.name(), Math.round((width - 90) / 1.25f)), x + 33, y + 6, 1.25f, Theme.TEXT);
+		ui.textScaled(ui.ellipsize(module.name(), Math.round((width - 110) / 1.25f)), x + 33, y + 6, 1.25f, Theme.TEXT);
 		Module.Tier tier = module.tier();
 		int badgeX = x + 33;
 		int categoryWidth = Math.round(ui.textWidth(module.category().label()) * 0.75f) + 8;

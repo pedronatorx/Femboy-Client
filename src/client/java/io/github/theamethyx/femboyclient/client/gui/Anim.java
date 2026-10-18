@@ -5,6 +5,8 @@ package io.github.theamethyx.femboyclient.client.gui;
  * disabled in the options it jumps straight to the target.
  */
 public final class Anim {
+	/** Global animation speed (Theme Studio): 1 normal, 2 twice as fast. */
+	public static float SPEED = 1;
 	private final float speed;
 	private float value;
 	private float target;
@@ -21,7 +23,7 @@ public final class Anim {
 		if (!animate) {
 			value = target;
 		} else {
-			value += (target - value) * (1 - (float) Math.exp(-speed * frameSeconds));
+			value += (target - value) * (1 - (float) Math.exp(-speed * SPEED * frameSeconds));
 			if (Math.abs(target - value) < 0.001f) {
 				value = target;
 			}

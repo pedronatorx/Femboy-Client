@@ -36,7 +36,12 @@ import io.github.theamethyx.femboyclient.core.setting.ModuleSettings;
  *   profiles/&lt;name&gt;.json    module state for one profile
  *   *.bak                   previous version of each file (written before every save)
  *   *.corrupt-&lt;time&gt;       unreadable files moved aside, never deleted
+ *   profiles/*.before-repair-&lt;time&gt;  a profile as it was before invalid values in it were replaced by defaults
+ *   restore-points/&lt;time&gt;-&lt;label&gt;/  copies of all files, made by you or before risky changes (newest 20 kept)
  * </pre>
+ *
+ * <p>Nothing you saved is dropped silently: values for modules or settings this version does not know are written back
+ * unchanged, and a profile whose values had to be replaced is copied first.
  *
  * Changes are saved shortly after they happen ({@link #tick()}) and on shutdown. Automatic saves serialize the state
  * on the calling (client) thread and write the files on the {@code writer} executor, so the game never waits for the
@@ -46,7 +51,10 @@ import io.github.theamethyx.femboyclient.core.setting.ModuleSettings;
  * are applied when the profile is loaded, so switching profiles switches them too.
  */
 public final class ConfigurationManager {
-	public static final int SCHEMA_VERSION = 2;
+	/** 3: profiles may hold "sections" (the HUD layout) and the global file a profile history. */
+	public static final int SCHEMA_VERSION = 3;
+	public static final int MAX_RESTORE_POINTS = 20;
+	public static final int MAX_HISTORY = 20;
 	public static final String DEFAULT_PROFILE = "default";
 	public static final long AUTOSAVE_DELAY_MILLIS = 1500;
 	private static final Pattern PROFILE_NAME = Pattern.compile("[A-Za-z0-9_-]{1,32}");
@@ -72,6 +80,18 @@ public final class ConfigurationManager {
 	/** Failures from background writes, reported on the client thread at the next tick. */
 	private final ConcurrentLinkedQueue<String> writeFailures = new ConcurrentLinkedQueue<>();
 	private Set<String> profileOptionIds = Set.of();
+	private Set<String> profileSectionKeys = Set.of();
+	/** Profiles switched away from, newest last. */
+	private final List<HistoryEntry> history = new ArrayList<>();
+	private final List<Runnable> loadListeners = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+	/** A profile you switched away from, and when. */
+	public record HistoryEntry(String profile, long timeMillis) {
+	}
+
+	/** A saved copy of all configuration files. {@code profiles} are the profile names it contains. */
+	public record RestorePoint(String id, String label, long createdMillis, List<String> profiles) {
+	}
 
 	/** Writes files synchronously on the calling thread (used by tests and tools). */
 	public ConfigurationManager(Path root, ModuleManager modules, ModuleSettings globalSettings, DiagnosticLogger diagnostics, LongSupplier clock) {
@@ -109,6 +129,7 @@ public final class ConfigurationManager {
 			globalSettings.resetAll();
 			profileRules.clear();
 			sections.clear();
+			history.clear();
 
 			if (global != null) {
 				checkSchema(global, "Global settings", report);
@@ -117,6 +138,15 @@ public final class ConfigurationManager {
 				}
 
 				profileRules.addAll(ProfileRule.fromJson(global.get("profileRules"), report));
+				readHistory(global.get("profileHistory"));
+				if (global.get("schemaVersion") instanceof JsonPrimitive version && version.isNumber() && version.getAsInt() < SCHEMA_VERSION) {
+					// The files are about to be rewritten in the new format: keep the old ones.
+					String problem = snapshotFiles("Before updating the configuration format");
+					if (problem != null) {
+						report.add("Could not keep a copy of the old configuration: " + problem);
+					}
+				}
+
 				if (global.get("sections") instanceof JsonObject saved) {
 					saved.entrySet().forEach(entry -> sections.put(entry.getKey(), entry.getValue().deepCopy()));
 				}
@@ -139,7 +169,23 @@ public final class ConfigurationManager {
 		// Write back immediately so recovered or newly created files exist on disk.
 		saveNow();
 		finishReport(report);
+		fireLoaded();
 		return report;
+	}
+
+	/** Called on the calling thread after a profile was loaded (startup, switch, restore, reset), for state outside modules. */
+	public void addLoadListener(Runnable listener) {
+		loadListeners.add(listener);
+	}
+
+	private void fireLoaded() {
+		for (Runnable listener : loadListeners) {
+			try {
+				listener.run();
+			} catch (RuntimeException e) {
+				diagnostics.error(SOURCE, "Applying the loaded profile failed in part: " + e.getMessage(), e);
+			}
+		}
 	}
 
 	private void loadProfileInto(String name, List<String> report) {
@@ -155,10 +201,47 @@ public final class ConfigurationManager {
 		checkSchema(profile, "Profile '" + name + "'", report);
 		JsonObject moduleJson = profile.get("modules") instanceof JsonObject object ? object : new JsonObject();
 		migrate(moduleJson, "Profile '" + name + "'");
-		modules.loadModules(moduleJson).forEach(warning -> report.add("Profile '" + name + "': " + warning));
+		List<String> warnings = modules.loadModules(moduleJson);
+		warnings.forEach(warning -> report.add("Profile '" + name + "': " + warning));
+		if (!warnings.isEmpty()) {
+			keepOriginal(name, report);
+		}
+
 		if (profile.get("options") instanceof JsonObject options) {
 			applyProfileOptions(options, name, report);
 		}
+
+		if (profile.get("sections") instanceof JsonObject saved) {
+			for (String key : profileSectionKeys) {
+				if (saved.get(key) != null) {
+					sections.put(key, saved.get(key).deepCopy());
+				}
+			}
+		}
+	}
+
+	/** Copies a profile whose values were just replaced by defaults, before the next save overwrites them. */
+	private void keepOriginal(String name, List<String> report) {
+		Path file = profileFile(name);
+		if (!Files.exists(file)) {
+			return;
+		}
+
+		Path copy = file.resolveSibling(name + ".json.before-repair-" + timestamp());
+		try {
+			Files.copy(file, copy, StandardCopyOption.REPLACE_EXISTING);
+			report.add("Profile '" + name + "': the file as it was is kept as " + copy.getFileName() + ".");
+		} catch (IOException e) {
+			report.add("Profile '" + name + "': could not keep a copy of the original file (" + e.getMessage() + ").");
+		}
+	}
+
+	/**
+	 * Which client-wide sections (by key, e.g. the HUD layout) each profile stores as well: when a profile with that
+	 * section is loaded, its copy replaces the current one. A profile without it keeps the current one.
+	 */
+	public void setProfileSections(Set<String> keys) {
+		profileSectionKeys = Set.copyOf(keys);
 	}
 
 	private void migrate(JsonObject moduleJson, String what) {
@@ -307,6 +390,17 @@ public final class ConfigurationManager {
 			json.add("options", profileOptionsJson());
 		}
 
+		JsonObject saved = new JsonObject();
+		for (String key : profileSectionKeys) {
+			if (sections.get(key) != null) {
+				saved.add(key, sections.get(key).deepCopy());
+			}
+		}
+
+		if (!saved.isEmpty()) {
+			json.add("sections", saved);
+		}
+
 		return json;
 	}
 
@@ -316,6 +410,15 @@ public final class ConfigurationManager {
 		json.addProperty("activeProfile", activeProfile);
 		json.add("settings", globalSettings.toJson());
 		json.add("profileRules", ProfileRule.toJson(profileRules));
+		com.google.gson.JsonArray historyJson = new com.google.gson.JsonArray();
+		for (HistoryEntry entry : history) {
+			JsonObject item = new JsonObject();
+			item.addProperty("profile", entry.profile());
+			item.addProperty("time", entry.timeMillis());
+			historyJson.add(item);
+		}
+
+		json.add("profileHistory", historyJson);
 		JsonObject savedSections = new JsonObject();
 		sections.forEach((key, value) -> savedSections.add(key, value.deepCopy()));
 		json.add("sections", savedSections);
@@ -394,6 +497,7 @@ public final class ConfigurationManager {
 		saveNow();
 		List<String> report = new ArrayList<>();
 		applying = true;
+		String previous = activeProfile;
 
 		try {
 			activeProfile = name;
@@ -402,10 +506,136 @@ public final class ConfigurationManager {
 			applying = false;
 		}
 
+		remember(previous);
 		saveNow();
 		diagnostics.info(SOURCE, "Switched to profile '" + name + "'.");
 		finishReport(report);
+		fireLoaded();
 		return null;
+	}
+
+	private void remember(String profile) {
+		history.removeIf(entry -> entry.profile().equals(profile));
+		history.add(new HistoryEntry(profile, clock.getAsLong()));
+		while (history.size() > MAX_HISTORY) {
+			history.removeFirst();
+		}
+	}
+
+	private void readHistory(JsonElement json) {
+		if (json instanceof com.google.gson.JsonArray array) {
+			for (JsonElement element : array) {
+				if (element instanceof JsonObject item && item.get("profile") instanceof JsonPrimitive profile && profile.isString()
+						&& isValidProfileName(profile.getAsString()) && item.get("time") instanceof JsonPrimitive time && time.isNumber()) {
+					history.add(new HistoryEntry(profile.getAsString(), time.getAsLong()));
+				}
+			}
+
+			while (history.size() > MAX_HISTORY) {
+				history.removeFirst();
+			}
+		}
+	}
+
+	/** Profiles you switched away from, newest first (only those that still exist). */
+	public List<HistoryEntry> history() {
+		List<HistoryEntry> result = new ArrayList<>();
+		for (int i = history.size() - 1; i >= 0; i--) {
+			HistoryEntry entry = history.get(i);
+			if (!entry.profile().equals(activeProfile) && profileExists(entry.profile())) {
+				result.add(entry);
+			}
+		}
+
+		return result;
+	}
+
+	/** The profile used before the current one, or {@code null}. */
+	public String previousProfile() {
+		List<HistoryEntry> entries = history();
+		return entries.isEmpty() ? null : entries.getFirst().profile();
+	}
+
+	/** Switches back to {@link #previousProfile()}. @return {@code null} on success, otherwise a readable reason */
+	public String revertProfile() {
+		String previous = previousProfile();
+		return previous == null ? "There is no earlier profile to go back to." : switchProfile(previous);
+	}
+
+	/**
+	 * Renames a profile (also the active one). Switching rules and the history follow the new name.
+	 *
+	 * @return {@code null} on success, otherwise a readable reason
+	 */
+	public String renameProfile(String from, String to) {
+		if (!profileExists(from)) {
+			return "Profile '" + from + "' does not exist.";
+		}
+
+		if (!isValidProfileName(to)) {
+			return "Use 1-32 letters, digits, '-' or '_'.";
+		}
+
+		if (from.equals(to)) {
+			return null;
+		}
+
+		if (!from.equalsIgnoreCase(to)) {
+			String problem = checkNewProfileName(to);
+			if (problem != null) {
+				return problem;
+			}
+		}
+
+		boolean active = from.equals(activeProfile);
+		if (active) {
+			saveNow();
+		} else {
+			flushWrites();
+		}
+
+		try {
+			Files.move(profileFile(from), profileFile(to), StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException e) {
+			return "Could not rename the profile file: " + e.getMessage();
+		}
+
+		if (active) {
+			activeProfile = to;
+		}
+
+		profileRules.replaceAll(rule -> rule.profile().equals(from) ? new ProfileRule(rule.item(), rule.dimension(), to) : rule);
+		history.replaceAll(entry -> entry.profile().equals(from) ? new HistoryEntry(to, entry.timeMillis()) : entry);
+		saveNow();
+		diagnostics.info(SOURCE, "Renamed profile '" + from + "' to '" + to + "'.");
+		return null;
+	}
+
+	/**
+	 * What differs between two profiles: modules, keys, settings and stored client options. Either may be the active
+	 * profile (its live state is used). {@code null} if one of them could not be read.
+	 */
+	public List<ConfigDiff.Difference> diffProfiles(String left, String right) {
+		JsonObject leftModules = profileModules(left);
+		JsonObject rightModules = profileModules(right);
+		if (leftModules == null || rightModules == null) {
+			return null;
+		}
+
+		return ConfigDiff.compare(modules, leftModules, rightModules, globalSettings, profileOptions(left), profileOptions(right));
+	}
+
+	/** The client options a profile stores, or {@code null} when it stores none or cannot be read. */
+	private JsonObject profileOptions(String name) {
+		if (name.equals(activeProfile)) {
+			return profileOptionIds.isEmpty() ? null : profileOptionsJson();
+		}
+
+		try {
+			return Files.exists(profileFile(name)) && JsonFiles.readObject(profileFile(name)).get("options") instanceof JsonObject options ? options : null;
+		} catch (IOException e) {
+			return null;
+		}
 	}
 
 	/** Deletes a profile that is not active. The file is moved aside as a backup, not erased. */
@@ -544,6 +774,13 @@ public final class ConfigurationManager {
 		List<String> warnings = new ArrayList<>();
 		JsonObject clean = modules.sanitizeModules(modulesJson, warnings);
 		warnings.forEach(warning -> diagnostics.warn(SOURCE, "Profile '" + name + "': " + warning));
+		if (profileExists(name)) {
+			String problem = createRestorePoint("Before replacing profile " + name);
+			if (problem != null) {
+				return problem;
+			}
+		}
+
 		JsonObject json = new JsonObject();
 		json.addProperty("schemaVersion", SCHEMA_VERSION);
 		json.add("modules", clean);
@@ -564,10 +801,217 @@ public final class ConfigurationManager {
 			}
 
 			finishReport(report);
+			fireLoaded();
 		}
 
 		diagnostics.info(SOURCE, "Wrote profile '" + name + "'.");
 		return null;
+	}
+
+	/**
+	 * Resets everything to a fresh installation's state: client options, switching rules, the HUD layout and other client
+	 * data, and every module of the active profile (all off). Other profiles are kept. A restore point is made first.
+	 *
+	 * @return {@code null} on success, otherwise why the restore point could not be made (nothing was reset then)
+	 */
+	public String resetEverything() {
+		String problem = createRestorePoint("Before resetting everything");
+		if (problem != null) {
+			return problem;
+		}
+
+		applying = true;
+		try {
+			globalSettings.resetAll();
+			profileRules.clear();
+			sections.clear();
+			for (var module : modules.all()) {
+				modules.resetToDefaults(module);
+			}
+		} finally {
+			applying = false;
+		}
+
+		saveNow();
+		diagnostics.info(SOURCE, "Reset all settings to defaults (a restore point was made first).");
+		fireLoaded();
+		return null;
+	}
+
+	// ----- restore points --------------------------------------------------------------------
+
+	/**
+	 * Saves the current state and copies all configuration files into a new restore point.
+	 *
+	 * @return {@code null} on success, otherwise a readable reason
+	 */
+	public String createRestorePoint(String label) {
+		saveNow();
+		return snapshotFiles(label);
+	}
+
+	/** Copies the files as they are on disk now (without saving first). */
+	private String snapshotFiles(String label) {
+		flushWrites();
+		String slug = label.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
+		Path dir = root.resolve("restore-points").resolve(timestamp() + (slug.isEmpty() ? "" : "-" + slug.substring(0, Math.min(40, slug.length()))));
+		try {
+			Files.createDirectories(dir.resolve("profiles"));
+			if (Files.exists(globalFile())) {
+				Files.copy(globalFile(), dir.resolve("femboyclient.json"), StandardCopyOption.REPLACE_EXISTING);
+			}
+
+			Path profiles = root.resolve("profiles");
+			if (Files.isDirectory(profiles)) {
+				try (DirectoryStream<Path> stream = Files.newDirectoryStream(profiles, "*.json")) {
+					for (Path file : stream) {
+						Files.copy(file, dir.resolve("profiles").resolve(file.getFileName()), StandardCopyOption.REPLACE_EXISTING);
+					}
+				}
+			}
+
+			JsonObject info = new JsonObject();
+			info.addProperty("label", label);
+			info.addProperty("created", clock.getAsLong());
+			info.addProperty("schemaVersion", SCHEMA_VERSION);
+			JsonFiles.writeAtomically(dir.resolve("info.json"), info);
+		} catch (IOException e) {
+			diagnostics.error(SOURCE, "Could not create a restore point: " + e.getMessage(), e);
+			return "Could not create the restore point: " + e.getMessage();
+		}
+
+		diagnostics.info(SOURCE, "Created restore point '" + label + "'.");
+		pruneRestorePoints();
+		return null;
+	}
+
+	private void pruneRestorePoints() {
+		List<RestorePoint> points = restorePoints();
+		for (int i = MAX_RESTORE_POINTS; i < points.size(); i++) {
+			deleteRestorePoint(points.get(i).id());
+		}
+	}
+
+	/** Restore points, newest first. */
+	public List<RestorePoint> restorePoints() {
+		List<RestorePoint> points = new ArrayList<>();
+		Path dir = root.resolve("restore-points");
+		if (!Files.isDirectory(dir)) {
+			return points;
+		}
+
+		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, Files::isDirectory)) {
+			for (Path point : stream) {
+				String label = point.getFileName().toString();
+				long created = 0;
+				try {
+					JsonObject info = JsonFiles.readObject(point.resolve("info.json"));
+					if (info.get("label") instanceof JsonPrimitive primitive && primitive.isString()) label = primitive.getAsString();
+					if (info.get("created") instanceof JsonPrimitive primitive && primitive.isNumber()) created = primitive.getAsLong();
+				} catch (IOException e) {
+					// A point without readable info is still listed under its folder name.
+				}
+
+				List<String> names = new ArrayList<>();
+				if (Files.isDirectory(point.resolve("profiles"))) {
+					try (DirectoryStream<Path> files = Files.newDirectoryStream(point.resolve("profiles"), "*.json")) {
+						for (Path file : files) {
+							String fileName = file.getFileName().toString();
+							names.add(fileName.substring(0, fileName.length() - ".json".length()));
+						}
+					}
+				}
+
+				names.sort(String.CASE_INSENSITIVE_ORDER);
+				points.add(new RestorePoint(point.getFileName().toString(), label, created, List.copyOf(names)));
+			}
+		} catch (IOException e) {
+			diagnostics.warn(SOURCE, "Could not list restore points: " + e.getMessage());
+		}
+
+		points.sort(java.util.Comparator.comparing(RestorePoint::id).reversed());
+		return points;
+	}
+
+	/**
+	 * Puts the files of a restore point back and loads them. A restore point of the current state is made first, so this
+	 * can be undone. Profiles created after the point are kept.
+	 *
+	 * @return {@code null} on success, otherwise a readable reason
+	 */
+	public String restore(String id) {
+		Path point = restorePointDir(id);
+		if (point == null) {
+			return "That restore point does not exist.";
+		}
+
+		// Read the point first: making the new restore point may prune old ones, this one included.
+		JsonObject global = null;
+		java.util.Map<Path, JsonObject> profileFiles = new java.util.LinkedHashMap<>();
+		try {
+			if (Files.exists(point.resolve("femboyclient.json"))) {
+				global = JsonFiles.readObject(point.resolve("femboyclient.json"));
+			}
+
+			if (Files.isDirectory(point.resolve("profiles"))) {
+				try (DirectoryStream<Path> files = Files.newDirectoryStream(point.resolve("profiles"), "*.json")) {
+					for (Path file : files) {
+						profileFiles.put(root.resolve("profiles").resolve(file.getFileName()), JsonFiles.readObject(file));
+					}
+				}
+			}
+		} catch (IOException e) {
+			return "The restore point could not be read (" + e.getMessage() + "); nothing was changed.";
+		}
+
+		String problem = createRestorePoint("Before restoring " + id);
+		if (problem != null) {
+			return problem;
+		}
+
+		try {
+			if (global != null) {
+				JsonFiles.writeAtomically(globalFile(), global);
+			}
+
+			for (var entry : profileFiles.entrySet()) {
+				JsonFiles.writeAtomically(entry.getKey(), entry.getValue());
+			}
+		} catch (IOException e) {
+			diagnostics.error(SOURCE, "Restoring failed: " + e.getMessage(), e);
+			return "Restoring failed (" + e.getMessage() + "). Your previous state is in the newest restore point.";
+		}
+
+		load();
+		diagnostics.info(SOURCE, "Restored the configuration from restore point " + id + ".");
+		return null;
+	}
+
+	/** Deletes a restore point folder. @return {@code null} on success, otherwise a readable reason */
+	public String deleteRestorePoint(String id) {
+		Path point = restorePointDir(id);
+		if (point == null) {
+			return "That restore point does not exist.";
+		}
+
+		try (var walk = Files.walk(point)) {
+			for (Path path : walk.sorted(java.util.Comparator.reverseOrder()).toList()) {
+				Files.delete(path);
+			}
+		} catch (IOException e) {
+			return "Could not delete the restore point: " + e.getMessage();
+		}
+
+		return null;
+	}
+
+	private Path restorePointDir(String id) {
+		if (id == null || !id.matches("[A-Za-z0-9-]{1,80}")) {
+			return null;
+		}
+
+		Path dir = root.resolve("restore-points").resolve(id);
+		return Files.isDirectory(dir) ? dir : null;
 	}
 
 	/** Resets every module of the active profile to its defaults (all modules off) and saves. */
@@ -618,6 +1062,44 @@ public final class ConfigurationManager {
 			diagnostics.warn(SOURCE, "Could not read profile '" + name + "': " + e.getMessage());
 			return null;
 		}
+	}
+
+	/**
+	 * Checks every profile without applying anything: the values each one holds that this version would replace by defaults,
+	 * and files that cannot be read. Unknown modules are listed as notes (they are kept, not dropped).
+	 *
+	 * @return problems by profile name; profiles without problems map to an empty list
+	 */
+	public java.util.Map<String, List<String>> validateProfiles() {
+		java.util.Map<String, List<String>> result = new java.util.LinkedHashMap<>();
+		for (String name : profiles()) {
+			List<String> problems = new ArrayList<>();
+			JsonObject modulesJson;
+			if (name.equals(activeProfile)) {
+				modulesJson = modules.saveModules();
+			} else {
+				try {
+					JsonObject file = JsonFiles.readObject(profileFile(name));
+					checkSchema(file, "The file", problems);
+					modulesJson = file.get("modules") instanceof JsonObject object ? object : new JsonObject();
+					ConfigMigrations.migrateModules(modulesJson);
+				} catch (IOException e) {
+					problems.add("The file cannot be read: " + e.getMessage());
+					result.put(name, problems);
+					continue;
+				}
+			}
+
+			List<String> warnings = new ArrayList<>();
+			modules.sanitizeModules(modulesJson, warnings);
+			for (String warning : warnings) {
+				problems.add(warning.startsWith("Unknown module") ? warning.replace("was skipped.", "is kept unchanged (not part of this version).") : warning);
+			}
+
+			result.put(name, problems);
+		}
+
+		return result;
 	}
 
 	public boolean profileExists(String name) {

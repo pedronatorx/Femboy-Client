@@ -74,4 +74,9 @@ public final class BetterChatModule extends Module {
 
 		return new Decorated(result, repeat);
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("chat timestamps", "chat");
+	}
 }

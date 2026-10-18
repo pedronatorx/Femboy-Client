@@ -68,4 +68,9 @@ public final class KeystrokesModule extends Module implements ClientHooks.HudWid
 		ui.roundRect(x, y, w, h, down ? Theme.withAlpha(Theme.ACCENT, 0.85f) : Theme.withAlpha(Theme.SURFACE, 0.8f));
 		ui.textCentered(label, x + w / 2, y + (h - 8) / 2, down ? 0xFFFFFFFF : Theme.TEXT_SECONDARY);
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("cps", "keys");
+	}
 }

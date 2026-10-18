@@ -78,4 +78,9 @@ public final class ModuleListHudModule extends Module implements ClientHooks.Hud
 			lines.add(new HudLine("", module.name(), running ? Theme.TEXT : Theme.TEXT_MUTED, running ? Theme.ACCENT : Theme.BORDER_STRONG));
 		}
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("array list", "arraylist", "enabled modules");
+	}
 }

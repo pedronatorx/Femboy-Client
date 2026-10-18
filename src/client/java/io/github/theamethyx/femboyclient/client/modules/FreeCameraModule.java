@@ -278,4 +278,9 @@ public final class FreeCameraModule extends Module implements ClientHooks.HudBlo
 			lines.add(HudLine.of("Edge of loaded chunks", "", Theme.WARNING));
 		}
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("freecam", "spectator camera");
+	}
 }

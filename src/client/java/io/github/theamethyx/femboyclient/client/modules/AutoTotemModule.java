@@ -97,4 +97,9 @@ public final class AutoTotemModule extends Module {
 			}
 		}
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("auto offhand", "offhand");
+	}
 }

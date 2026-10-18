@@ -83,4 +83,9 @@ public final class DeathCoordinatesModule extends Module implements ClientHooks.
 					last.dimension().replace("minecraft:", ""), minutes), Theme.WARNING));
 		}
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("death point", "last death");
+	}
 }

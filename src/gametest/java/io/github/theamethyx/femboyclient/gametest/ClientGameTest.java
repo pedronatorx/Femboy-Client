@@ -64,7 +64,8 @@ public class ClientGameTest implements FabricClientGameTest {
 	static final BlockPos PLAYER = new BlockPos(0, -60, 0);
 	/** Center of the geode fixture's stone cube; the cube spans chunks x -1..1, z 0..2. */
 	static final BlockPos GEODE_CENTER = new BlockPos(0, -41, 30);
-	static final List<String> NAVIGATION = List.of("Home", "Combat", "Automation", "Movement", "Visuals", "Inventory", "World", "Profiles", "Settings");
+	static final List<String> NAVIGATION = List.of("Home", "Combat", "Automation", "Movement", "Visuals", "Inventory", "World", "Trackers", "Profiles",
+			"Settings");
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
@@ -80,7 +81,7 @@ public class ClientGameTest implements FabricClientGameTest {
 
 		report.check("Femboy Client entrypoint ran", context.computeOnClient(client -> FemboyClient.get() != null && FemboyClient.get().modules() != null));
 		int moduleCount = context.computeOnClient(client -> FemboyClient.get().modules().all().size());
-		report.check("All 72 modules registered", moduleCount == 72, String.valueOf(moduleCount));
+		report.check("All 77 modules registered", moduleCount == 77, String.valueOf(moduleCount));
 		FoundationTest.firstLaunch(context, report);
 		// Deterministic screenshots: no easing between frames.
 		context.runOnClient(client -> FemboyClient.get().options().animations.set(false));
@@ -121,6 +122,7 @@ public class ClientGameTest implements FabricClientGameTest {
 			AdvancedFeaturesTest.freeCamera(context, ui, singleplayer, report);
 			AdvancedFeaturesTest.javaRunner(context, ui, report);
 			OverhaulTest.run(context, singleplayer, ui, report);
+			ProductTest.run(context, singleplayer, ui, report);
 
 			int errors = context.computeOnClient(client -> FemboyClient.get().diagnostics().errorCount());
 			report.check("No module errors were logged during the run", errors == 0, errors == 0 ? ""
@@ -824,11 +826,11 @@ public class ClientGameTest implements FabricClientGameTest {
 		context.takeScreenshot("visuals-entity-esp-colors");
 
 		showPage(context, "Settings");
-		context.runOnClient(client -> ((SettingsPage) ((ClientScreen) client.screen).currentPage()).showTab(1));
+		context.runOnClient(client -> ((SettingsPage) ((ClientScreen) client.screen).currentPage()).showTab("Developer"));
 		context.waitTicks(3);
 		boolean diagnostics = context.computeOnClient(client -> ((SettingsPage) ((ClientScreen) client.screen).currentPage()).activeTab().title()
-				.equals("Diagnostics"));
-		report.check("Settings has a Diagnostics tab", diagnostics);
+				.equals("Developer"));
+		report.check("Settings has a Developer tab (health monitor, diagnostics and the log)", diagnostics);
 		context.takeScreenshot("settings-diagnostics");
 		context.runOnClient(client -> ((SettingsPage) ((ClientScreen) client.screen).currentPage()).showTab(0));
 		closeMenu(context, ui);

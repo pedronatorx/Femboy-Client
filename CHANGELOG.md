@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.0.0 - 2026-10-18
+
+### Added
+- **Command palette** (Ctrl+K or Ctrl+P in the menu, the header button, or its own key, unbound by default): find and run modules (Enter toggles, Tab opens settings), pages and settings tabs, profiles, individual settings, theme presets and actions (HUD editor, save, restore point, back to the previous profile, performance mode, timeline marker, diagnostic report, emergency off). With nothing typed it lists favorites, recently used modules and a pending rule suggestion. Arrow keys, Page Up/Down and mouse work.
+- **Favorites and recently used:** a star in a module's settings header; Home shows Favorites and Recently used cards first. Stored once for all profiles.
+- **Quick toggle wheel** (hold its key; unbound by default): up to eight favorites (then recent modules) and "previous profile" around the crosshair; point and release.
+- **Theme Studio** (Settings, Appearance): presets Default purple, Deep violet, Midnight, Minimal dark, High contrast and Reduced motion; custom accent and second accent, background and text colors, panel opacity, corner style, colored or plain icons, background art, HUD background opacity, animation speed; a live preview; save, share (as text), import (validated) and delete your own themes. All of it is stored per profile.
+- **Performance Center** (Settings, Performance): FPS, frame times and a frame graph, the client's share of each frame, memory, the cost of every running module per tick, HUD frame and world frame, what busy modules are working on, the update rates of the current mode, warnings and recommendations derived from the measurements, an **on/off comparison** for one visual or assist module, optional allocation measurement and an exportable **diagnostic report** (no server address, chat or names).
+- **Developer tab** (Settings, Developer): the **module health monitor** (Active, Waiting, Unsupported here, Reduced, Suspended, Error, Off, with the reason, last update, errors, cost and current work), dependencies and conflicts, a **configuration validator** for all profiles, the newest crash reports, event counters, raw call timings and the log.
+- **Rules** (Settings, Rules): "When / If / Then" rules with triggers (profile changed, world joined, dimension changed, GUI scale or window size changed, low FPS for 5 s, combat started or ended, held item type changed), condition groups (all or any: profile, dimension, environment, held item, HUD layout, FPS), actions (notify, suggest a profile or Performance mode, switch profile or HUD layout, show or hide a HUD element, turn visual modules on or off, set the performance mode, add a timeline marker), priority order, cooldowns, dry runs, a "check now" button, history, validation with conflict detection, and import/export. Suggestions wait in the command palette until applied. Two suggestion rules ship by default. Rules cannot switch on modules that act in the game, and loops are prevented (each rule once per chain, a minimum cooldown for rules that change something, at most five rules per second).
+- **Session timeline** (Settings, Timeline): profile switches, module changes, worlds and dimensions (described as singleplayer, private network or public server only), deaths, your markers, schematics, performance warnings, module errors and rules; search, filter by kind, bookmarks, notes, export as text, clear, and a switch per kind of event. No chat is recorded.
+- **HUD editor rebuilt:** snapping to edges, the center and other elements with guide lines (Shift: free), an optional 8-pixel grid, the safe area and hotbar zone, per-element **size** and **opacity**, **hide**, **show only** in combat / out of combat / holding a weapon / gliding / sneaking, arrow-key nudging, **undo and redo**, an elements list to turn HUD modules on, overlap warnings, and several **named layouts** with copy, rename, delete and clipboard import/export. Positions are anchored to the nearest screen edge or the center, so they hold at other window sizes and GUI scales. Each profile stores its own layout.
+- **Profiles:** preview a profile before switching (exactly which modules, keys, settings and stored options differ), rename (rules and history follow), a list of recently used profiles with "Back", and seven more presets: Bed PvP, Farming, Parkour, Speedrunning, Recording / Streaming, Developer and Authorized Testing (24 in total).
+- **Restore points:** create one by hand; one is made automatically before restoring, a full reset, replacing a profile with a preset, and a configuration format update. Restore (undoable), delete; the newest 20 are kept.
+- **Reset everything** (two clicks) and **Reload from disk** (two clicks).
+- **Notifications:** categories (module toggles, profiles, configuration, errors, performance, environment, rules, alerts, other) that the Notifications module can show or hide, position (top right, top left, top center, bottom right), style, icons, repeats folded into one toast with a count, a rate limit, and animations that follow Reduce motion. Turning on a module that cannot run where you are now says why.
+- **New modules:** Compass (heading strip), Session Stats (play time, distance, deaths, hits and best combo), Experience (exact points to the next and a target level), Shape Planner (outlines circles, cylinders, spheres, domes, spiral staircases and walls with a block count; guides only), Mention Alerts (notification and sound when chat mentions your name or a keyword as a whole word).
+- A separate **Trackers** page in the sidebar; World keeps the world tools and the Java runner.
+- Search aliases for modules (for example "ore esp" finds Block ESP, "freecam" finds Free Camera).
+
+### Changed
+- **A failing module is suspended, not turned off:** it stops, cleans up and restarts by itself after 5 s (10 s after a second failure). The third failure within a minute turns it off until you turn it on again. Failures while starting or loading still turn it off at once. The notification says which happened.
+- **Nothing you saved is dropped silently:** settings and modules this version does not know (from a newer version) are written back unchanged, and a profile whose values had to be replaced by defaults is copied to `<name>.json.before-repair-<time>` first.
+- Configuration schema 3 (profiles may hold the HUD layout; the global file a profile history). Files of an older schema are copied into a restore point before they are rewritten.
+- Settings is split into tabs: General, Appearance, Performance, Rules, Timeline, Developer.
+- Busy modules (Block ESP, Entity ESP, Storage ESP, Trackers, Block Counter, Light Level, Hitboxes, Shape Planner) describe their current work for the health monitor and the Performance Center.
+- A module that averages more than 2 ms per tick gets one performance warning per session.
+
+### Fixed
+- A dropdown whose value was empty showed "-" even when it had a name for "nothing" (for example "All events").
+
 ## 0.9.0 - 2026-10-18
 
 ### Added

@@ -12,6 +12,11 @@ import com.google.gson.JsonObject;
 /** The ordered, validated settings of one module. */
 public final class ModuleSettings {
 	private final Map<String, Setting<?>> settings = new LinkedHashMap<>();
+	/**
+	 * Saved values for settings this version does not have (written by a newer version, or by an older one for a setting
+	 * that was removed). They are written back unchanged, so opening a profile in this version never loses them.
+	 */
+	private JsonObject retained = new JsonObject();
 	private String section;
 
 	public <S extends Setting<?>> S add(S setting) {
@@ -54,7 +59,13 @@ public final class ModuleSettings {
 	public JsonObject toJson() {
 		JsonObject json = new JsonObject();
 		settings.values().forEach(setting -> json.add(setting.id(), setting.toJson()));
+		retained.entrySet().forEach(entry -> json.add(entry.getKey(), entry.getValue().deepCopy()));
 		return json;
+	}
+
+	/** Ids of saved values this version does not know, kept as they were (see {@link #load}). */
+	public java.util.Set<String> retainedKeys() {
+		return java.util.Set.copyOf(retained.keySet());
 	}
 
 	/**
@@ -81,13 +92,19 @@ public final class ModuleSettings {
 	}
 
 	/**
-	 * Applies saved values. Unknown keys are ignored (they may come from a newer or older version)
-	 * and missing keys fall back to defaults.
+	 * Applies saved values. Unknown keys (they may come from a newer or older version) are kept unchanged and written back
+	 * by {@link #toJson()}; missing keys fall back to defaults.
 	 *
 	 * @return readable warnings for values that had to be replaced by defaults
 	 */
 	public List<String> load(JsonObject json) {
 		List<String> warnings = new ArrayList<>();
+		retained = new JsonObject();
+		for (Map.Entry<String, JsonElement> entry : json.entrySet()) {
+			if (!settings.containsKey(entry.getKey())) {
+				retained.add(entry.getKey(), entry.getValue().deepCopy());
+			}
+		}
 
 		for (Setting<?> setting : settings.values()) {
 			JsonElement value = json.get(setting.id());

@@ -12,7 +12,7 @@ import io.github.theamethyx.femboyclient.client.gui.UiContext;
 public class Button extends Widget {
 	public enum Style { PRIMARY, SECONDARY, GHOST, DANGER }
 
-	private final Supplier<String> label;
+	protected Supplier<String> label;
 	private final Runnable action;
 	private final Style style;
 	private final Anim hover = new Anim(0, 18);

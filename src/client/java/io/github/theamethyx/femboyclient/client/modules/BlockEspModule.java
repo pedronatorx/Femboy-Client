@@ -353,4 +353,15 @@ public final class BlockEspModule extends Module implements ClientHooks.WorldRen
 		return String.format(Locale.ROOT, "%d found, %d/%d chunks", scanner.count(), Math.min(scanner.scannedChunks(), scanner.chunksInRange()),
 				scanner.chunksInRange());
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("ore esp", "ores", "block finder");
+	}
+
+	@Override
+	public String workload() {
+		return String.format(java.util.Locale.ROOT, "%,d blocks found in %d/%d chunks, %d shown, %d lines", scanner().count(), scanner().scannedChunks(),
+				scanner().chunksInRange(), shown().size(), lines().drawn());
+	}
 }

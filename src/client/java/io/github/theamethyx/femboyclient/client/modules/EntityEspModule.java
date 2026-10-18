@@ -578,4 +578,14 @@ public final class EntityEspModule extends Module implements ClientHooks.WorldRe
 		Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().position();
 		lastLabels = EspRenderer.drawLabels(ui, targets(camera, partialTick, limit, true), screenWidth, screenHeight, limit, labelStyle());
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("player esp", "mob esp", "item esp", "projectile esp", "tracers");
+	}
+
+	@Override
+	public String workload() {
+		return trackedTargets().size() + " targets, " + lines().drawn() + " lines, " + lastLabels().size() + " labels";
+	}
 }

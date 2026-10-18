@@ -352,4 +352,9 @@ public final class WaypointsModule extends Module implements ClientHooks.WorldRe
 			ui.wrapped(text, x + 4, y + 2, width - 8, Theme.TEXT_MUTED);
 		}
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("markers", "locations");
+	}
 }

@@ -108,4 +108,9 @@ public final class HitboxesModule extends Module implements ClientHooks.WorldRen
 			drawn++;
 		}
 	}
+
+	@Override
+	public String workload() {
+		return drawn() + " hitboxes drawn";
+	}
 }

@@ -45,7 +45,7 @@ public class HomePage extends Page {
 	private static final List<Group> GROUPS = List.of(new Group("Combat", List.of(ModuleCategory.COMBAT)),
 			new Group("Automation", List.of(ModuleCategory.AUTOMATION)), new Group("Movement", List.of(ModuleCategory.MOVEMENT)),
 			new Group("Visuals", List.of(ModuleCategory.VISUALS, ModuleCategory.HUD)), new Group("Inventory", List.of(ModuleCategory.INVENTORY)),
-			new Group("World", List.of(ModuleCategory.WORLD, ModuleCategory.TRACKERS, ModuleCategory.DEVELOPER)));
+			new Group("World", List.of(ModuleCategory.WORLD, ModuleCategory.DEVELOPER)), new Group("Trackers", List.of(ModuleCategory.TRACKERS)));
 	private Group group;
 	private float scrollTarget;
 	private int contentHeight;
@@ -141,6 +141,23 @@ public class HomePage extends Page {
 			}
 
 			grouped.computeIfAbsent(module.category(), c -> new ArrayList<>()).add(module);
+		}
+
+		// Favorites and recently used modules first, when nothing is searched or filtered.
+		if (query.isBlank() && group == null) {
+			List<Module> favorites = femboy.quickAccess().favorites();
+			if (!favorites.isEmpty()) {
+				CategoryCard card = new CategoryCard("Favorites", Icon.STAR, favorites);
+				cards.add(card);
+				children.add(0, card);
+			}
+
+			List<Module> recent = femboy.quickAccess().recent().stream().filter(module -> !favorites.contains(module)).limit(6).toList();
+			if (!recent.isEmpty()) {
+				CategoryCard card = new CategoryCard("Recently used", Icon.CLOCK, recent);
+				cards.add(card);
+				children.add(0, card);
+			}
 		}
 
 		// Cards in sidebar order: a section's categories next to each other (Visuals, then the HUD panels).
@@ -396,11 +413,23 @@ public class HomePage extends Page {
 
 	/** One category: a header with icon, name and count, then its modules. */
 	private final class CategoryCard extends Container {
-		private final ModuleCategory category;
+		private final String title;
+		private final Icon icon;
+		private final int total;
 		private final List<ModuleTile> tiles = new ArrayList<>();
 
 		CategoryCard(ModuleCategory category, List<Module> modules) {
-			this.category = category;
+			this(category.label(), Icon.byName(category.icon()), modules, femboy.modules().byCategory(category).size());
+		}
+
+		CategoryCard(String title, Icon icon, List<Module> modules) {
+			this(title, icon, modules, modules.size());
+		}
+
+		private CategoryCard(String title, Icon icon, List<Module> modules, int total) {
+			this.title = title;
+			this.icon = icon;
+			this.total = total;
 			for (Module module : modules) {
 				tiles.add(add(new ModuleTile(module, femboy.modules(), () -> settingsOpen() ? panel.module().id() : null, HomePage.this::openSettings)));
 			}
@@ -425,9 +454,9 @@ public class HomePage extends Page {
 			ui.roundRect(x, y, width, height, Theme.SIDEBAR, 7);
 			ui.outline(x, y, width, height, Theme.BORDER, 7);
 			ui.gradientRect(x + 6, y + 5, 13, 13, Theme.ACCENT, Theme.ACCENT_2, 4);
-			ui.icon(Icon.byName(category.icon()), x + 8, y + 7, 9, 0xFFFFFFFF);
-			ui.textScaled(category.label(), x + 24, y + 7, 1.1f, Theme.TEXT);
-			String count = String.valueOf(femboy.modules().byCategory(category).size());
+			ui.icon(icon, x + 8, y + 7, 9, 0xFFFFFFFF);
+			ui.textScaled(title, x + 24, y + 7, 1.1f, Theme.TEXT);
+			String count = String.valueOf(total);
 			int countWidth = ui.textWidth(count) + 8;
 			ui.roundRect(x + width - countWidth - 6, y + 5, countWidth, 11, Theme.SURFACE_ACTIVE, 5);
 			ui.text(count, x + width - countWidth - 2, y + 7, Theme.TEXT_SECONDARY);

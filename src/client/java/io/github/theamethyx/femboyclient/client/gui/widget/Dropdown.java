@@ -29,6 +29,20 @@ public class Dropdown<T> extends Widget {
 		this.height = 14;
 	}
 
+	/** The label of a value; a labeler that cannot name {@code null} shows "-". */
+	private String label(T option) {
+		if (option != null) {
+			return labeler.apply(option);
+		}
+
+		try {
+			String text = labeler.apply(null);
+			return text == null ? "-" : text;
+		} catch (RuntimeException e) {
+			return "-";
+		}
+	}
+
 	public boolean isOpen(UiContext ui) {
 		return ui.overlay() == list;
 	}
@@ -40,7 +54,7 @@ public class Dropdown<T> extends Widget {
 		ui.roundRect(x, y, width, height, Theme.lerp(Theme.SURFACE, Theme.SURFACE_ACTIVE, h));
 		ui.outline(x, y, width, height, open ? Theme.ACCENT_DIM : Theme.lerp(Theme.BORDER, Theme.BORDER_STRONG, h));
 		T current = value.get();
-		ui.textClipped(current == null ? "-" : labeler.apply(current), x + 5, y + (height - 8) / 2, width - 18, Theme.TEXT);
+		ui.textClipped(label(current), x + 5, y + (height - 8) / 2, width - 18, Theme.TEXT);
 		ui.icon(Icon.CHEVRON_DOWN, x + width - 12, y + (height - 8) / 2, 8, open ? Theme.ACCENT : Theme.TEXT_SECONDARY);
 
 		if (hovered(ui)) {
@@ -100,7 +114,7 @@ public class Dropdown<T> extends Widget {
 					ui.rect(x + 1, rowY + 2, 2, OPTION_HEIGHT - 4, Theme.ACCENT);
 				}
 
-				ui.textClipped(labeler.apply(option), x + 6, rowY + 3, width - 10, selected ? Theme.ACCENT_STRONG : Theme.TEXT);
+				ui.textClipped(label(option), x + 6, rowY + 3, width - 10, selected ? Theme.ACCENT_STRONG : Theme.TEXT);
 			}
 		}
 

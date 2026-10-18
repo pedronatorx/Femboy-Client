@@ -133,4 +133,9 @@ public final class KillAuraModule extends Module implements ClientHooks.HudBlock
 					target == null ? Theme.TEXT_MUTED : Theme.ACCENT_STRONG));
 		}
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("aura");
+	}
 }

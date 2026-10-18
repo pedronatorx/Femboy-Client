@@ -36,6 +36,8 @@ public class ProfilesPage extends Page {
 	private int feedbackColor;
 	private String pendingConfirm;
 	private long pendingConfirmAt;
+	/** Profile compared with the active one (the preview), or null. */
+	private String compareWith;
 
 	public ProfilesPage(UiContext ui) {
 		super(ui);
@@ -100,6 +102,26 @@ public class ProfilesPage extends Page {
 			rows.add(new ProfileRow(profile));
 		}
 
+		if (compareWith != null && config.profileExists(compareWith)) {
+			addComparison(rows, config);
+		}
+
+		List<ConfigurationManager.HistoryEntry> history = config.history();
+		if (!history.isEmpty()) {
+			rows.add(new ConfigPage.SectionTitle("Recently used profiles", "Newest first. 'Back' switches to that profile again (the current one is saved)."));
+			for (int i = 0; i < Math.min(5, history.size()); i++) {
+				rows.add(new HistoryRow(history.get(i)));
+			}
+		}
+
+		rows.add(new NameAndButton("New name for '" + config.activeProfile() + "'", "Rename", Icon.CODE,
+				"Rename the active profile. Switching rules and the history follow the new name.", name -> {
+			String old = config.activeProfile();
+			String problem = config.renameProfile(old, name);
+			report(problem == null ? "Renamed '" + old + "' to '" + name + "'." : problem, problem == null);
+			return problem == null;
+		}));
+
 		rows.add(new NameAndButton("New profile name", "Create", Icon.PLUS,
 				"Create a profile as a copy of the current one, without switching to it.", name -> {
 			String problem = config.createProfile(name);
@@ -149,6 +171,123 @@ public class ProfilesPage extends Page {
 		content.setChildren(rows);
 	}
 
+	/** The preview: what switching to {@link #compareWith} would change, with buttons to apply or close. */
+	private void addComparison(List<Widget> rows, ConfigurationManager config) {
+		String active = config.activeProfile();
+		List<io.github.theamethyx.femboyclient.core.config.ConfigDiff.Difference> diff = config.diffProfiles(active, compareWith);
+		rows.add(new ConfigPage.SectionTitle("Preview: " + active + " → " + compareWith, diff == null ? "The profile could not be read."
+				: diff.isEmpty() ? "No differences: switching changes nothing." : diff.size() + " difference(s). Left: now; right: after switching."));
+		if (diff != null) {
+			for (int i = 0; i < Math.min(40, diff.size()); i++) {
+				rows.add(new DiffRow(diff.get(i)));
+			}
+
+			if (diff.size() > 40) {
+				rows.add(new ModulesPage.Message((diff.size() - 40) + " more difference(s) not listed."));
+			}
+		}
+
+		rows.add(new PreviewActions(compareWith));
+	}
+
+	static String describeKey(String code) {
+		try {
+			int key = Integer.parseInt(code);
+			return key == io.github.theamethyx.femboyclient.core.module.Module.NO_KEY ? "none"
+					: com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(key).getDisplayName().getString();
+		} catch (NumberFormatException e) {
+			return code;
+		}
+	}
+
+	private static final class DiffRow extends Widget {
+		private final io.github.theamethyx.femboyclient.core.config.ConfigDiff.Difference difference;
+
+		DiffRow(io.github.theamethyx.femboyclient.core.config.ConfigDiff.Difference difference) {
+			this.difference = difference;
+		}
+
+		@Override
+		public int preferredHeight(UiContext ui, int width) {
+			return 13;
+		}
+
+		@Override
+		public void render(UiContext ui) {
+			boolean key = difference.kind() == io.github.theamethyx.femboyclient.core.config.ConfigDiff.Kind.KEY;
+			String left = key ? describeKey(difference.left()) : difference.left();
+			String right = key ? describeKey(difference.right()) : difference.right();
+			String where = difference.moduleName().isEmpty() ? "Client option" : difference.moduleName();
+			ui.roundRect(x, y, width, height, Theme.SURFACE);
+			int split = width / 2;
+			ui.textClipped(where + ": " + difference.what(), x + 6, y + 3, split - 10, Theme.TEXT_SECONDARY);
+			String change = left + "  →  " + right;
+			ui.textClipped(change, x + split, y + 3, width - split - 6, Theme.TEXT);
+			if (ui.hovered(x, y, width, height)) {
+				ui.tooltip(this, where + ": " + difference.what() + "\nNow: " + left + "\nAfter switching: " + right);
+			}
+		}
+	}
+
+	private final class PreviewActions extends Container {
+		PreviewActions(String target) {
+			add(new Button("Switch to " + target, Button.Style.PRIMARY, () -> {
+				String problem = femboy.config().switchProfile(target);
+				compareWith = null;
+				report(problem == null ? "Switched to profile '" + target + "'." : problem, problem == null);
+				rebuild();
+			}).icon(Icon.CHECK));
+			add(new Button("Close preview", Button.Style.SECONDARY, () -> {
+				compareWith = null;
+				rebuild();
+			}).icon(Icon.CLOSE));
+		}
+
+		@Override
+		public int preferredHeight(UiContext ui, int width) {
+			return 16;
+		}
+
+		@Override
+		protected void onLayout() {
+			int half = (width - Theme.GAP) / 2;
+			children.get(0).setBounds(x, y, half, 16);
+			children.get(1).setBounds(x + half + Theme.GAP, y, width - half - Theme.GAP, 16);
+		}
+	}
+
+	private final class HistoryRow extends Container {
+		private final ConfigurationManager.HistoryEntry entry;
+
+		HistoryRow(ConfigurationManager.HistoryEntry entry) {
+			this.entry = entry;
+			add(new Button("Back", Button.Style.SECONDARY, () -> {
+				String problem = femboy.config().switchProfile(entry.profile());
+				report(problem == null ? "Back to profile '" + entry.profile() + "'." : problem, problem == null);
+				rebuild();
+			}).icon(Icon.UNDO)).tooltip("Switch to '" + entry.profile() + "' again.");
+		}
+
+		@Override
+		public int preferredHeight(UiContext ui, int width) {
+			return 18;
+		}
+
+		@Override
+		protected void onLayout() {
+			children.get(0).setBounds(x + width - 54, y + 1, 52, 16);
+		}
+
+		@Override
+		public void render(UiContext ui) {
+			ui.roundRect(x, y, width, height, Theme.SURFACE);
+			ui.icon(Icon.CLOCK, x + 6, y + 5, 8, Theme.TEXT_MUTED);
+			ui.textClipped(entry.profile(), x + 19, y + 5, width - 140, Theme.TEXT_SECONDARY);
+			ui.textRight("left " + io.github.theamethyx.femboyclient.client.smart.SessionTimeline.time(entry.timeMillis()), x + width - 60, y + 5, Theme.TEXT_MUTED);
+			super.render(ui);
+		}
+	}
+
 	private void setRules(List<ProfileRule> rules) {
 		femboy.config().setProfileRules(rules);
 		femboy.profileSwitcher().reset();
@@ -180,6 +319,7 @@ public class ProfilesPage extends Page {
 		private final Button duplicate;
 		private final Button export;
 		private final Button delete;
+		private final Button preview;
 
 		ProfileRow(String name) {
 			this.name = name;
@@ -204,6 +344,11 @@ public class ProfilesPage extends Page {
 				rebuild();
 			}).icon(Icon.TRASH));
 			delete.tooltip("Delete this profile. Click twice to confirm. A backup copy stays in the profiles folder.");
+			preview = add(new Button("Preview", Button.Style.GHOST, () -> {
+				compareWith = name.equals(compareWith) ? null : name;
+				rebuild();
+			}));
+			preview.tooltip("Compare with the active profile: exactly which modules, keys and settings would change. You can switch from there.");
 		}
 
 		private String copyName() {
@@ -257,6 +402,12 @@ public class ProfilesPage extends Page {
 			right -= exportWidth + Theme.GAP;
 			duplicate.setBounds(right - 34, y + 3, 34, 14);
 			right -= 34 + Theme.GAP;
+			if (!active) {
+				int previewWidth = Math.max(50, preview.naturalWidth(ui) + 4);
+				preview.setBounds(right - previewWidth, y + 3, previewWidth, 14);
+				right -= previewWidth + Theme.GAP;
+			}
+
 			use.setBounds(right - 30, y + 3, 30, 14);
 		}
 

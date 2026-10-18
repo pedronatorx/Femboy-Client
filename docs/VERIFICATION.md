@@ -2,6 +2,16 @@
 
 Date: 2026-10-18. Sections up to "Servers and stability" were written for 0.4.0 and still pass; later additions are in the sections after it, ending with 0.9.0.
 
+## 1.0.0 (2026-10-18)
+
+Commands: `./gradlew build` (unit tests and server GameTests) and `rm -rf build/run/clientGameTest/config/femboyclient && ./scripts/run-client-tests.sh` (in-game, Xvfb, Mesa llvmpipe).
+
+- `./gradlew build`: BUILD SUCCESSFUL. Unit tests: 140, 0 failures (new: module failure suspension and retry, health states, aliases; preserving unknown modules and settings, before-repair copies, restore points and pruning, diffs, history, rename, per-profile HUD sections, full reset, schema-update snapshot; HUD layout anchoring, legacy format, snapping, undo; rule engine triggers, any/all, cooldowns, loop prevention, dry run, rate limit, validation, JSON; experience formulas; shape generator).
+- In-game suite: **Result: PASSED (297 checks)**. New checks (`ProductTest`): Ctrl+K palette search and Enter toggle, Tab opens settings, alias search, Escape, jumping to a settings tab; quick wheel order and toggle, recently used; Theme Studio presets, save/export/import with invalid values skipped, corner style and panel opacity, restoring defaults; HUD editor placing, scaling, hiding (faint in the editor, gone in game), undo, "in combat" condition, independent layouts; profile diff, per-profile HUD layout, history, rename, revert; restore point; validator; rules (notification and visual module, automation refused, dry run), timeline (profile, rule, marker, search); on/off comparison with both halves measured and the module restored, automation excluded; health state; diagnostic report file; folded notifications; Compass, Experience, Session Stats and Shape Planner on the HUD, hollow sphere count and outlines drawn; Mention Alerts whole-word, keyword and own-message handling. The previous checks still pass (sidebar now ten sections, 77 modules, 24 presets, Developer tab).
+- Found and fixed by the tests: K as the default palette key took a key the tests (and players) bind to modules, so it is now unbound; Ctrl shortcuts in the menu and HUD editor read only the event's modifier flags, which the test input (and some keyboards) do not set, so they now also check the key state, as the code editor already did.
+- Screenshots: `docs/screenshots/0088`-`0097` (palette, Home favorites, Theme Studio, HUD editor, rules, timeline, Performance Center, Developer tab, new modules).
+- **Not tested:** a real GPU (all frame numbers come from software rendering), the quick wheel with a physically held key (the test opens it and chooses a slot directly), Mention Alerts with real server chat formats, rules on a multiplayer server, the Performance Center's recommendations under a real slow frame on hardware, macOS Cmd shortcuts.
+
 ## Status values
 
 - **Implemented, not tested**

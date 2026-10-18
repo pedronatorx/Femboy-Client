@@ -181,6 +181,62 @@ public final class Presets {
 						.off("reach")
 						.off("flight")
 						.build(), null));
+		list.add(new Preset("bed_pvp", "Bed PvP", "Explosion damage estimates, health and armor, beds and totems counted; for the Nether and the End "
+				+ "where beds explode.",
+				new Builder()
+						.on("explosion_info")
+						.on("health_armor")
+						.on("target_hud")
+						.on("item_counters", "items", ids("red_bed", "white_bed", "totem_of_undying", "golden_apple"))
+						.build(), null));
+		list.add(new Preset("farming", "Farming", "Light levels for crops and mob spawning, coordinates, block highlight and seed and bone meal counts.",
+				new Builder()
+						.on("light_level")
+						.on("coordinates_hud")
+						.on("block_highlight")
+						.on("item_counters", "items", ids("wheat_seeds", "bone_meal", "carrot", "potato"))
+						.build(), null));
+		list.add(new Preset("parkour", "Parkour", "Speed and height, keystrokes and exact coordinates for practising jumps.",
+				new Builder()
+						.on("movement_info")
+						.on("keystrokes")
+						.on("coordinates_hud")
+						.build(), null));
+		list.add(new Preset("speedrunning", "Speedrunning", "Coordinates with chunk position, movement, death coordinates, waypoints and the "
+				+ "performance panel. Structure Finder needs singleplayer (it uses the world seed).",
+				new Builder()
+						.on("coordinates_hud")
+						.on("movement_info")
+						.on("death_coordinates")
+						.on("waypoints")
+						.on("performance_hud")
+						.off("structure_finder")
+						.build(), null));
+		list.add(new Preset("recording", "Recording / Streaming", "A clean screen: only keystrokes, toasts for messages instead of chat lines, "
+				+ "nothing else drawn.",
+				new Builder()
+						.on("keystrokes")
+						.on("notifications")
+						.build(), null));
+		list.add(new Preset("developer", "Developer", "Performance panel, hitboxes, chunk borders and the module list, for testing the client itself.",
+				new Builder()
+						.on("performance_hud")
+						.on("hitboxes")
+						.on("chunk_borders")
+						.on("module_list_hud")
+						.build(), null));
+		list.add(new Preset("authorized_testing", "Authorized Testing", "Like Local Testing, for servers in your own network (LAN or VPN). Sandbox "
+				+ "modules run only there; on any other server they stay off, whatever the profile says.",
+				new Builder()
+						.on("hitboxes")
+						.on("combat_info", "accuracy", true)
+						.on("target_hud")
+						.on("performance_hud")
+						.on("entity_esp")
+						.off("kill_aura")
+						.off("trigger_bot")
+						.off("velocity")
+						.build(), null));
 		return list;
 	}
 

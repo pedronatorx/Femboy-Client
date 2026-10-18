@@ -52,4 +52,9 @@ public final class FullbrightModule extends Module {
 		float value = override;
 		return Float.isNaN(value) ? vanilla : Math.max(vanilla, value);
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("gamma", "brightness", "night vision");
+	}
 }

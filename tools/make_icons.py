@@ -163,6 +163,34 @@ def _(): return union(poly([(8,0.8),(9.5,6.5),(15.2,8),(9.5,9.5),(8,15.2),(6.5,9
 @icon("chevron_right")
 def _(): return union(line(6.5,4,10.5,8,1.8), line(10.5,8,6.5,12,1.8))
 
+@icon("power")
+def _(): return union(arc(8,8.6,5.6,W,300,240), line(8,1.6,8,8,W))
+@icon("save")  # floppy disk
+def _(): return union(outline(poly([(2,2),(11.5,2),(14,4.5),(14,14),(2,14)]), poly([(3.6,3.6),(10.8,3.6),(12.4,5.2),(12.4,12.4),(3.6,12.4)])),
+                      rrect(5,2,10.5,5.8,0.5), rrect(4.8,9,11.2,14,0.6))
+@icon("command")  # keyboard prompt
+def _(): return union(outline(rrect(1.2,2.5,14.8,13.5,1.6), rrect(2.8,4.1,13.2,11.9,0.6)), line(4.4,6,6.9,8,1.5), line(6.9,8,4.4,10,1.5), line(8.2,10.2,11.6,10.2,1.5))
+@icon("palette")
+def _():
+    blob = lambda x, y: ((x-8)/6.6)**2 + ((y-8)/6.0)**2 <= 1
+    return minus(blob, union(circle(10.6,10.4,1.7), circle(5,6.4,1.1), circle(8,4.4,1.1), circle(11.2,6.2,1.1), circle(4.8,9.8,1.1)))
+@icon("clock")
+def _(): return union(ring(8,8,6.2,W), line(8,8,8,4.2,1.6), line(8,8,10.8,9.6,1.6))
+@icon("flow")  # rule: when -> then
+def _(): return union(rrect(1.5,2,6.5,6.5,1), rrect(9.5,9.5,14.5,14,1), line(4,6.5,4,11.8,1.4), line(4,11.8,9.5,11.8,1.4), poly([(8.2,10.2),(10,11.8),(8.2,13.4)]))
+@icon("undo")
+def _(): return union(arc(8.8,9,4.6,W,190,90), poly([(1.4,9.4),(4.2,5.2),(6.6,9.6)]))
+@icon("redo")
+def _(): return union(arc(7.2,9,4.6,W,90,350), poly([(14.6,9.4),(11.8,5.2),(9.4,9.6)]))
+@icon("grid")
+def _(): return union(*[line(2+4*i,2,2+4*i,14,1.1) for i in range(4)], *[line(2,2+4*i,14,2+4*i,1.1) for i in range(4)])
+@icon("copy")
+def _(): return union(outline(rrect(5.5,5.5,14,14,1.2), rrect(7.1,7.1,12.4,12.4,0.4)), outline(rrect(2,2,10.5,10.5,1.2), rrect(3.6,3.6,10.5,10.5,0.4)))
+@icon("filter")
+def _(): return poly([(1.5,2.5),(14.5,2.5),(9.4,8.4),(9.4,13.6),(6.6,12.2),(6.6,8.4)])
+@icon("compass")
+def _(): return union(ring(8,8,6.4,W), poly([(8,3.2),(9.6,8),(8,8.6),(6.4,8)]), outline(poly([(8,12.8),(9.6,8),(6.4,8)]), poly([(8,11.2),(8.7,8.6),(7.3,8.6)])))
+
 def render(path):
     cols = 8; rows = math.ceil(len(ICONS)/cols)
     w, h = cols*CELL, rows*CELL

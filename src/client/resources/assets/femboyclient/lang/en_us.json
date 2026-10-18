@@ -1,5 +1,7 @@
 {
 	"key.category.femboyclient.main": "Femboy Client",
 	"key.femboyclient.open_menu": "Open Femboy Client menu",
-	"key.femboyclient.disable_all": "Turn all modules off (emergency)"
+	"key.femboyclient.disable_all": "Turn all modules off (emergency)",
+	"key.femboyclient.command_palette": "Command palette",
+	"key.femboyclient.quick_wheel": "Quick toggle wheel (hold)"
 }

@@ -19,6 +19,9 @@ public final class PerformanceMonitor {
 	private int frameCursor;
 	private int frameCount;
 	private long lastFrameStart = -1;
+	/** Frames and their total duration since startup (never reset), for before/after comparisons. */
+	private long totalFrames;
+	private long totalFrameNanos;
 	private volatile boolean measureAllocations;
 
 	/** HotSpot's per-thread allocation counter, or {@code null} when this JVM has none. */
@@ -71,9 +74,22 @@ public final class PerformanceMonitor {
 			frameNanos[frameCursor] = nowNanos - lastFrameStart;
 			frameCursor = (frameCursor + 1) % FRAME_HISTORY;
 			frameCount = Math.min(frameCount + 1, FRAME_HISTORY);
+			totalFrames++;
+			totalFrameNanos += nowNanos - lastFrameStart;
 		}
 
 		lastFrameStart = nowNanos;
+	}
+
+	/** {frames, total nanoseconds} since startup; subtract two readings to measure a period. */
+	public synchronized long[] frameTotals() {
+		return new long[] {totalFrames, totalFrameNanos};
+	}
+
+	/** Total recorded nanoseconds of a timing, or 0 if it was never recorded. */
+	public long totalNanos(String key) {
+		Timing timing = timings.get(key);
+		return timing == null ? 0 : timing.totalNanos();
 	}
 
 	/** Frame durations in nanoseconds, oldest first. */

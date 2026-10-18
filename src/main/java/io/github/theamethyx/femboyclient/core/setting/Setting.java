@@ -139,6 +139,42 @@ public abstract class Setting<T> {
 		set(defaultValue);
 	}
 
+	/** The default value as config JSON (what {@link #toJson()} writes after {@link #reset()}). Client thread only. */
+	public final JsonElement defaultJson() {
+		T saved = value;
+		value = defaultValue;
+		try {
+			return toJson();
+		} finally {
+			value = saved;
+		}
+	}
+
+	/**
+	 * A config value as readable text, as {@link #displayValue()} would show it, without applying it; for diffs and
+	 * previews. Unreadable values are described as such. Client thread only.
+	 */
+	public final String describe(JsonElement json) {
+		T parsed;
+		try {
+			parsed = parse(json);
+		} catch (RuntimeException e) {
+			return "unreadable (" + json + ")";
+		}
+
+		if (parsed == null || validate(parsed) != null) {
+			return "invalid (" + json + ")";
+		}
+
+		T saved = value;
+		value = parsed;
+		try {
+			return displayValue();
+		} finally {
+			value = saved;
+		}
+	}
+
 	public final boolean isDefault() {
 		return value.equals(defaultValue);
 	}

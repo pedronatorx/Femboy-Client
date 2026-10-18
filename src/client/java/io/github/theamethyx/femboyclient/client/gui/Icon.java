@@ -10,11 +10,12 @@ public enum Icon {
 	PLUS, TRASH, INFO, LOCK, STAR, FOLDER, PLAY, STOP,
 	HOME, PLAYER, STORAGE, NAVIGATE, PAUSE, COMBAT, CODE, ARROW,
 	SUN, TARGET, BELL, GLOBE, BOLT, MOVEMENT, LAYERS, SLIDERS,
-	HEART, SPARKLE, CHEVRON_RIGHT;
+	HEART, SPARKLE, CHEVRON_RIGHT, POWER, SAVE, COMMAND, PALETTE, CLOCK,
+	FLOW, UNDO, REDO, GRID, COPY, FILTER, COMPASS;
 
 	public static final int CELL = 32;
 	public static final int ATLAS_WIDTH = 256;
-	public static final int ATLAS_HEIGHT = 192;
+	public static final int ATLAS_HEIGHT = 224;
 
 	public int u() {
 		return (ordinal() % 8) * CELL;

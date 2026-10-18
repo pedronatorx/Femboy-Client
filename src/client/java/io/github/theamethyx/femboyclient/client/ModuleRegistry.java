@@ -1,6 +1,11 @@
 package io.github.theamethyx.femboyclient.client;
 
 import io.github.theamethyx.femboyclient.client.modules.AimAssistModule;
+import io.github.theamethyx.femboyclient.client.modules.CompassModule;
+import io.github.theamethyx.femboyclient.client.modules.ExperienceInfoModule;
+import io.github.theamethyx.femboyclient.client.modules.MentionAlertsModule;
+import io.github.theamethyx.femboyclient.client.modules.SessionStatsModule;
+import io.github.theamethyx.femboyclient.client.modules.ShapePlannerModule;
 import io.github.theamethyx.femboyclient.client.modules.AimTrainerModule;
 import io.github.theamethyx.femboyclient.client.modules.AntiHungerModule;
 import io.github.theamethyx.femboyclient.client.modules.AutoAnchorModule;
@@ -168,9 +173,14 @@ public final class ModuleRegistry {
 		modules.register(new KeystrokesModule());
 		modules.register(new NotificationsModule());
 		modules.register(new BetterChatModule());
+		modules.register(new MentionAlertsModule());
+		modules.register(new CompassModule());
+		modules.register(new SessionStatsModule());
+		modules.register(new ExperienceInfoModule());
 		modules.register(new AutoReconnectModule());
 
 		// Developer
+		modules.register(new ShapePlannerModule());
 		modules.register(new JavaRunnerModule());
 	}
 }

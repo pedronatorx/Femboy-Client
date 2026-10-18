@@ -66,7 +66,7 @@ public final class AutoProfileSwitcher {
 
 		switches++;
 		if (femboy.options().profileMessages.get()) {
-			io.github.theamethyx.femboyclient.client.hud.Notifications.show("Profile", desired, io.github.theamethyx.femboyclient.client.gui.Theme.ACCENT);
+			io.github.theamethyx.femboyclient.client.hud.Notifications.post(io.github.theamethyx.femboyclient.client.hud.Notifications.Category.PROFILE, "Profile", desired, io.github.theamethyx.femboyclient.client.gui.Theme.ACCENT);
 		}
 	}
 

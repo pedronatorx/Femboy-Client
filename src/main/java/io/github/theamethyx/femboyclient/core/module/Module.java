@@ -47,6 +47,15 @@ public abstract class Module {
 	private String lastError;
 	private long lastErrorMillis;
 	private int errorCount;
+	/** {@link System#nanoTime()} at the start of the last tick or render call that completed, or 0. */
+	long lastSuccessNanos;
+	/** Times (clock millis) of the most recent failures, newest last; used to tell a one-off error from a broken module. */
+	final long[] recentFailures = new long[ModuleManager.FAILURES_BEFORE_OFF];
+	int recentFailureCount;
+	/** While the clock is before this, the module is suspended after a failure and will be restarted. */
+	long suspendedUntil;
+	/** Who turned the module off when it was not the user (a conflict or repeated failures); cleared when it is turned on. */
+	String offReason;
 	/** "id/phase" keys for the performance monitor, built once instead of on every call. */
 	final String[] timingKeys;
 
@@ -171,6 +180,22 @@ public abstract class Module {
 		return java.util.Set.of();
 	}
 
+	/**
+	 * Other names people may search for (for example "ore esp" for Block ESP or "xray" for nothing at all: aliases only
+	 * help find a module, they never describe features it does not have). Lower case.
+	 */
+	public List<String> aliases() {
+		return List.of();
+	}
+
+	/**
+	 * A short description of the module's current work, such as "1,240 blocks found, 64 shown", for the health monitor and
+	 * the Performance Center, or {@code null}. Called only while the menu shows it, from the client thread; keep it cheap.
+	 */
+	public String workload() {
+		return null;
+	}
+
 	/** Another module this one uses, and what for. Shown in the module's info; nothing is switched on automatically. */
 	public record Requirement(String moduleId, String purpose) {
 	}
@@ -182,16 +207,16 @@ public abstract class Module {
 
 	public Availability availability(EnvironmentPolicy environment) {
 		if (requiresWorld() && !environment.inWorld()) {
-			return Availability.unavailable("Waiting for a world to load.");
+			return Availability.waiting("Waiting for a world to load.");
 		}
 
 		if (testEnvironmentOnly() && !environment.testEnvironment()) {
-			return Availability.unavailable(TEST_ENVIRONMENT_ONLY);
+			return Availability.environment(TEST_ENVIRONMENT_ONLY);
 		}
 
 		String limitation = environment.lowImpactMode() ? lowImpactLimitation() : null;
 		if (limitation != null) {
-			return Availability.unavailable("Paused in Low-Impact mode: " + limitation);
+			return Availability.reduced("Paused in Low-Impact mode: " + limitation);
 		}
 
 		return Availability.AVAILABLE;
@@ -404,6 +429,18 @@ public abstract class Module {
 
 	final void clearError() {
 		lastError = null;
+		recentFailureCount = 0;
+		suspendedUntil = 0;
+	}
+
+	/** Why the module was turned off by the client rather than by you (a conflict, repeated failures), or {@code null}. */
+	public final String offReason() {
+		return offReason;
+	}
+
+	/** Failures within the recent window that the manager still counts (see {@link ModuleManager#FAILURE_WINDOW_MILLIS}). */
+	public final int recentFailures() {
+		return recentFailureCount;
 	}
 
 	@Override
@@ -411,11 +448,44 @@ public abstract class Module {
 		return "Module[" + id + "]";
 	}
 
-	public record Availability(boolean available, String reason) {
-		public static final Availability AVAILABLE = new Availability(true, "");
+	/**
+	 * Whether a module can run here and now. {@code kind} says why not, so the GUI and the health monitor can tell "waiting
+	 * for a world" from "not allowed here" without parsing the text.
+	 */
+	public record Availability(boolean available, String reason, Kind kind) {
+		public enum Kind {
+			/** It can run. */
+			AVAILABLE,
+			/** It needs something that is not there yet, such as a loaded world. */
+			WAITING,
+			/** It is not allowed or not possible in this environment (for example a public server). */
+			ENVIRONMENT,
+			/** The performance mode pauses it. */
+			REDUCED,
+			/** Any other reason given by the module. */
+			OTHER
+		}
+
+		public static final Availability AVAILABLE = new Availability(true, "", Kind.AVAILABLE);
+
+		public Availability(boolean available, String reason) {
+			this(available, reason, available ? Kind.AVAILABLE : Kind.OTHER);
+		}
 
 		public static Availability unavailable(String reason) {
-			return new Availability(false, reason);
+			return new Availability(false, reason, Kind.OTHER);
+		}
+
+		public static Availability waiting(String reason) {
+			return new Availability(false, reason, Kind.WAITING);
+		}
+
+		public static Availability environment(String reason) {
+			return new Availability(false, reason, Kind.ENVIRONMENT);
+		}
+
+		public static Availability reduced(String reason) {
+			return new Availability(false, reason, Kind.REDUCED);
 		}
 	}
 }

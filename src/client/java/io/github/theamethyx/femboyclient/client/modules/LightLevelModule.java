@@ -114,4 +114,14 @@ public final class LightLevelModule extends Module implements ClientHooks.WorldR
 			}
 		}
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("spawn proof", "mob spawning");
+	}
+
+	@Override
+	public String workload() {
+		return spots().size() + " spots marked";
+	}
 }

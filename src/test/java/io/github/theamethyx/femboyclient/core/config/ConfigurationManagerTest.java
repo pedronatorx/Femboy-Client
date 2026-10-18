@@ -137,7 +137,8 @@ class ConfigurationManagerTest {
 
 		List<String> report = newConfig().load();
 
-		assertEquals(3, report.size(), report::toString);
+		assertEquals(4, report.size(), report::toString);
+		assertTrue(report.getLast().contains("before-repair"), "the original file is kept");
 		assertTrue(report.get(0).contains("newer version"));
 		assertTrue(report.stream().anyMatch(line -> line.contains("Test Module: 'enabled' must be true or false")));
 		assertTrue(report.stream().anyMatch(line -> line.contains("'Size' had an invalid value")));

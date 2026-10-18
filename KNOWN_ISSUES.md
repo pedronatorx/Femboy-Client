@@ -86,6 +86,22 @@
 - **No Fall** tells the server you are on the ground; it does not help when the server checks falls itself.
 - **HUD editor:** the name label of a block dragged to the very top can overlap the help panel.
 
+## 1.0.0 limitations
+
+- **Command palette key** is unbound by default (K would take a key people often give to modules); Ctrl+K inside the menu always works. The quick toggle wheel key is unbound too.
+- **HUD opacity** fades backgrounds, text and icons, but item icons (Keystrokes, Item Counters, Target HUD) are drawn opaque by Minecraft.
+- **HUD editor toolbar** covers the top middle of the screen; an element there must be dragged by its uncovered part, or moved with the arrow keys after selecting it in the elements list.
+- **HUD layouts** anchor elements to the nearest screen third. An element placed exactly between two thirds may anchor differently than you expect after a large resize; drag it once more.
+- **Theme Studio:** only Minecraft's font; text size follows the menu scale, it cannot be set separately.
+- **Rules** see what the client sees once per tick. A profile switch made by a rule is noticed (and fires "the profile changes") on the next tick; the minimum cooldown of 3 s keeps two rules from switching back and forth. Rules cannot press keys, place blocks or switch on automation modules, by design.
+- **Session timeline** lives in memory for the session (export it to keep it). Deaths are detected from the client's health state.
+- **On/off comparison** measures under whatever is happening at the time; movement, chunk loading and garbage collection add noise. Differences under about 0.2 ms per frame are not meaningful. It does not run for automation modules.
+- **Failure recovery:** an error while a module starts (or while loading its settings) still turns it off at once; only errors while running are retried.
+- **Restore points** are created and listed on the client thread when you click (a few small files, typically under a few milliseconds).
+- **Shape Planner** draws the nearest outlines up to its limit (default 1,500) and recomputes the shape when a setting changes; a radius-64 filled cylinder is cut at 40,000 blocks (the summary shows "+").
+- **Mention Alerts** match the message text as shown. Your own messages are recognized only in the vanilla `<Name> message` format; servers that format chat differently can alert on your own lines.
+- **Not built from the 1.0 plan:** chat search, a better player list (tab), tooltip extras (enchantment, potion, durability tooltips beyond vanilla), crafting, fall-damage and projectile calculators as separate tools, screenshot tools, a developer console, a test-world launcher, inventory snapshots and comparison, item history and favorites, inventory search, armor and weapon loadouts, quick equip, a durability manager, road and wall planners beyond the Shape Planner's wall, area selection and build notes, the combat training tools beyond Aim Trainer (click timing, movement and parkour trainers, practice dummy, combat timeline, replay camera), developer visualization mode and target grouping for ESP, and keyboard focus traversal of every control in the menu (the palette, the HUD editor and text fields are keyboard-driven; other controls need the mouse).
+
 ## Test environment notes
 
 - In-game tests ran headless under Xvfb with Mesa llvmpipe, which renders in software, so frame times are much slower than on real hardware.

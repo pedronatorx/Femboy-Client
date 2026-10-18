@@ -105,4 +105,9 @@ public final class PerformanceHudModule extends Module implements ClientHooks.Hu
 			lines.add(HudLine.of("Memory", used + " / " + max + " MB", grade(used / (double) max, 0.7, 0.9, false)));
 		}
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("fps", "frame time", "memory");
+	}
 }

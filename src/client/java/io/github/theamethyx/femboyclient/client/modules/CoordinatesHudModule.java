@@ -87,4 +87,9 @@ public final class CoordinatesHudModule extends Module implements ClientHooks.Hu
 			lines.add(HudLine.of("Dimension", level.dimension().identifier().toString(), Theme.TEXT_SECONDARY));
 		}
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("coords", "position", "xyz");
+	}
 }

@@ -39,6 +39,11 @@ public final class FemboyClient implements ClientModInitializer {
 	private GlobalOptions options;
 	private WorldRenderDispatcher worldRender;
 	private HudManager hud;
+	private io.github.theamethyx.femboyclient.client.diag.ModuleProfiler profiler;
+	private final io.github.theamethyx.femboyclient.client.smart.SessionTimeline timeline = new io.github.theamethyx.femboyclient.client.smart.SessionTimeline();
+	private io.github.theamethyx.femboyclient.client.smart.RuleRunner rules;
+	private io.github.theamethyx.femboyclient.client.gui.QuickAccess quickAccess;
+	private io.github.theamethyx.femboyclient.client.smart.SmartEvents smartEvents;
 	private final AutoProfileSwitcher profileSwitcher = new AutoProfileSwitcher();
 	private final CombatTracker combat = new CombatTracker();
 	/** Writes configuration files off the client thread, one at a time. */
@@ -64,6 +69,7 @@ public final class FemboyClient implements ClientModInitializer {
 		Performance.bind(options);
 		modules = new ModuleManager(diagnostics, performance, new NoWorldYet());
 		keybinds = new KeybindManager(modules);
+		profiler = new io.github.theamethyx.femboyclient.client.diag.ModuleProfiler(modules, performance);
 
 		Path configDir = FabricLoader.getInstance().getConfigDir().resolve(MOD_ID);
 		try {
@@ -77,10 +83,15 @@ public final class FemboyClient implements ClientModInitializer {
 
 		config = new ConfigurationManager(configDir, modules, options.settings, diagnostics, System::currentTimeMillis, configWriter);
 		config.setProfileOptions(GlobalOptions.PROFILE_OPTIONS);
+		config.setProfileSections(java.util.Set.of(io.github.theamethyx.femboyclient.client.hud.HudLayout.SECTION));
 		modules.setEnvironment(new ClientEnvironment(client));
-		modules.addFailureListener((module, phase, reason) -> io.github.theamethyx.femboyclient.client.hud.Notifications.show(module.name() + " stopped",
-				reason + " (details in Settings, Diagnostics)", io.github.theamethyx.femboyclient.client.gui.Theme.ERROR));
-		modules.addConflictListener((enabled, turnedOff) -> io.github.theamethyx.femboyclient.client.hud.Notifications.show(turnedOff.name() + " turned off",
+		modules.addFailureListener((module, phase, reason, turnedOff) -> io.github.theamethyx.femboyclient.client.hud.Notifications.post(
+				io.github.theamethyx.femboyclient.client.hud.Notifications.Category.ERROR,
+				module.name() + (turnedOff ? " turned off" : " paused"),
+				reason + (turnedOff ? ". Turn it on again to retry (details in Settings, Developer)" : ". It restarts in a few seconds"),
+				turnedOff ? io.github.theamethyx.femboyclient.client.gui.Theme.ERROR : io.github.theamethyx.femboyclient.client.gui.Theme.WARNING));
+		modules.addConflictListener((enabled, turnedOff) -> io.github.theamethyx.femboyclient.client.hud.Notifications.post(
+				io.github.theamethyx.femboyclient.client.hud.Notifications.Category.MODULE, turnedOff.name() + " turned off",
 				"it cannot run together with " + enabled.name(), io.github.theamethyx.femboyclient.client.gui.Theme.WARNING));
 
 		ModuleRegistry.registerAll(modules);
@@ -92,6 +103,12 @@ public final class FemboyClient implements ClientModInitializer {
 		ClientKeys.register();
 		hud = new HudManager(modules, new io.github.theamethyx.femboyclient.client.hud.HudLayout(config));
 		hud.register();
+		timeline.setRecorded(options.recordedKinds());
+		options.timelineKinds.values().forEach(setting -> setting.onChange(value -> timeline.setRecorded(options.recordedKinds())));
+		quickAccess = new io.github.theamethyx.femboyclient.client.gui.QuickAccess(config, modules);
+		rules = new io.github.theamethyx.femboyclient.client.smart.RuleRunner(this);
+		smartEvents = new io.github.theamethyx.femboyclient.client.smart.SmartEvents(this);
+		options.applyTheme();
 		worldRender = new WorldRenderDispatcher(modules, diagnostics);
 		worldRender.register();
 		ClientTickEvents.END_CLIENT_TICK.register(this::onEndTick);
@@ -99,6 +116,7 @@ public final class FemboyClient implements ClientModInitializer {
 		io.github.theamethyx.femboyclient.client.modules.InventorySorterModule.registerEvents();
 		io.github.theamethyx.femboyclient.client.modules.ChestOrganizerModule.registerEvents();
 		io.github.theamethyx.femboyclient.client.modules.ShulkerPreviewModule.registerTooltip();
+		io.github.theamethyx.femboyclient.client.modules.MentionAlertsModule.registerEvents();
 		WorldRenderEvents.START_MAIN.register(context -> performance.markFrame(System.nanoTime()));
 		WorldRenderEvents.END_EXTRACTION.register(context -> io.github.theamethyx.femboyclient.client.render.FrameProjection.captureFrustum(context.frustum()));
 		io.github.theamethyx.femboyclient.client.world.BlockChanges.register();
@@ -109,6 +127,18 @@ public final class FemboyClient implements ClientModInitializer {
 		while (ClientKeys.openMenu.consumeClick()) {
 			if (client.screen == null) {
 				client.setScreen(new ClientScreen());
+			}
+		}
+
+		while (ClientKeys.commandPalette.consumeClick()) {
+			if (client.screen == null) {
+				client.setScreen(ClientScreen.withPalette());
+			}
+		}
+
+		while (ClientKeys.quickWheel.consumeClick()) {
+			if (client.screen == null && client.player != null) {
+				client.setScreen(new io.github.theamethyx.femboyclient.client.gui.QuickWheelScreen());
 			}
 		}
 
@@ -131,6 +161,8 @@ public final class FemboyClient implements ClientModInitializer {
 		profileSwitcher.tick(client, this);
 		combat.tick(client, comboTimeoutMillis());
 		modules.tick();
+		profiler.tick();
+		smartEvents.tick(client);
 		config.tick();
 	}
 
@@ -167,10 +199,17 @@ public final class FemboyClient implements ClientModInitializer {
 
 		if (!toggled.isEmpty() && options.toggleMessages.get() && client.player != null) {
 			Module module = toggled.getFirst();
-			String state = module.isEnabled() ? "enabled" : "disabled";
 			String extra = toggled.size() > 1 ? " (+" + (toggled.size() - 1) + " more on this key)" : "";
-			io.github.theamethyx.femboyclient.client.hud.Notifications.show(module.name(), state + extra,
-					module.isEnabled() ? io.github.theamethyx.femboyclient.client.gui.Theme.SUCCESS : io.github.theamethyx.femboyclient.client.gui.Theme.TEXT_MUTED);
+			Module.Availability availability = modules.availability(module);
+			if (module.isEnabled() && !availability.available()) {
+				// On, but it cannot run here: say why instead of pretending it works.
+				io.github.theamethyx.femboyclient.client.hud.Notifications.post(io.github.theamethyx.femboyclient.client.hud.Notifications.Category.ENVIRONMENT,
+						module.name(), "on, but " + availability.reason() + extra, io.github.theamethyx.femboyclient.client.gui.Theme.WARNING);
+			} else {
+				io.github.theamethyx.femboyclient.client.hud.Notifications.post(io.github.theamethyx.femboyclient.client.hud.Notifications.Category.MODULE,
+						module.name(), (module.isEnabled() ? "enabled" : "disabled") + extra,
+						module.isEnabled() ? io.github.theamethyx.femboyclient.client.gui.Theme.SUCCESS : io.github.theamethyx.femboyclient.client.gui.Theme.TEXT_MUTED);
+			}
 		}
 	}
 
@@ -183,6 +222,22 @@ public final class FemboyClient implements ClientModInitializer {
 	private long comboTimeoutMillis() {
 		var info = modules.get(io.github.theamethyx.femboyclient.client.modules.CombatInfoModule.class);
 		return info == null ? 3000 : info.comboTimeoutMillis();
+	}
+
+	public io.github.theamethyx.femboyclient.client.diag.ModuleProfiler profiler() {
+		return profiler;
+	}
+
+	public io.github.theamethyx.femboyclient.client.smart.SessionTimeline timeline() {
+		return timeline;
+	}
+
+	public io.github.theamethyx.femboyclient.client.gui.QuickAccess quickAccess() {
+		return quickAccess;
+	}
+
+	public io.github.theamethyx.femboyclient.client.smart.RuleRunner rules() {
+		return rules;
 	}
 
 	public HudManager hud() {

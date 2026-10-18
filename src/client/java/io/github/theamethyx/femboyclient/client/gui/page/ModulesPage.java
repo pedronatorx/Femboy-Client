@@ -110,7 +110,7 @@ public class ModulesPage extends Page {
 			}
 		}
 
-		io.github.theamethyx.femboyclient.client.hud.Notifications.show("Reset", resetScopeLabel() + " modules are back to their defaults",
+		io.github.theamethyx.femboyclient.client.hud.Notifications.post(io.github.theamethyx.femboyclient.client.hud.Notifications.Category.CONFIG, "Reset", resetScopeLabel() + " modules are back to their defaults",
 				Theme.SUCCESS);
 		rebuildList();
 		rebuildDetails();

@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
+import java.util.function.LongSupplier;
 
 import com.google.gson.JsonObject;
 
@@ -18,8 +19,13 @@ import io.github.theamethyx.femboyclient.core.diag.PerformanceMonitor;
 
 /**
  * Owns all modules and drives their lifecycle. Every call into module code goes through
- * {@link #runGuarded(Module, Phase, Runnable)}, so one failing module is disabled and reported
+ * {@link #runGuarded(Module, Phase, Runnable)}, so one failing module is stopped and reported
  * instead of crashing the client or affecting other modules.
+ *
+ * <p>Recovery: when a running module fails while ticking, drawing or changing worlds, it is suspended (stopped, its
+ * cleanup run) for a few seconds and then started again, because many errors are one-off (a chunk unloading at the wrong
+ * moment). After {@link #FAILURES_BEFORE_OFF} failures within {@link #FAILURE_WINDOW_MILLIS} it is turned off and stays off
+ * until you turn it on again. Failures while starting, loading or registering turn it off at once.
  *
  * <p>Not thread-safe: use it from the client thread only.
  */
@@ -35,21 +41,42 @@ public final class ModuleManager {
 	private final List<ConflictListener> conflictListeners = new CopyOnWriteArrayList<>();
 	private final DiagnosticLogger diagnostics;
 	private final PerformanceMonitor performance;
+	private final LongSupplier clock;
 	private EnvironmentPolicy environment;
+	/**
+	 * Saved state of modules this version does not have (from a newer version, or one that was removed), from the last
+	 * loaded profile. Written back by {@link #saveModules()} so they are not lost.
+	 */
+	private JsonObject retainedModules = new JsonObject();
+
+	/** Failures within {@link #FAILURE_WINDOW_MILLIS} after which a module is turned off instead of suspended. */
+	public static final int FAILURES_BEFORE_OFF = 3;
+	public static final long FAILURE_WINDOW_MILLIS = 60_000;
+	/** How long a module stays suspended after its first failure; doubled after the second. */
+	public static final long SUSPEND_MILLIS = 5_000;
 
 	public ModuleManager(DiagnosticLogger diagnostics, PerformanceMonitor performance, EnvironmentPolicy environment) {
+		this(diagnostics, performance, environment, System::currentTimeMillis);
+	}
+
+	/** {@code clock} gives the time in milliseconds for failure windows and suspensions (tests pass a fake one). */
+	public ModuleManager(DiagnosticLogger diagnostics, PerformanceMonitor performance, EnvironmentPolicy environment, LongSupplier clock) {
 		this.diagnostics = Objects.requireNonNull(diagnostics);
 		this.performance = Objects.requireNonNull(performance);
 		this.environment = Objects.requireNonNull(environment);
+		this.clock = Objects.requireNonNull(clock);
 	}
 
 	public enum Phase {
 		REGISTER, ENABLE, DISABLE, TICK, RENDER_HUD, RENDER_WORLD, SAVE, LOAD, WORLD_CHANGE
 	}
 
-	/** Told when a module fails and is turned off, with a readable reason (for notifications). */
+	/**
+	 * Told when a module fails, with a readable reason (for notifications). {@code turnedOff} is false when the module was
+	 * only suspended and will restart by itself.
+	 */
 	public interface FailureListener {
-		void failed(Module module, Phase phase, String reason);
+		void failed(Module module, Phase phase, String reason, boolean turnedOff);
 	}
 
 	/** Told when turning {@code enabled} on turned {@code turnedOff} off because they conflict. */
@@ -128,6 +155,8 @@ public final class ModuleManager {
 			StringBuilder haystack = new StringBuilder(name).append(' ').append(module.id()).append(' ')
 					.append(module.description().toLowerCase(Locale.ROOT)).append(' ')
 					.append(module.category().label().toLowerCase(Locale.ROOT));
+			String aliases = String.join(" ", module.aliases()).toLowerCase(Locale.ROOT);
+			haystack.append(' ').append(aliases);
 			module.settings().all().forEach(setting -> haystack.append(' ').append(setting.name().toLowerCase(Locale.ROOT)));
 
 			boolean all = true;
@@ -135,7 +164,7 @@ public final class ModuleManager {
 			for (String term : terms) {
 				if (term.isEmpty()) continue;
 				if (haystack.indexOf(term) < 0) all = false;
-				if (!name.contains(term)) inName = false;
+				if (!name.contains(term) && !aliases.contains(term)) inName = false;
 			}
 
 			if (all) {
@@ -160,6 +189,7 @@ public final class ModuleManager {
 			module.clearError();
 		}
 
+		module.offReason = null;
 		if (module.isEnabled() != enabled) {
 			module.setEnabledFlag(enabled);
 			diagnostics.info(module.name(), enabled ? "Enabled" : "Disabled");
@@ -192,6 +222,7 @@ public final class ModuleManager {
 	private void resolveConflicts(Module module) {
 		for (Module other : conflictsOf(module)) {
 			other.setEnabledFlag(false);
+			other.offReason = "Turned off because it cannot run together with " + module.name() + ".";
 			updateRunning(other);
 			notifyChanged(other);
 			diagnostics.info(other.name(), "Turned off: it cannot run together with " + module.name() + ".");
@@ -319,7 +350,7 @@ public final class ModuleManager {
 	}
 
 	private void updateRunning(Module module) {
-		boolean shouldRun = module.isEnabled() && availability(module).available();
+		boolean shouldRun = module.isEnabled() && !suspended(module) && availability(module).available();
 
 		if (shouldRun && !module.isRunning()) {
 			module.setRunning(true);
@@ -335,6 +366,73 @@ public final class ModuleManager {
 		}
 	}
 
+	/** Whether the module is waiting out a suspension after a failure. Clears the suspension once it has passed. */
+	private boolean suspended(Module module) {
+		if (module.suspendedUntil == 0) {
+			return false;
+		}
+
+		if (clock.getAsLong() < module.suspendedUntil) {
+			return true;
+		}
+
+		module.suspendedUntil = 0;
+		diagnostics.info(module.name(), "Restarting after the suspension.");
+		return false;
+	}
+
+	/** The module's current state and recent numbers, for the health monitor. */
+	public ModuleHealth health(Module module) {
+		long now = clock.getAsLong();
+		long sinceSuccess = module.lastSuccessNanos == 0 ? -1 : (System.nanoTime() - module.lastSuccessNanos) / 1_000_000;
+		int recent = recentFailures(module, now);
+		String workload = null;
+		if (module.isRunning()) {
+			try {
+				workload = module.workload();
+			} catch (RuntimeException e) {
+				workload = "Could not describe its work: " + e.getMessage();
+			}
+		}
+
+		ModuleHealth.State state;
+		String reason;
+		if (!module.isEnabled()) {
+			boolean failed = module.lastError() != null;
+			state = failed ? ModuleHealth.State.ERROR : ModuleHealth.State.OFF;
+			reason = module.offReason() != null ? module.offReason() : failed ? module.lastError() : "";
+		} else if (module.isRunning()) {
+			state = ModuleHealth.State.ACTIVE;
+			reason = "";
+		} else if (module.suspendedUntil > now) {
+			state = ModuleHealth.State.SUSPENDED;
+			reason = "Restarts in " + Math.max(1, (module.suspendedUntil - now + 999) / 1000) + " s after: " + module.lastError();
+		} else {
+			Module.Availability availability = availability(module);
+			reason = availability.reason();
+			state = switch (availability.kind()) {
+				case WAITING -> ModuleHealth.State.WAITING;
+				case ENVIRONMENT -> ModuleHealth.State.UNSUPPORTED;
+				case REDUCED -> ModuleHealth.State.REDUCED;
+				case AVAILABLE -> ModuleHealth.State.WAITING;
+				case OTHER -> ModuleHealth.State.UNSUPPORTED;
+			};
+		}
+
+		return new ModuleHealth(state, reason, sinceSuccess, module.lastError(), recent, module.errorCount(), workload);
+	}
+
+	private static int recentFailures(Module module, long now) {
+		int count = 0;
+		for (int i = 0; i < module.recentFailureCount; i++) {
+			if (now - module.recentFailures[i] < FAILURE_WINDOW_MILLIS) {
+				count++;
+			}
+		}
+
+		return count;
+	}
+
 	/**
 	 * Runs module code with error isolation and timing.
 	 *
@@ -346,6 +444,10 @@ public final class ModuleManager {
 
 		try {
 			action.run();
+			if (phase == Phase.TICK || phase == Phase.RENDER_HUD || phase == Phase.RENDER_WORLD) {
+				module.lastSuccessNanos = start;
+			}
+
 			return true;
 		} catch (VirtualMachineError fatal) {
 			throw fatal;
@@ -362,21 +464,31 @@ public final class ModuleManager {
 		String message = "Failed during " + phase.name().toLowerCase(Locale.ROOT).replace('_', ' ') + ": "
 				+ (t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage());
 		module.recordError(message);
-		diagnostics.error(module.name(), message + ". The module was turned off; other modules are unaffected.", t);
-		for (FailureListener listener : failureListeners) {
-			try {
-				listener.failed(module, phase, message);
-			} catch (RuntimeException e) {
-				diagnostics.warn("Client", "A failure notification could not be shown: " + e);
-			}
-		}
+		long now = clock.getAsLong();
+		int recent = rememberFailure(module, now);
 
 		if (phase == Phase.DISABLE || phase == Phase.SAVE) {
 			// Turning it off again would recurse; saving failures do not affect running state.
+			diagnostics.error(module.name(), message + ". Other modules are unaffected.", t);
+			notifyFailure(module, phase, message, false);
 			return;
 		}
 
-		module.setEnabledFlag(false);
+		boolean recoverable = phase == Phase.TICK || phase == Phase.RENDER_HUD || phase == Phase.RENDER_WORLD || phase == Phase.WORLD_CHANGE;
+		boolean turnOff = !recoverable || recent >= FAILURES_BEFORE_OFF;
+		if (turnOff) {
+			module.setEnabledFlag(false);
+			module.suspendedUntil = 0;
+			module.offReason = recoverable ? "Turned off after " + recent + " errors within a minute. Last: " + message
+					: "Turned off after an error. " + message;
+			diagnostics.error(module.name(), message + (recoverable ? ". It failed " + recent + " times within a minute and was turned off" : ". The module was turned off")
+					+ "; other modules are unaffected. Turn it on again to retry.", t);
+		} else {
+			long pause = SUSPEND_MILLIS * recent;
+			module.suspendedUntil = now + pause;
+			diagnostics.error(module.name(), message + ". Suspended for " + pause / 1000 + " s, then it restarts by itself; other modules are unaffected.", t);
+		}
+
 		if (module.isRunning()) {
 			module.setRunning(false);
 			if (phase != Phase.ENABLE) {
@@ -390,7 +502,38 @@ public final class ModuleManager {
 			}
 		}
 
+		notifyFailure(module, phase, message, turnOff);
 		notifyChanged(module);
+	}
+
+	/** Records a failure time and returns how many failures fall within the window, including this one. */
+	private static int rememberFailure(Module module, long now) {
+		long[] times = module.recentFailures;
+		int kept = 0;
+		for (int i = 0; i < module.recentFailureCount; i++) {
+			if (now - times[i] < FAILURE_WINDOW_MILLIS) {
+				times[kept++] = times[i];
+			}
+		}
+
+		if (kept == times.length) {
+			System.arraycopy(times, 1, times, 0, kept - 1);
+			kept--;
+		}
+
+		times[kept++] = now;
+		module.recentFailureCount = kept;
+		return kept;
+	}
+
+	private void notifyFailure(Module module, Phase phase, String message, boolean turnedOff) {
+		for (FailureListener listener : failureListeners) {
+			try {
+				listener.failed(module, phase, message, turnedOff);
+			} catch (RuntimeException e) {
+				diagnostics.warn("Client", "A failure notification could not be shown: " + e);
+			}
+		}
 	}
 
 	// ----- persistence -----------------------------------------------------------------------
@@ -404,7 +547,13 @@ public final class ModuleManager {
 			}
 		}
 
+		retainedModules.entrySet().forEach(entry -> json.add(entry.getKey(), entry.getValue().deepCopy()));
 		return json;
+	}
+
+	/** Ids of modules in the last loaded profile that this version does not have; their data is kept. */
+	public java.util.Set<String> retainedModules() {
+		return java.util.Set.copyOf(retainedModules.keySet());
 	}
 
 	/**
@@ -434,6 +583,17 @@ public final class ModuleManager {
 	 */
 	public List<String> loadModules(JsonObject json) {
 		List<String> warnings = new ArrayList<>();
+		retainedModules = new JsonObject();
+		for (String id : json.keySet()) {
+			if (!modules.containsKey(id)) {
+				retainedModules.add(id, json.get(id).deepCopy());
+			}
+		}
+
+		if (!retainedModules.isEmpty()) {
+			diagnostics.info("Client", "The profile has settings for " + retainedModules.size() + " module(s) this version does not have ("
+					+ String.join(", ", retainedModules.keySet()) + "); they are kept in the file unchanged.");
+		}
 
 		for (Module module : modules.values()) {
 			JsonObject moduleJson = json.get(module.id()) instanceof JsonObject object ? object : null;

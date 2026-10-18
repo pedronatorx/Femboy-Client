@@ -160,6 +160,8 @@ public final class SchematicViewerModule extends Module implements ClientHooks.W
 
 		try {
 			schematic = Schematic.load(path);
+			io.github.theamethyx.femboyclient.client.FemboyClient.get().timeline().record(io.github.theamethyx.femboyclient.client.smart.SessionTimeline.Kind.SCHEMATIC,
+					"Loaded schematic " + path.getFileName(), schematic.name());
 			file = name;
 			loadError = null;
 			restartPass();

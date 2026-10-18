@@ -112,4 +112,9 @@ public final class BlockCounterModule extends Module implements ClientHooks.HudB
 
 		counts.forEach((name, count) -> lines.add(HudLine.of(name, String.valueOf(count))));
 	}
+
+	@Override
+	public String workload() {
+		return String.format(java.util.Locale.ROOT, "%,d blocks in %d/%d chunks", scanner().count(), scanner().scannedChunks(), scanner().chunksInRange());
+	}
 }

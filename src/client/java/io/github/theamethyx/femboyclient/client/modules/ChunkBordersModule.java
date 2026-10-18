@@ -70,4 +70,9 @@ public final class ChunkBordersModule extends Module implements ClientHooks.Worl
 			}
 		}
 	}
+
+	@Override
+	public java.util.List<String> aliases() {
+		return java.util.List.of("chunk grid");
+	}
 }

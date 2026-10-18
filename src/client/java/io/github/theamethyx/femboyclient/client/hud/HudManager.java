@@ -47,8 +47,41 @@ public final class HudManager {
 	private boolean dirty = true;
 	private int rebuilds;
 
-	/** Where a block was drawn in the last frame (GUI coordinates), for the HUD editor and tests. */
-	public record Placed(String moduleId, String name, int x, int y, int width, int height, boolean custom) {
+	/**
+	 * Where a block was drawn in the last frame (GUI coordinates, scaled size), for the HUD editor and tests. {@code hidden}
+	 * marks an element the layout hides (or whose condition does not hold), drawn faintly only while the editor is open.
+	 */
+	public record Placed(String moduleId, String name, int x, int y, int width, int height, boolean custom, boolean hidden, float scale) {
+	}
+
+	/** Whether the HUD editor is open: hidden elements are then drawn faintly so they can be found and shown again. */
+	private static boolean editing() {
+		return Minecraft.getInstance().screen instanceof io.github.theamethyx.femboyclient.client.gui.HudEditorScreen;
+	}
+
+	/** Which visibility conditions hold this frame, by ordinal. */
+	private final boolean[] conditions = new boolean[io.github.theamethyx.femboyclient.core.hud.HudLayouts.Condition.values().length];
+
+	private void evaluateConditions(Minecraft client) {
+		var player = client.player;
+		boolean combat = FemboyClient.get().combat().inCombat(COMBAT_WINDOW_MILLIS);
+		conditions[io.github.theamethyx.femboyclient.core.hud.HudLayouts.Condition.ALWAYS.ordinal()] = true;
+		conditions[io.github.theamethyx.femboyclient.core.hud.HudLayouts.Condition.IN_COMBAT.ordinal()] = combat;
+		conditions[io.github.theamethyx.femboyclient.core.hud.HudLayouts.Condition.OUT_OF_COMBAT.ordinal()] = !combat;
+		conditions[io.github.theamethyx.femboyclient.core.hud.HudLayouts.Condition.HOLDING_WEAPON.ordinal()] = player != null && isWeapon(player.getMainHandItem());
+		conditions[io.github.theamethyx.femboyclient.core.hud.HudLayouts.Condition.GLIDING.ordinal()] = player != null && player.isFallFlying();
+		conditions[io.github.theamethyx.femboyclient.core.hud.HudLayouts.Condition.SNEAKING.ordinal()] = player != null && player.isShiftKeyDown();
+	}
+
+	/** Seconds after your last attack or damage during which "In combat" holds. */
+	public static final long COMBAT_WINDOW_MILLIS = 8_000;
+
+	private static boolean isWeapon(net.minecraft.world.item.ItemStack stack) {
+		var group = io.github.theamethyx.femboyclient.client.profile.AutoProfileSwitcher.classify(stack);
+		return group != null && switch (group) {
+			case SWORD, AXE, MACE, SPEAR, TRIDENT, BOW, CROSSBOW -> true;
+			default -> false;
+		};
 	}
 
 	public HudManager(ModuleManager modules, HudLayout layout) {
@@ -116,6 +149,8 @@ public final class HudManager {
 		ui.setScreenSize(width, height);
 		ui.beginFrame(graphics, -1000, -1000, 0, false);
 		float partialTick = deltaTracker.getGameTimeDeltaPartialTick(false);
+		boolean editing = editing();
+		evaluateConditions(client);
 
 		if (dirty || ClientTicks.count() - builtTick >= Performance.hudInterval()) {
 			dirty = false;
@@ -135,12 +170,19 @@ public final class HudManager {
 				modules.runGuarded(module, ModuleManager.Phase.RENDER_HUD, () -> overlay.renderOverlay(ui, width, height, partialTick));
 			}
 
+			io.github.theamethyx.femboyclient.core.hud.HudLayouts.Element element = layout.element(module.id());
+			boolean hidden = element.hidden() || !conditions[element.when().ordinal()];
+			if (hidden && !editing) {
+				continue;
+			}
+
 			Block text = blocks.get(module);
 			if (text != null && module instanceof ClientHooks.HudBlock block) {
-				if (layout.get(module.id()) != null) {
-					custom.add(text);
+				Item item = new Styled(text, element, hidden);
+				if (element.placed()) {
+					custom.add(item);
 				} else {
-					byCorner.computeIfAbsent(block.hudAnchor(), anchor -> new ArrayList<>()).add(text);
+					byCorner.computeIfAbsent(block.hudAnchor(), anchor -> new ArrayList<>()).add(item);
 				}
 			}
 
@@ -150,8 +192,8 @@ public final class HudManager {
 					size[0] = widget.hudWidth(ui);
 					size[1] = widget.hudHeight(ui);
 				}) && size[0] > 0 && size[1] > 0) {
-					WidgetItem entry = new WidgetItem(module, widget, size[0], size[1]);
-					if (layout.get(module.id()) != null) {
+					Item entry = new Styled(new WidgetItem(module, widget, size[0], size[1]), element, hidden);
+					if (element.placed()) {
 						custom.add(entry);
 					} else {
 						byCorner.computeIfAbsent(widget.hudAnchor(), anchor -> new ArrayList<>()).add(entry);
@@ -173,13 +215,11 @@ public final class HudManager {
 		}
 
 		for (Item block : custom) {
-			HudLayout.Position position = layout.get(block.moduleId());
 			int blockWidth = block.width(ui);
 			int blockHeight = block.height(ui);
-			int x = Math.clamp(Math.round(position.x() * width), 0, Math.max(0, width - blockWidth));
-			int y = Math.clamp(Math.round(position.y() * height), 0, Math.max(0, height - blockHeight));
-			block.draw(ui, x, y, blockWidth, block.alignRight(), menuOpen);
-			placed.add(new Placed(block.moduleId(), block.name(), x, y, blockWidth, blockHeight, true));
+			int[] position = layout.element(block.moduleId()).topLeft(width, height, blockWidth, blockHeight);
+			block.draw(ui, position[0], position[1], blockWidth, block.alignRight(), menuOpen);
+			placed.add(new Placed(block.moduleId(), block.name(), position[0], position[1], blockWidth, blockHeight, true, block.hidden(), block.scale()));
 		}
 	}
 
@@ -200,7 +240,7 @@ public final class HudManager {
 			int x = anchor.right() ? screenWidth - MARGIN - blockWidth : MARGIN;
 			int y = anchor.bottom() ? cursor - blockHeight : cursor;
 			block.draw(ui, x, y, blockWidth, anchor.right(), dimmed);
-			placed.add(new Placed(block.moduleId(), block.name(), x, y, blockWidth, blockHeight, false));
+			placed.add(new Placed(block.moduleId(), block.name(), x, y, blockWidth, blockHeight, false, block.hidden(), block.scale()));
 			cursor = anchor.bottom() ? y - GAP : y + blockHeight + GAP;
 		}
 	}
@@ -223,8 +263,8 @@ public final class HudManager {
 		return harmful ? 52 : beneficial ? 26 : 0;
 	}
 
-	/** Something placed on the HUD: a text block or a widget. */
-	private sealed interface Item permits Block, WidgetItem {
+	/** Something placed on the HUD: a text block or a widget, possibly scaled and faded by the layout. */
+	private sealed interface Item permits Block, WidgetItem, Styled {
 		String moduleId();
 
 		String name();
@@ -236,6 +276,71 @@ public final class HudManager {
 		int height(UiContext ui);
 
 		void draw(UiContext ui, int x, int y, int width, boolean alignRight, boolean dimmed);
+
+		default boolean hidden() {
+			return false;
+		}
+
+		default float scale() {
+			return 1;
+		}
+	}
+
+	/**
+	 * An item with its layout entry applied: drawn scaled around its top-left corner and with the entry's opacity (a third
+	 * of it when hidden, which only happens in the editor). Sizes are the scaled ones.
+	 */
+	private record Styled(Item inner, io.github.theamethyx.femboyclient.core.hud.HudLayouts.Element element, boolean hidden) implements Item {
+		@Override
+		public String moduleId() {
+			return inner.moduleId();
+		}
+
+		@Override
+		public String name() {
+			return inner.name();
+		}
+
+		@Override
+		public boolean alignRight() {
+			return inner.alignRight();
+		}
+
+		@Override
+		public float scale() {
+			return element.scale();
+		}
+
+		@Override
+		public int width(UiContext ui) {
+			return Math.round(inner.width(ui) * element.scale());
+		}
+
+		@Override
+		public int height(UiContext ui) {
+			return Math.round(inner.height(ui) * element.scale());
+		}
+
+		@Override
+		public void draw(UiContext ui, int x, int y, int width, boolean alignRight, boolean dimmed) {
+			float opacity = element.opacity() * (hidden ? 0.35f : 1);
+			if (element.scale() == 1 && opacity >= 1) {
+				inner.draw(ui, x, y, width, alignRight, dimmed);
+				return;
+			}
+
+			var pose = ui.graphics().pose();
+			pose.pushMatrix();
+			pose.translate(x, y);
+			pose.scale(element.scale(), element.scale());
+			ui.setAlpha(opacity);
+			try {
+				inner.draw(ui, 0, 0, inner.width(ui), alignRight, dimmed);
+			} finally {
+				ui.setAlpha(1);
+				pose.popMatrix();
+			}
+		}
 	}
 
 	private final class WidgetItem implements Item {
@@ -315,7 +420,7 @@ public final class HudManager {
 		@Override
 		public void draw(UiContext ui, int x, int y, int width, boolean alignRight, boolean dimmed) {
 			if (panel) {
-				ui.roundRect(x, y, width, height(), Theme.withAlpha(Theme.SURFACE, dimmed ? 0.45f : 0.82f));
+				ui.roundRect(x, y, width, height(), Theme.withAlpha(Theme.SURFACE, dimmed ? 0.45f : Theme.HUD_BACKGROUND));
 				ui.rect(alignRight ? x + width - 1 : x, y + 2, 1, height() - 4, Theme.ACCENT_DIM);
 			}
 
@@ -329,7 +434,7 @@ public final class HudManager {
 					// List style: each row gets its own tight background, aligned to the edge.
 					int rowWidth = valueWidth + labelWidth + 6 + (line.accent() != 0 ? 2 : 0);
 					int rowX = alignRight ? x + width - rowWidth : x;
-					ui.rect(rowX, rowY - 1, rowWidth, LINE, Theme.withAlpha(Theme.SURFACE, dimmed ? 0.4f : 0.75f));
+					ui.rect(rowX, rowY - 1, rowWidth, LINE, Theme.withAlpha(Theme.SURFACE, dimmed ? 0.4f : Theme.HUD_BACKGROUND * 0.92f));
 					if (line.accent() != 0) {
 						ui.rect(alignRight ? rowX + rowWidth - 2 : rowX, rowY - 1, 2, LINE, line.accent());
 					}

@@ -1,10 +1,10 @@
 # Femboy Client
 
-A client-side Fabric mod for **Minecraft Java Edition 1.21.11**: a themeable menu with 72 combat, automation, movement, visual, inventory, tracking, world and utility modules, ESP with target lines from your crosshair, three performance modes, a drag-and-drop HUD editor, profiles with automatic switching, and 17 ready-made presets.
+A client-side Fabric mod for **Minecraft Java Edition 1.21.11**: a themeable menu with 77 combat, automation, movement, visual, inventory, tracking, world and utility modules, a command palette, ESP with target lines from your crosshair, three performance modes, a Performance Center, a HUD editor with layouts, profiles with previews, history and automatic switching, 24 ready-made presets, rules, a session timeline, and restore points.
 
 Everything is **off on first start**; nothing runs until you turn it on or install a preset. Every module shows a **tier** badge: *Visual* and *Assist* modules (information, ESP, HUD) and *Automation* modules that only manage your own items (Auto Attribute Swap's spear reach and weapon rules, Auto Tool, Inventory Sorter, Chest Organizer, Item Swap, Hotbar Profiles, Sprint) work on every server. **Sandbox** modules (combat automation including AutoCrystal, AutoAnchor and Auto Pot, movement changes including Anti Hunger, Auto Armor, Auto Refill, Auto Offhand, and the three modules that read every loaded block: Block ESP, Block Counter and Geode Analyzer) work only in a **test environment**: singleplayer, or a server you reach at a private address (your own PC, your LAN, or a VPN such as Tailscale or ZeroTier). There are no prompts or allowlists; elsewhere they simply stay off and their description says why. Femboy Client contains nothing that hides it from anti-cheat systems, and some servers' rules forbid clients like this, so check before you use it there.
 
-![Home page](docs/screenshots/0009_gui-1280x720-0-home.png)
+![Home page](docs/screenshots/0010_gui-1280x720-0-home.png)
 
 ## Versions
 
@@ -21,15 +21,20 @@ Everything is **off on first start**; nothing runs until you turn it on or insta
 ## Installation (normal Minecraft launcher)
 
 1. Install Fabric Loader 0.19.5 for Minecraft 1.21.11.
-2. Put `femboy-client-0.9.0.jar` (from `build/libs/`) and Fabric API 0.141.6+1.21.11 into the profile's `mods` folder.
+2. Put `femboy-client-1.0.0.jar` (from `build/libs/`) and Fabric API 0.141.6+1.21.11 into the profile's `mods` folder.
 3. Start the game and press **Right Shift** to open the menu. You can rebind it under Options → Controls → Key Binds → Femboy Client.
 
 Settings live in `config/femboyclient/`:
 - `femboyclient.json`: client options, active profile
 - `profiles/*.json`: modules, keys and settings per profile, plus the look and performance mode stored with each profile
 - `exports/*.json`: profiles you exported
+- `restore-points/<time>-<label>/`: copies of all of the above (the newest 20)
+- `reports/`: diagnostic reports and session timelines you exported
+- `profiles/<name>.json.before-repair-<time>`: a profile as it was before invalid values in it were replaced by defaults
 
 Every file is written atomically with a `.bak` copy, on a background thread so the game never waits for the disk. An unreadable file is moved aside as `*.corrupt-<time>`, never deleted, and the client falls back to the backup or to defaults.
+
+**Nothing you saved is dropped silently.** Settings or modules this version does not know (written by a newer version) are kept and written back unchanged. When a value is invalid, it is replaced by its default and the file is first copied as `before-repair`. **Upgrading from 0.9.x:** the configuration moves to schema 3 (profiles also store the HUD layout); the old files are copied into a restore point first.
 
 **Upgrading from 0.8.x:** Ore ESP is now Block ESP. Its settings (blocks, radius, "only exposed", on/off) move over automatically the first time a profile is loaded, also for profiles you import later; the previous file stays as `.bak`.
 
@@ -45,7 +50,7 @@ export JAVA_HOME=$HOME/.local/share/jdks/jdk-25.0.4.1+1   # any JDK 25+
 
 | Task | Command |
 |---|---|
-| Build the mod jar (also runs the unit tests) | `./gradlew build` → `build/libs/femboy-client-0.9.0.jar` |
+| Build the mod jar (also runs the unit tests) | `./gradlew build` → `build/libs/femboy-client-1.0.0.jar` |
 | Unit tests only | `./gradlew test` |
 | Server GameTests, headless (includes the research experiment) | `./gradlew runGameTest` |
 | In-game client tests, headless (needs `xvfb-run`), with screenshots | `./scripts/run-client-tests.sh` |
@@ -56,9 +61,9 @@ export JAVA_HOME=$HOME/.local/share/jdks/jdk-25.0.4.1+1   # any JDK 25+
 
 ## Using the menu
 
-The sidebar has nine sections: **Home, Combat, Automation, Movement, Visuals, Inventory, World, Profiles, Settings**. The header has the page title, a **search field** for all modules (Ctrl+F; results appear on Home), the **profile selector** (click it to switch profiles or manage them), a **notification bell** with the latest client messages, and the close button. Messages that arrive while the menu is open also slide in briefly at the bottom right.
+The sidebar has ten sections: **Home, Combat, Automation, Movement, Visuals, Inventory, World, Trackers, Profiles, Settings**. The header has the page title, the **command palette** button (Ctrl+K), a **search field** for all modules (Ctrl+F; results appear on Home), the **profile selector** (click it to switch profiles or manage them), a **notification bell** with the latest client messages, and the close button. Messages that arrive while the menu is open also slide in briefly at the bottom right.
 
-**Home** shows every module in cards: **left-click** a module to turn it on or off, **right-click** it to slide in its settings panel (tabs **Settings**, **Keybinds**, **Info**, and a Reset button; Esc closes it). On the other pages a click opens the settings on the right and the switch turns the module on or off; **Reset ...** under the list resets every module of the page (a second click confirms). Every module has an on/off switch, a key (click it and press a key; Backspace clears it) that either **toggles** the module or keeps it on only while **held**, and settings in **collapsible sections**: fine-tuning sections (Performance, Colors, Health, Style, Keys, Display) start folded, one click opens them. Click a number's value to type it exactly; Shift + mouse wheel over a slider moves it one step. Each setting has a tooltip and its own reset. The Info tab says why a module is paused, what it uses (for example Trackers uses Player Finder for last-seen positions) and which modules it cannot run together with.
+**Home** starts with your **Favorites** (star a module in its settings header) and **Recently used** modules, then shows every module in cards: **left-click** a module to turn it on or off, **right-click** it to slide in its settings panel (tabs **Settings**, **Keybinds**, **Info**, and a Reset button; Esc closes it). On the other pages a click opens the settings on the right and the switch turns the module on or off; **Reset ...** under the list resets every module of the page (a second click confirms). Every module has an on/off switch, a key (click it and press a key; Backspace clears it) that either **toggles** the module or keeps it on only while **held**, and settings in **collapsible sections**: fine-tuning sections (Performance, Colors, Health, Style, Keys, Display) start folded, one click opens them. Click a number's value to type it exactly; Shift + mouse wheel over a slider moves it one step. Each setting has a tooltip and its own reset. The Info tab says why a module is paused, what it uses (for example Trackers uses Player Finder for last-seen positions) and which modules it cannot run together with.
 
 The menu has smooth rounded panels, soft shadows and glows, purple-to-magenta highlights and vector icons, drawn from a few small textures made by `tools/make_gui_art.py` and `tools/make_icons.py` (no downloads; plain shapes are used if a texture is missing). Animations: on or off, and **Reduce motion** keeps only fades. Menu scale: automatic, Minecraft's, or 1x to 4x.
 
@@ -70,13 +75,25 @@ The menu has smooth rounded panels, soft shadows and glows, purple-to-magenta hi
 | **Movement** | Free Camera, Sprint, Movement Info, Elytra Info, Flight\*, Elytra Flight\*, Speed\*, Strafe Assist\*, Step\*, Safe Walk\*, No Slow\*, No Fall\*, Anti Hunger\* |
 | **Visuals** | Entity ESP, Entity Outlines, Storage ESP, Block ESP\*, Hitboxes, Trajectories, Block Highlight, Light Level, Fullbright, Zoom, Chunk Borders; HUD and utilities: Coordinates, Performance, Module List, Keystrokes, Notifications, Better Chat, Auto Reconnect |
 | **Inventory** | Item Counters, Health & Armor, Effects, Auto Tool, Inventory Sorter, Shulker Preview, Item Swap, Hotbar Profiles, Chest Organizer, Auto Armor\*, Auto Refill\* |
-| **World** | Geode Analyzer\*, Block Counter\*, Death Coordinates, Structure Finder, Schematic Viewer, Material List; players and places: Player Finder, Trackers, Player Alert, Waypoints; developer: Java Runner |
-| **Profiles** | Your profiles (use, copy, export, import, delete, reset), the 17 presets, automatic switching rules and delay |
-| **Settings** | General tab: emergency off, **Edit HUD layout**, client options (performance mode, theme, custom accent color, menu scale, animations, reduce motion, tooltips, automatic switching), config folder. Diagnostics tab: frame timing, time per module, message log |
+| **World** | Geode Analyzer\*, Block Counter\*, Death Coordinates, Structure Finder, Schematic Viewer, Material List, Shape Planner; developer: Java Runner |
+| **Trackers** | Player Finder, Trackers, Player Alert, Waypoints |
+| **Profiles** | Your profiles (use, preview and compare, copy, export, import, rename, delete, reset), recently used profiles, the 24 presets, automatic switching rules and delay |
+| **Settings** | **General:** emergency off, **Edit HUD layout**, client options (performance mode, menu scale, tooltips, messages, automatic switching), restore points, reset everything, files (open, save, reload). **Appearance:** Theme Studio. **Performance:** Performance Center. **Rules**, **Timeline**. **Developer:** module health, dependencies, configuration validator, crash reports, counters, timings, log |
 
 \* Sandbox tier: test environments only (see [Test environments](#test-environments)).
 
-**Themes:** Femboy (navy, purple, magenta; the default), Charcoal, Midnight magenta and Deep ocean, plus an optional custom accent color. **HUD editor:** drag any HUD block to place it anywhere (positions are stored relative to the screen size, so they survive resizing), right-click a block to send it back to its corner, R resets all.
+**Theme Studio** (Settings → Appearance): presets Default purple, Deep violet, Midnight, Minimal dark, High contrast and Reduced motion (and the older Midnight magenta and Deep ocean palettes); your own accent, second accent, background and text colors, panel opacity, corner style (sharp, soft, round), colored or plain icons, background art, HUD background opacity, animation speed, and a live preview. Save looks under a name, copy them as text to share, import them (every value is checked). The look is stored in each profile. Only Minecraft's font is used; other fonts are not supported.
+
+**HUD editor** (Settings → General → Edit HUD layout, or the command palette): drag an element; it snaps to the screen edges, the center and other elements with guide lines (hold Shift to place freely; G shows an 8-pixel grid that it then snaps to). Select an element to change its **size** and **opacity**, choose when it **shows** (always, in combat, out of combat, holding a weapon, gliding, sneaking) or **hide** it; the mouse wheel scales the element under it (Shift: opacity), arrow keys nudge it, Delete or a right-click sends it back to its corner. The elements list on the left turns HUD modules on and off and hides them per layout; hidden elements are drawn faintly while the editor is open. Overlapping elements are outlined in amber. **Ctrl+Z / Ctrl+Y** undo and redo. Keep several **layouts** (copy, rename, delete, copy to and from the clipboard) and switch between them. Positions are anchored to the nearest screen edge or the center, so they stay put at other window sizes and GUI scales; each profile stores its own layout.
+
+### Command palette and quick access
+
+**Ctrl+K** (or Ctrl+P) in the menu, the palette button in the header, or the **Command palette** key anywhere (unbound by default so it never takes a key you use; bind it under Options → Controls → Key Binds → Femboy Client). Type to find:
+- **modules** (Enter turns one on or off, Tab or a right-click opens its settings; search also knows other names, such as "ore esp" or "freecam"),
+- **settings** of any module (opens the module with that section unfolded), **pages** and **settings tabs**, **profiles** (switch), **theme presets**,
+- **actions:** open the HUD editor, manage profiles, save, create a restore point, go back to the previous profile, cycle the performance mode, add a timeline marker, export a diagnostic report, turn everything off.
+
+With nothing typed it lists favorites, recently used modules and a waiting rule suggestion. **Quick toggle wheel:** bind "Quick toggle wheel (hold)" (unbound by default), hold it in game, point at one of up to eight favorites (then recent modules, then "previous profile") and release.
 
 ### Modules
 
@@ -140,11 +157,16 @@ The menu has smooth rounded panels, soft shadows and glows, purple-to-magenta hi
 | **Waypoints** | Save positions; see them as markers with names and distances. |
 | **Geode Analyzer** | Finds amethyst geodes in loaded chunks and keeps exact growth-stage counts up to date as chunks load and buds grow. Singleplayer and your own network only. See below. |
 | **Coordinates, Performance, Module List** | HUD panels. |
+| **Compass** | A heading strip with the directions around where you look and your exact bearing. |
+| **Session Stats** | Play time, distance moved, deaths, hits landed, accuracy and best combo of this session. |
+| **Experience** | Your level and exactly how many points the next level and a target level need (Minecraft's formulas). |
+| **Mention Alerts** | A notification and a short sound when chat mentions your name or one of your keywords as a whole word. Nothing is stored. |
+| **Shape Planner** | Outlines a circle, cylinder, sphere, dome, spiral staircase or wall (filled or hollow) around a center you choose, with the number of blocks and stacks. Guides only; it never places blocks. |
 | **Java Runner** | Write and run small Java programs in a separate process, with output, errors, limits and examples. See below. |
 
 HUD blocks stack in the corner you choose without overlapping, and the top-right corner starts below vanilla's effect icons.
 
-An enabled module **pauses** while no world is loaded and resumes on its own. If a module throws an error, it is turned off, a notification says which module and why, and the details go to Settings → Diagnostics; other modules keep running. The same message repeated within 10 seconds is counted instead of logged again.
+An enabled module **pauses** while no world is loaded and resumes on its own. If a module throws an error while running, it is **suspended**: stopped, cleaned up and restarted by itself after 5 seconds (10 after a second error). The third error within a minute turns it off until you turn it on again. A notification says which happened, and the module health monitor (Settings → Developer) shows its state, last error and error count. Other modules keep running. The same log message repeated within 10 seconds is counted instead of logged again.
 
 Modules that control the same thing cannot run together: turning one on turns the other off, with a message (KillAura with Aim Assist or Trigger Bot; Flight with Elytra Flight or Speed). When you change world or dimension, modules drop what described the old one (scan results, targets, found structures).
 
@@ -184,8 +206,28 @@ A **profile** stores which modules are on, every setting and every key. Changes 
 - **Create** a profile on the Profiles page: type a name and press Create (it starts as a copy of the current one). **Use** switches to it; the current profile is saved first, and modules that are off in the new profile are turned off.
 - **Copy** duplicates a profile, **Export** copies it to the clipboard and saves it under `config/femboyclient/exports/`, **Import** creates a profile from text on the clipboard. Every imported value is checked; unknown modules and invalid values are dropped and replaced by defaults, and you are told which.
 - **Reset the current profile** turns every module off and restores defaults (two clicks).
-- **Presets:** Sword PvP, Axe PvP, Mace PvP, Spear PvP, Spear + Mace PvP, Crystal PvP, Anchor PvP, Pot PvP, UHC / Survival, Survival / SMP, Elytra PvP, Bow / Crossbow, Building, Mining, Exploration, Performance and Local Testing. **Install** creates a normal profile from the preset; edit it like any other. **Reset** puts the preset's settings back. Presets turn on information and visual modules only. Automation that fits a style is configured but left off: Auto Attribute Swap (axe, mace, spear + mace), KillAura and Trigger Bot (sword, axe), Auto StunSlam (mace, spear + mace), AutoTotem (crystal, anchor).
+- **Preview** a profile before using it: the list of exactly which modules, key binds, settings and stored options would change, with a button to switch. **Rename** the active profile (switching rules and the history follow). **Recently used profiles** lists where you were, with "Back".
+- A profile also stores the **look** (Theme Studio), the **performance mode** and the **HUD layout**.
+- **Presets:** Sword PvP, Axe PvP, Mace PvP, Spear PvP, Spear + Mace PvP, Crystal PvP, Anchor PvP, Bed PvP, Pot PvP, UHC / Survival, Survival / SMP, Elytra PvP, Bow / Crossbow, Building, Mining, Farming, Exploration, Parkour, Speedrunning, Recording / Streaming, Performance, Developer, Local Testing and Authorized Testing. **Install** creates a normal profile from the preset; edit it like any other. **Reset** puts the preset's settings back. Presets turn on information and visual modules only. Automation that fits a style is configured but left off: Auto Attribute Swap (axe, mace, spear + mace), KillAura and Trigger Bot (sword, axe), Auto StunSlam (mace, spear + mace), AutoTotem (crystal, anchor).
 - **Automatic switching:** add rules such as "Mace, any dimension → mace_pvp" (or press **Add rule** next to a preset), then turn on *Switch profiles automatically*. Rules are checked from the top; the first match wins (held item or gliding, optionally a dimension). If nothing matches, the profile stays. A rule result must hold for the **switch delay** (default 4 ticks, 0–40) before the profile changes, so scrolling past items doesn't flicker between profiles. A profile you pick by hand stays until your held item changes to something another rule matches. A weapon Auto Attribute Swap holds for a single hit never changes the profile.
+
+## Restore points and resets
+
+Settings → General → **Restore points**: a copy of all settings and profiles. One is made by hand or automatically before a restore, a full reset, replacing a profile with a preset, and a configuration format update; the newest 20 are kept. **Restore** (two clicks) makes a restore point of the current state first, so it can be undone. **Reset everything** (two clicks) puts client options, the HUD layout, switching rules and every module of the active profile back to a fresh installation's state; other profiles are kept. **Reload from disk** reads the files again after you edited them by hand.
+
+## Performance Center
+
+Settings → **Performance**: FPS, average and slowest frame time, 1% low, a frame-time graph, the share of each frame Femboy Client uses, memory, the cost of every running module (per tick, per HUD frame, per world frame), what busy modules are working on (blocks found, targets, lines), the update rates of the current mode, and warnings with recommendations computed from these numbers (a costly module, a slow frame where Performance mode would help, stutter, memory nearly full). **Compare on and off** measures a visual or assist module for a few seconds in each state under the same conditions and shows the difference in frame time and client cost (automation modules are excluded because switching them on would make them act). **Export report** writes a text report for debugging (versions, frame statistics, module costs and health, recent log; no server address, chat or player names). Allocation measurement can be turned on here; it is off otherwise. Timing is measured around every call into module code all the time; it costs two clock reads per call.
+
+## Rules and timeline
+
+Settings → **Rules**: "When / If / Then" rules. **When:** the profile changes, a world is joined, the dimension changes, the GUI scale or window size changes, FPS stays below a limit for 5 s, combat starts or ends, the held item type changes. **If:** all or any of: the profile is (not) X, the dimension, the environment (singleplayer, private network, public server), what you hold, the HUD layout, FPS below N. **Then:** show a notification, suggest a profile or Performance mode (suggestions wait in the command palette: "Apply suggestion"), switch profile or HUD layout, show or hide a HUD element, turn a *visual* module on or off, set the performance mode, add a timeline marker. Rules run from the top; each has a cooldown and can be a **dry run** that only records what it would do; **Check now** tests the conditions. Problems (missing values, unknown profiles, rules that contradict each other) are listed above the rules, and the history shows what ran. Rules can be copied as text and imported (they arrive switched off). Rules never turn on modules that act in the game, a rule never runs twice in one chain of events, rules that change something wait at least 3 seconds, and at most five rules run per second. Two suggestion-only rules ship by default; "Rules" in the same tab turns the whole system off.
+
+Settings → **Timeline**: this session's profile switches, module changes, worlds and dimensions, deaths, your markers, schematics, performance warnings, module errors and rules. Search, filter by kind, bookmark (bookmarked events are kept longest), add notes, add markers, export as text, clear; choose which kinds are recorded. It is kept in memory (newest 500) and records no chat, no player names and no server addresses.
+
+## Notifications
+
+Client messages go to the bell in the menu. With the **Notifications** module on, they also appear as toasts: choose the position (top right, top left, top center, bottom right), style, icons, duration and which categories show (module toggles, profiles, configuration, errors, performance, environment, rules, alerts, other). The same message within 5 seconds is folded into one with a count, and at most four new toasts appear per second. Turning on a module that cannot run where you are says why instead of pretending it runs.
 
 ## Emergency off
 

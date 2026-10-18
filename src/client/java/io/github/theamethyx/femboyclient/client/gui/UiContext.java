@@ -53,6 +53,8 @@ public final class UiContext {
 	private String shownTooltip;
 	private boolean reduceMotion;
 	private boolean cheapShapes;
+	/** Opacity applied to everything drawn (HUD elements can be faded); 1 = unchanged. */
+	private float alpha = 1;
 
 	public UiContext(Font font) {
 		this.font = font;
@@ -84,6 +86,23 @@ public final class UiContext {
 	 */
 	public void setCheapShapes(boolean cheapShapes) {
 		this.cheapShapes = cheapShapes;
+	}
+
+	/**
+	 * Multiplies the opacity of everything drawn until it is set back to 1 (used for faded HUD elements). Items drawn with
+	 * {@link #item} are not faded: Minecraft draws them opaque.
+	 */
+	public void setAlpha(float alpha) {
+		this.alpha = Math.clamp(alpha, 0, 1);
+	}
+
+	public float alpha() {
+		return alpha;
+	}
+
+	/** {@code color} with the current opacity applied. */
+	private int a(int color) {
+		return alpha >= 1 ? color : Theme.withAlpha(color, alpha);
 	}
 
 	/** With reduced motion on, things no longer slide or grow; only short fades remain. */
@@ -306,7 +325,7 @@ public final class UiContext {
 
 	public void rect(int x, int y, int width, int height, int color) {
 		if (width > 0 && height > 0) {
-			graphics.fill(x, y, x + width, y + height, color);
+			graphics.fill(x, y, x + width, y + height, a(color));
 		}
 	}
 
@@ -324,7 +343,16 @@ public final class UiContext {
 			return;
 		}
 
-		int r = Math.min(radius, Math.min(width, height) / 2);
+		if (alpha < 1) {
+			// Applied once here; rect() below would apply it again.
+			float saved = alpha;
+			alpha = 1;
+			roundRect(x, y, width, height, Theme.withAlpha(color, saved), radius);
+			alpha = saved;
+			return;
+		}
+
+		int r = Math.min(Math.round(radius * Theme.RADIUS_SCALE), Math.min(width, height) / 2);
 		if (r <= 0) {
 			rect(x, y, width, height, color);
 			return;
@@ -381,6 +409,9 @@ public final class UiContext {
 	 * corners the second, and a filtered alpha ramp blends the middle.
 	 */
 	public void gradientRect(int x, int y, int width, int height, int left, int right, int radius) {
+		radius = Math.round(radius * Theme.RADIUS_SCALE);
+		left = a(left);
+		right = a(right);
 		int r = Math.min(radius, Math.min(width, height) / 2);
 		if (cheapShapes || !art() || width <= 2 * r + 1) {
 			roundRect(x, y, width, height, Theme.lerp(left, right, 0.5f), radius);
@@ -434,7 +465,7 @@ public final class UiContext {
 
 	/** A soft round glow of {@code color} (alpha included) centered on a point; nothing without the texture. */
 	public void glow(int centerX, int centerY, int radius, int color) {
-		if (art() && radius > 0) {
+		if (art() && radius > 0 && Theme.BACKDROP_ART) {
 			graphics.blit(RenderPipelines.GUI_TEXTURED, GLOW, centerX - radius, centerY - radius, 0, 0, radius * 2, radius * 2, 128, 128, 128, 128, color);
 		}
 	}
@@ -458,6 +489,7 @@ public final class UiContext {
 	}
 
 	public void outline(int x, int y, int width, int height, int color, int radius) {
+		color = a(color);
 		int r = Math.max(1, Math.min(radius, Math.min(width, height) / 2) - 1);
 		graphics.fill(x + r, y, x + width - r, y + 1, color);
 		graphics.fill(x + r, y + height - 1, x + width - r, y + height, color);
@@ -466,15 +498,15 @@ public final class UiContext {
 	}
 
 	public void text(String text, int x, int y, int color) {
-		graphics.drawString(font, text, x, y, color, false);
+		graphics.drawString(font, text, x, y, a(color), false);
 	}
 
 	public void textCentered(String text, int centerX, int y, int color) {
-		graphics.drawString(font, text, centerX - font.width(text) / 2, y, color, false);
+		graphics.drawString(font, text, centerX - font.width(text) / 2, y, a(color), false);
 	}
 
 	public void textRight(String text, int rightX, int y, int color) {
-		graphics.drawString(font, text, rightX - font.width(text), y, color, false);
+		graphics.drawString(font, text, rightX - font.width(text), y, a(color), false);
 	}
 
 	/** Draws text cut to {@code maxWidth} with an ellipsis; returns whether it was cut. */
@@ -498,7 +530,7 @@ public final class UiContext {
 	public int wrapped(String text, int x, int y, int maxWidth, int color) {
 		List<FormattedCharSequence> lines = font.split(Component.literal(text), Math.max(10, maxWidth));
 		for (int i = 0; i < lines.size(); i++) {
-			graphics.drawString(font, lines.get(i), x, y + i * 10, color, false);
+			graphics.drawString(font, lines.get(i), x, y + i * 10, a(color), false);
 		}
 
 		return lines.size() * 10;
@@ -511,7 +543,7 @@ public final class UiContext {
 	/** Draws an icon at {@code size}x{@code size} GUI pixels, tinted with {@code color}. */
 	public void icon(Icon icon, int x, int y, int size, int color) {
 		graphics.blit(RenderPipelines.GUI_TEXTURED, ICONS, x, y, icon.u(), icon.v(), size, size, Icon.CELL, Icon.CELL,
-				Icon.ATLAS_WIDTH, Icon.ATLAS_HEIGHT, color);
+				Icon.ATLAS_WIDTH, Icon.ATLAS_HEIGHT, a(color));
 	}
 
 	public int textWidth(String text) {
@@ -524,7 +556,7 @@ public final class UiContext {
 		pose.pushMatrix();
 		pose.translate(x, y);
 		pose.scale(scale, scale);
-		graphics.drawString(font, text, 0, 0, color, false);
+		graphics.drawString(font, text, 0, 0, a(color), false);
 		pose.popMatrix();
 	}
 
