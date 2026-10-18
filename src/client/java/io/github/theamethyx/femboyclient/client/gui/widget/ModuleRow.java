@@ -2,15 +2,22 @@ package io.github.theamethyx.femboyclient.client.gui.widget;
 
 import java.util.function.Consumer;
 
+import io.github.theamethyx.femboyclient.client.FemboyClient;
 import io.github.theamethyx.femboyclient.client.gui.Anim;
 import io.github.theamethyx.femboyclient.client.gui.Icon;
+import io.github.theamethyx.femboyclient.client.gui.ModuleStatus;
 import io.github.theamethyx.femboyclient.client.gui.Theme;
 import io.github.theamethyx.femboyclient.client.gui.UiContext;
 import io.github.theamethyx.femboyclient.core.module.Module;
 import io.github.theamethyx.femboyclient.core.module.ModuleManager;
 
-/** A module in the module list: name, status and an on/off switch. Clicking selects it. */
+/**
+ * A module in a module list, the same everywhere: its name, one line saying what it does (or, when something is wrong,
+ * what), its key if it has one, and an on/off switch. Clicking the row opens its settings; the switch turns it on or off.
+ */
 public class ModuleRow extends Container {
+	public static final int HEIGHT = 26;
+
 	private final Module module;
 	private final ModuleManager manager;
 	private final Consumer<Module> onSelect;
@@ -23,7 +30,11 @@ public class ModuleRow extends Container {
 		this.manager = manager;
 		this.selected = selected;
 		this.onSelect = onSelect;
-		this.toggle = add(new ToggleSwitch(module::isEnabled, enabled -> manager.setEnabled(module, enabled)));
+		this.toggle = add(new ToggleSwitch(module::isEnabled, enabled -> {
+			manager.setEnabled(module, enabled);
+			FemboyClient.get().quickAccess().touch(module);
+		}));
+		toggle.tooltip(() -> (module.isEnabled() ? "On" : "Off") + ". Click to turn " + module.name() + (module.isEnabled() ? " off." : " on."));
 	}
 
 	public Module module() {
@@ -36,29 +47,18 @@ public class ModuleRow extends Container {
 
 	@Override
 	public int preferredHeight(UiContext ui, int width) {
-		return 20;
+		return HEIGHT;
 	}
 
 	@Override
 	protected void onLayout() {
-		toggle.setBounds(x + width - ToggleSwitch.WIDTH - 5, y + 5, ToggleSwitch.WIDTH, ToggleSwitch.HEIGHT);
+		toggle.setBounds(x + width - ToggleSwitch.WIDTH - 6, y + (HEIGHT - ToggleSwitch.HEIGHT) / 2, ToggleSwitch.WIDTH, ToggleSwitch.HEIGHT);
 	}
 
-	/** Short status used for the dot color and tooltip. */
+	/** Short status: color and text (kept for the developer page and older callers). */
 	public static StatusView status(Module module, ModuleManager manager) {
-		if (module.lastError() != null) {
-			return new StatusView(Theme.ERROR, "Error: " + module.lastError());
-		}
-
-		if (module.isRunning()) {
-			return new StatusView(Theme.SUCCESS, "Running");
-		}
-
-		if (module.isEnabled()) {
-			return new StatusView(Theme.WARNING, "Enabled but paused: " + manager.availability(module).reason());
-		}
-
-		return new StatusView(Theme.TEXT_MUTED, "Off");
+		ModuleStatus status = ModuleStatus.of(module, manager);
+		return new StatusView(status.color(), status.sentence());
 	}
 
 	public record StatusView(int color, String text) {
@@ -70,25 +70,50 @@ public class ModuleRow extends Container {
 		boolean hot = ui.hovered(x, y, width, height);
 		float h = hover.update(hot ? 1 : 0, ui.frameSeconds(), ui.animate());
 
-		int background = isSelected ? Theme.SURFACE_ACTIVE : Theme.lerp(Theme.SURFACE, Theme.SURFACE_HOVER, h);
-		ui.roundRect(x, y, width, height, background);
 		if (isSelected) {
-			ui.rect(x, y + 3, 2, height - 6, Theme.ACCENT);
+			ui.roundRect(x, y, width, height, Theme.SURFACE_ACTIVE, Theme.RADIUS_CONTROL);
+			ui.roundRect(x, y + 5, 2, height - 10, Theme.ACCENT, 1);
+		} else if (h > 0.01f) {
+			ui.roundRect(x, y, width, height, Theme.withAlpha(Theme.SURFACE_HOVER, h), Theme.RADIUS_CONTROL);
 		}
 
-		StatusView status = status(module, manager);
-		Icon icon = module.lastError() != null ? Icon.WARNING : Icon.byName(module.category().icon());
-		ui.icon(icon, x + 6, y + 6, 8, module.lastError() != null ? Theme.ERROR : module.isRunning() ? Theme.ACCENT : Theme.TEXT_MUTED);
-
-		int nameColor = module.isEnabled() ? Theme.TEXT : Theme.TEXT_SECONDARY;
+		ModuleStatus status = ModuleStatus.of(module, manager);
 		int textRight = toggle.x() - 6;
-		ui.textClipped(module.name(), x + 18, y + 6, textRight - x - 24, nameColor);
-		// Small status dot: green running, amber paused, red error.
-		ui.roundRect(textRight - 2, y + 8, 5, 5, status.color(), 2);
+		int left = x + 8;
+		boolean favorite = FemboyClient.get().quickAccess().isFavorite(module);
+		if (favorite) {
+			ui.icon(Icon.STAR, left, y + 5, 7, Theme.WARNING);
+			left += 10;
+		}
+
+		String key = module.key() == Module.NO_KEY ? null : KeybindButton.keyName(module.key());
+		int keyWidth = 0;
+		if (key != null) {
+			keyWidth = Math.min(40, ui.textWidth(key) + 6);
+			ui.roundRect(textRight - keyWidth, y + 4, keyWidth, 10, Theme.withAlpha(Theme.SURFACE_ACTIVE, 0.9f), 2);
+			ui.textScaled(ui.ellipsize(key, Math.round((keyWidth - 4) / ui.small())), textRight - keyWidth + 3, y + 5 + (8 - 8 * ui.small()) / 2,
+					ui.small(), Theme.TEXT_SECONDARY);
+			keyWidth += 4;
+		}
+
+		ui.textClipped(module.name(), left, y + 5, textRight - left - keyWidth, Theme.TEXT);
+
+		// Second line: what it does, unless something about its state matters more.
+		boolean showState = status.kind() != ModuleStatus.Kind.OFF && status.kind() != ModuleStatus.Kind.ON;
+		int lineY = y + 16;
+		if (showState) {
+			ui.icon(status.icon(), x + 8, lineY, 7, status.color());
+			String text = status.detail().isEmpty() ? status.label() : status.label() + ": " + status.detail();
+			ui.textScaled(ui.ellipsize(text, Math.round((textRight - x - 18) / ui.small())), x + 18, lineY + (8 - 8 * ui.small()) / 2, ui.small(),
+					status.color());
+		} else {
+			ui.textScaled(ui.ellipsize(module.description(), Math.round((textRight - x - 8) / ui.small())), x + 8, lineY + (8 - 8 * ui.small()) / 2,
+					ui.small(), Theme.TEXT_MUTED);
+		}
 
 		toggle.render(ui);
 		if (hot) {
-			ui.tooltip(module, module.description() + "\n\nStatus: " + status.text());
+			ui.tooltip(module, module.description() + "\n\nStatus: " + status.sentence() + (key == null ? "" : "\nKey: " + key));
 			if (!toggle.contains(ui.mouseX(), ui.mouseY())) {
 				ui.pointer();
 			}

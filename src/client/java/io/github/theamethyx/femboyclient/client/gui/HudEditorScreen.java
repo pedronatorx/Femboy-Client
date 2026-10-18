@@ -31,7 +31,11 @@ import io.github.theamethyx.femboyclient.core.module.Module;
  *       and guide lines show what it snapped to. Hold Shift to place freely. Arrow keys nudge (Shift: 10 pixels).</li>
  *   <li>Select an element to change its scale, opacity, when it shows, or hide it; the mouse wheel scales the element under
  *       the mouse (Shift + wheel: opacity).</li>
- *   <li>The elements list turns HUD modules on and off. Hidden elements are drawn faintly while the editor is open.</li>
+ *   <li>The elements list has two groups: elements showing (the eye hides one in this layout) and HUD modules that are
+ *       turned off (one click turns one on). Hidden elements are drawn faintly while the editor is open.</li>
+ *   <li>The inspector of the selected element shows size, opacity, hide and reset; "More" adds when it shows, quick
+ *       alignment to a corner or the center, and a link to the module's own settings (colors and content).</li>
+ *   <li>The toolbar sits at the top, or at the bottom while an element would be under it at the top.</li>
  *   <li>Several layouts can be kept and switched; they can be copied to and from the clipboard. Every change can be undone
  *       (Ctrl+Z, Ctrl+Y).</li>
  * </ul>
@@ -62,6 +66,10 @@ public final class HudEditorScreen extends Screen {
 	private boolean snapping = true;
 	private boolean showPanel = true;
 	private boolean layoutMenu;
+	/** The inspector shows its advanced controls (when it shows, alignment, module settings). */
+	private boolean advanced;
+	/** Top of the toolbar this frame: near the top edge, or near the bottom when elements would be under it. */
+	private int toolbarY = 3;
 	private int panelScroll;
 	/** Text entry for naming a layout: non-null while open. */
 	private TextField nameField;
@@ -83,6 +91,17 @@ public final class HudEditorScreen extends Screen {
 		if (ui == null) {
 			ui = new UiContext(font);
 		}
+	}
+
+	/** Opens with an element selected (the search's HUD results do this). */
+	public HudEditorScreen select(String moduleId) {
+		selected = moduleId;
+		return this;
+	}
+
+	/** The selected element's module id, or {@code null} (used by automated tests). */
+	public String selected() {
+		return selected;
 	}
 
 	@Override
@@ -116,6 +135,7 @@ public final class HudEditorScreen extends Screen {
 		ui.setScreenSize(width, height);
 		ui.beginFrame(graphics, mouseX, mouseY, 0, false);
 		controls.clear();
+		toolbarY = toolbarAtBottom() ? height - TOOLBAR_H - 3 : 3;
 
 		if (showGrid) {
 			drawGrid(graphics);
@@ -262,10 +282,32 @@ public final class HudEditorScreen extends Screen {
 		return Math.min(width - 8, 360);
 	}
 
+	/**
+	 * Whether the toolbar goes to the bottom: when a visible element lies where the toolbar would be at the top (and the
+	 * bottom spot is free), so it never covers what you are arranging.
+	 */
+	public boolean toolbarAtBottom() {
+		int w = toolbarWidth();
+		Snapping.Box top = new Snapping.Box((width - w) / 2, 0, w, TOOLBAR_H + 6);
+		Snapping.Box bottom = new Snapping.Box((width - w) / 2, height - TOOLBAR_H - 6, w, TOOLBAR_H + 6);
+		boolean topTaken = false;
+		boolean bottomTaken = false;
+		for (HudManager.Placed block : hud.placed()) {
+			if (block.moduleId().equals(dragging)) {
+				continue;
+			}
+
+			topTaken |= Snapping.overlap(box(block), top);
+			bottomTaken |= Snapping.overlap(box(block), bottom);
+		}
+
+		return topTaken && !bottomTaken;
+	}
+
 	private void drawToolbar(int mouseX, int mouseY) {
 		int w = toolbarWidth();
 		int x = (width - w) / 2;
-		int y = 3;
+		int y = toolbarY;
 		ui.shadow(x, y, w, TOOLBAR_H, 5, 0.6f);
 		ui.roundRect(x, y, w, TOOLBAR_H, Theme.withAlpha(Theme.PANEL, 0.96f), 5);
 		int cx = x + 2;
@@ -289,10 +331,11 @@ public final class HudEditorScreen extends Screen {
 		}
 
 		if (hud.placed().isEmpty()) {
-			String hint = "No HUD elements are showing. Turn some on in the list on the left.";
+			String hint = "No HUD elements are showing. Turn some on under \"Turned off\" in the list on the left.";
 			int hw = ui.textWidth(hint) + 12;
-			ui.roundRect((width - hw) / 2, y + TOOLBAR_H + 4, hw, 13, Theme.withAlpha(Theme.SURFACE, 0.92f), 4);
-			ui.textCentered(hint, width / 2, y + TOOLBAR_H + 7, Theme.TEXT_SECONDARY);
+			int hy = toolbarY < height / 2 ? y + TOOLBAR_H + 4 : y - 17;
+			ui.roundRect((width - hw) / 2, hy, hw, 13, Theme.withAlpha(Theme.SURFACE, 0.92f), 4);
+			ui.textCentered(hint, width / 2, hy + 3, Theme.TEXT_SECONDARY);
 		}
 	}
 
@@ -309,11 +352,35 @@ public final class HudEditorScreen extends Screen {
 	}
 
 	private int panelTop() {
-		return TOOLBAR_H + 10;
+		return toolbarY < height / 2 ? TOOLBAR_H + 10 : 6;
 	}
 
 	private int panelHeight() {
 		return Math.max(60, height - panelTop() - 50);
+	}
+
+	/** One line of the elements list: a group caption ({@code module == null}) or a module. */
+	private record PanelRow(String caption, Module module) {
+	}
+
+	/** Showing elements first, then the HUD modules that are off. */
+	private List<PanelRow> panelRows() {
+		List<PanelRow> rows = new ArrayList<>();
+		List<Module> on = new ArrayList<>();
+		List<Module> off = new ArrayList<>();
+		for (Module module : hudModules()) {
+			(module.isEnabled() ? on : off).add(module);
+		}
+
+		rows.add(new PanelRow("Showing (" + on.size() + ")", null));
+		on.forEach(module -> rows.add(new PanelRow(null, module)));
+		if (on.isEmpty()) {
+			rows.add(new PanelRow("  none yet", null));
+		}
+
+		rows.add(new PanelRow("Turned off (" + off.size() + ")", null));
+		off.forEach(module -> rows.add(new PanelRow(null, module)));
+		return rows;
 	}
 
 	private void drawPanel(int mouseX, int mouseY) {
@@ -325,59 +392,82 @@ public final class HudEditorScreen extends Screen {
 		ui.text("HUD elements", x + 6, y + 5, Theme.TEXT);
 		ui.icon(Icon.INFO, x + PANEL_W - 13, y + 4, 8, Theme.TEXT_MUTED);
 		if (mouseX >= x + PANEL_W - 15 && mouseX < x + PANEL_W - 2 && mouseY >= y + 2 && mouseY < y + 14) {
-			ui.tooltip("panel-info", "Switch: turn the module on or off. Eye: hide or show it in this layout. Click a name to select the element.");
+			ui.tooltip("panel-info", "Showing: elements on your HUD. Click a name to select it; the eye hides or shows it in this layout only. "
+					+ "Turned off: HUD modules that are off; \"Turn on\" adds them.");
 		}
 
-		List<Module> modules = hudModules();
+		List<PanelRow> rows = panelRows();
 		int listY = y + 17;
 		int visibleRows = (h - 20) / ROW_H;
-		panelScroll = Math.clamp(panelScroll, 0, Math.max(0, modules.size() - visibleRows));
+		panelScroll = Math.clamp(panelScroll, 0, Math.max(0, rows.size() - visibleRows));
 		ui.pushClip(x, listY, PANEL_W, h - 20);
-		for (int i = panelScroll; i < modules.size() && i < panelScroll + visibleRows; i++) {
-			Module module = modules.get(i);
+		for (int i = panelScroll; i < rows.size() && i < panelScroll + visibleRows; i++) {
+			PanelRow row = rows.get(i);
 			int rowY = listY + (i - panelScroll) * ROW_H;
+			if (row.module() == null) {
+				ui.textScaled(row.caption(), x + 6, rowY + 3, 0.8f, Theme.TEXT_MUTED);
+				continue;
+			}
+
+			Module module = row.module();
+			boolean on = module.isEnabled();
 			boolean isSelected = module.id().equals(selected);
 			boolean hot = mouseX >= x + 2 && mouseX < x + PANEL_W - 2 && mouseY >= rowY && mouseY < rowY + ROW_H - 1;
 			if (isSelected || hot) {
 				ui.roundRect(x + 2, rowY, PANEL_W - 4, ROW_H - 1, isSelected ? Theme.ACCENT_TINT : Theme.SURFACE_HOVER, 3);
 			}
 
-			// Module switch.
-			boolean on = module.isEnabled();
-			int sx = x + 5;
-			ui.roundRect(sx, rowY + 3, 12, 6, on ? Theme.ACCENT : Theme.SURFACE_ACTIVE, 3);
-			ui.roundRect(on ? sx + 6 : sx, rowY + 3, 6, 6, 0xFFFFFFFF, 3);
-			controls.add(new Control(sx - 1, rowY, 14, ROW_H - 1, () -> femboy.modules().toggle(module)));
-
-			// Visibility in this layout.
-			HudLayouts.Element element = layout.element(module.id());
-			int ex = x + PANEL_W - 14;
-			ui.icon(element.hidden() ? Icon.LOCK : Icon.VISUAL, ex, rowY + 2, 8, element.hidden() ? Theme.TEXT_MUTED : Theme.TEXT_SECONDARY);
-			controls.add(new Control(ex - 2, rowY, 12, ROW_H - 1, () -> {
-				layout.checkpoint();
-				layout.update(module.id(), e -> e.withHidden(!e.hidden()));
-			}));
-
-			int color = !on ? Theme.TEXT_MUTED : module.isRunning() ? Theme.TEXT : Theme.WARNING;
-			ui.textClipped(module.name(), x + 21, rowY + 2, PANEL_W - 40, color);
-			controls.add(new Control(x + 19, rowY, PANEL_W - 36, ROW_H - 1, () -> selected = module.id()));
-			if (hot) {
-				String state = !on ? "Off." : module.isRunning() ? "On." : "On, but not running: " + femboy.modules().availability(module).reason();
-				String when = element.when() == HudLayouts.Condition.ALWAYS ? "" : " Shows: " + element.when().label() + ".";
-				ui.tooltip(module, module.name() + ": " + state + (element.hidden() ? " Hidden in this layout." : "") + when);
+			if (on) {
+				// Visibility in this layout.
+				HudLayouts.Element element = layout.element(module.id());
+				ui.icon(element.hidden() ? Icon.LOCK : Icon.VISUAL, x + 6, rowY + 2, 8, element.hidden() ? Theme.TEXT_MUTED : Theme.TEXT_SECONDARY);
+				controls.add(new Control(x + 4, rowY, 12, ROW_H - 1, () -> {
+					layout.checkpoint();
+					layout.update(module.id(), e -> e.withHidden(!e.hidden()));
+				}));
+				int color = element.hidden() ? Theme.TEXT_MUTED : module.isRunning() ? Theme.TEXT : Theme.WARNING;
+				ui.textClipped(module.name(), x + 19, rowY + 2, PANEL_W - 24, color);
+				controls.add(new Control(x + 17, rowY, PANEL_W - 20, ROW_H - 1, () -> selected = module.id()));
+				if (hot) {
+					String state = module.isRunning() ? "" : " Not showing right now: " + femboy.modules().availability(module).reason();
+					String when = element.when() == HudLayouts.Condition.ALWAYS ? "" : " Shows: " + element.when().label() + ".";
+					ui.tooltip(module, module.name() + ". Click to select." + (element.hidden() ? " Hidden in this layout (eye to show)." : "") + when + state);
+				}
+			} else {
+				String label = "Turn on";
+				int bw = ui.textWidth(label) + 6;
+				int bx = x + PANEL_W - bw - 5;
+				ui.textClipped(module.name(), x + 8, rowY + 2, bx - x - 12, Theme.TEXT_MUTED);
+				boolean buttonHot = mouseX >= bx && mouseX < bx + bw && mouseY >= rowY && mouseY < rowY + ROW_H - 1;
+				ui.roundRect(bx, rowY + 1, bw, ROW_H - 3, buttonHot ? Theme.ACCENT : Theme.SURFACE_ACTIVE, 3);
+				ui.text(label, bx + 3, rowY + 2, buttonHot ? 0xFFFFFFFF : Theme.TEXT_SECONDARY);
+				controls.add(new Control(bx, rowY, bw, ROW_H - 1, () -> {
+					femboy.modules().setEnabled(module, true);
+					selected = module.id();
+				}));
+				if (hot) {
+					ui.tooltip(module, module.description());
+				}
 			}
 		}
 
 		ui.popClip();
 	}
 
+	/** Bottom of the inspector: above the toolbar when the toolbar is at the bottom. */
+	private int inspectorY() {
+		int base = toolbarY > height / 2 ? toolbarY - 4 : height - 4;
+		return base - 18 - (advanced ? 20 : 0);
+	}
+
 	private void drawInspector(HudManager.Placed block, int mouseX, int mouseY) {
 		HudLayouts.Element element = layout.element(block.moduleId());
-		int w = Math.min(width - 8, 330);
+		int w = Math.min(width - 8, 360);
 		int x = (width - w) / 2;
-		int y = height - 22;
-		ui.shadow(x, y, w, 18, 5, 0.6f);
-		ui.roundRect(x, y, w, 18, Theme.withAlpha(Theme.PANEL, 0.96f), 5);
+		int y = inspectorY();
+		int h = advanced ? 38 : 18;
+		ui.shadow(x, y, w, h, 5, 0.6f);
+		ui.roundRect(x, y, w, h, Theme.withAlpha(Theme.PANEL, 0.96f), 5);
 		int cx = x + 6;
 		ui.textClipped(block.name(), cx, y + 5, 70, Theme.ACCENT_STRONG);
 		cx += Math.min(70, ui.textWidth(block.name())) + 8;
@@ -386,13 +476,60 @@ public final class HudEditorScreen extends Screen {
 				() -> change(block.moduleId(), e -> e.withScale(e.scale() - 0.1f)), () -> change(block.moduleId(), e -> e.withScale(e.scale() + 0.1f)));
 		cx = stepper(cx, y + 2, "Opacity", String.format(Locale.ROOT, "%.0f%%", element.opacity() * 100), mouseX, mouseY,
 				() -> change(block.moduleId(), e -> e.withOpacity(e.opacity() - 0.1f)), () -> change(block.moduleId(), e -> e.withOpacity(e.opacity() + 0.1f)));
-		cx = toolButton(cx, y + 2, Icon.CLOCK, element.when().label(), element.when() != HudLayouts.Condition.ALWAYS, true,
-				"When it shows. Click to cycle: always, in combat (8 s after you attack or are hurt), out of combat, holding a weapon, "
-						+ "gliding, sneaking.", mouseX, mouseY, () -> change(block.moduleId(), e -> e.withCondition(next(e.when()))));
 		cx = toolButton(cx, y + 2, element.hidden() ? Icon.LOCK : Icon.VISUAL, null, element.hidden(), true, element.hidden() ? "Show (H)" : "Hide (H)",
 				mouseX, mouseY, () -> change(block.moduleId(), e -> e.withHidden(!e.hidden())));
-		toolButton(cx, y + 2, Icon.RESET, null, false, element.placed() || element.scale() != 1 || element.opacity() != 1, "Back to its corner (Delete)",
+		cx = toolButton(cx, y + 2, Icon.RESET, null, false, element.placed() || element.scale() != 1 || element.opacity() != 1, "Back to its corner (Delete)",
 				mouseX, mouseY, () -> change(block.moduleId(), e -> e.unplaced().withScale(1).withOpacity(1)));
+		toolButton(cx, y + 2, advanced ? Icon.CHEVRON_DOWN : Icon.CHEVRON_RIGHT, advanced ? "Less" : "More", advanced, true,
+				advanced ? "Hide the advanced controls." : "When it shows, quick alignment and the module's own settings (colors, content).",
+				mouseX, mouseY, () -> advanced = !advanced);
+
+		if (!advanced) {
+			return;
+		}
+
+		int ay = y + 21;
+		cx = x + 6;
+		cx = toolButton(cx, ay, Icon.CLOCK, element.when().label(), element.when() != HudLayouts.Condition.ALWAYS, true,
+				"When it shows. Click to cycle: always, in combat (8 s after you attack or are hurt), out of combat, holding a weapon, "
+						+ "gliding, sneaking.", mouseX, mouseY, () -> change(block.moduleId(), e -> e.withCondition(next(e.when()))));
+		ui.text("Align", cx + 2, ay + 3, Theme.TEXT_MUTED);
+		cx += ui.textWidth("Align") + 6;
+		String[] names = {"Top left", "Top center", "Top right", "Bottom left", "Bottom right", "Center"};
+		Icon[] icons = {Icon.ARROW, Icon.CHEVRON_DOWN, Icon.ARROW, Icon.ARROW, Icon.ARROW, Icon.TARGET};
+		for (int i = 0; i < names.length; i++) {
+			int corner = i;
+			cx = toolButton(cx, ay, icons[i], null, false, true, "Move to the " + names[i].toLowerCase(Locale.ROOT) + " of the screen.", mouseX, mouseY,
+					() -> align(block, corner));
+		}
+
+		Module module = femboy.modules().get(block.moduleId());
+		if (module != null && parent instanceof ClientScreen menu) {
+			toolButton(cx + 4, ay, Icon.SLIDERS, "Settings", false, true, "Open " + module.name() + "'s settings (colors, what it shows) in the menu.",
+					mouseX, mouseY, () -> {
+						minecraft.setScreen(menu);
+						menu.openModule(module);
+					});
+		}
+	}
+
+	/** Places an element at a corner, the top center or the screen center (inside the margin). */
+	private void align(HudManager.Placed block, int where) {
+		int left = MARGIN + 2;
+		int top = MARGIN + 2;
+		int right = width - MARGIN - 2 - block.width();
+		int bottom = height - MARGIN - 2 - block.height();
+		int centerX = (width - block.width()) / 2;
+		int[] target = switch (where) {
+			case 0 -> new int[] {left, top};
+			case 1 -> new int[] {centerX, top};
+			case 2 -> new int[] {right, top};
+			case 3 -> new int[] {left, bottom};
+			case 4 -> new int[] {right, bottom};
+			default -> new int[] {centerX, (height - block.height()) / 2};
+		};
+		layout.checkpoint();
+		layout.placeAt(block.moduleId(), target[0], target[1], block.width(), block.height(), width, height);
 	}
 
 	private int stepper(int x, int y, String label, String value, int mouseX, int mouseY, Runnable down, Runnable up) {
@@ -423,8 +560,8 @@ public final class HudEditorScreen extends Screen {
 		String[] actions = {"New layout (copy of this one)", "Rename this layout", "Delete this layout", "Copy to clipboard", "Import from clipboard"};
 		int w = 170;
 		int x = menuX();
-		int y = TOOLBAR_H + 6;
 		int h = names.size() * ROW_H + actions.length * ROW_H + 9;
+		int y = toolbarY < height / 2 ? toolbarY + TOOLBAR_H + 3 : toolbarY - h - 3;
 		ui.shadow(x, y, w, h, 5, 0.8f);
 		ui.roundRect(x, y, w, h, Theme.SURFACE, 5);
 		ui.outline(x, y, w, h, Theme.BORDER_STRONG, 5);
@@ -583,8 +720,16 @@ public final class HudEditorScreen extends Screen {
 	}
 
 	private boolean overCanvas(double mouseX, double mouseY) {
-		if (mouseY < TOOLBAR_H + 4 && Math.abs(mouseX - width / 2.0) < toolbarWidth() / 2.0) {
+		if (mouseY >= toolbarY - 1 && mouseY < toolbarY + TOOLBAR_H + 1 && Math.abs(mouseX - width / 2.0) < toolbarWidth() / 2.0) {
 			return false;
+		}
+
+		HudManager.Placed current = find(selected);
+		if (current != null && dragging == null) {
+			int w = Math.min(width - 8, 360);
+			if (mouseY >= inspectorY() && mouseY < inspectorY() + (advanced ? 38 : 18) && Math.abs(mouseX - width / 2.0) < w / 2.0) {
+				return false;
+			}
 		}
 
 		return !(showPanel && mouseX < 4 + PANEL_W && mouseY >= panelTop() && mouseY < panelTop() + panelHeight());

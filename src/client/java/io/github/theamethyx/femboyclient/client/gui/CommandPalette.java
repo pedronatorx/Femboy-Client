@@ -24,9 +24,10 @@ import io.github.theamethyx.femboyclient.core.module.Module;
 import io.github.theamethyx.femboyclient.core.setting.Setting;
 
 /**
- * The command palette (Ctrl+K in the menu, or its own key anywhere): type to find modules, pages, profiles, settings and
- * actions. Enter runs the selected entry (a module toggles), Tab opens a module's settings instead, arrows move. With
- * nothing typed it lists a pending rule suggestion, favorites, recently used modules and common actions.
+ * The search, as a command palette (Ctrl+K or the Search field in the menu, or its own key anywhere): type to find
+ * modules, settings, pages, profiles, HUD elements, help and actions, grouped by kind. Enter opens the selected result
+ * (a module's settings, a page, a help topic) or runs an action; Tab (or a right-click) turns a module on or off; arrows
+ * move. With nothing typed it lists a pending rule suggestion, favorites, recently used modules and common actions.
  */
 public final class CommandPalette extends Widget {
 	private static final int ROW = 15;
@@ -45,7 +46,7 @@ public final class CommandPalette extends Widget {
 
 	public CommandPalette(ClientScreen screen, UiContext ui) {
 		this.screen = screen;
-		this.field = new TextField("Type a module, page, profile, setting or action", 60).icon(Icon.COMMAND);
+		this.field = new TextField("Search modules, settings, profiles, HUD, help and actions", 60).icon(Icon.SEARCH);
 		field.onChange(text -> refresh());
 		field.onSubmit(text -> runSelected(false));
 		refresh();
@@ -113,7 +114,7 @@ public final class CommandPalette extends Widget {
 				if (score > 0) list.add(new Entry(page.icon(), "Go to " + page.navLabel(), page.subtitle(), "Pages", () -> screen.showPage(index), null, score));
 			}
 
-			for (String tab : List.of("General", "Appearance", "Performance", "Rules", "Timeline", "Developer")) {
+			for (String tab : List.of("General", "Appearance", "Performance", "Rules", "Timeline", "Help", "Developer")) {
 				int score = score(query, tab, "settings");
 				if (score > 0) list.add(new Entry(Icon.SETTINGS, "Settings: " + tab, "open this settings tab", "Pages", () -> openSettingsTab(tab), null, score - 5));
 			}
@@ -122,6 +123,26 @@ public final class CommandPalette extends Widget {
 				int score = score(query, profile, "profile switch");
 				if (score > 0 && !profile.equals(femboy.config().activeProfile())) {
 					list.add(new Entry(Icon.LAYERS, "Switch to profile " + profile, "the current profile is saved first", "Profiles", () -> switchProfile(profile), null, score));
+				}
+			}
+
+			for (Module module : femboy.modules().all()) {
+				if (module instanceof io.github.theamethyx.femboyclient.client.module.ClientHooks.HudBlock
+						|| module instanceof io.github.theamethyx.femboyclient.client.module.ClientHooks.HudWidget) {
+					int score = score(query, module.name(), "hud element position layout move");
+					if (score >= 60 || score > 0 && (query.contains("hud") || query.contains("layout"))) {
+						list.add(new Entry(Icon.HUD, module.name() + " on the HUD", module.isEnabled() ? "move, resize or hide it in the HUD editor"
+								: "off: turn it on to show it", "HUD elements", () -> openHudEditor(module), null, score - 25));
+					}
+				}
+			}
+
+			for (HelpTopics.Topic topic : HelpTopics.all()) {
+				int score = score(query, topic.title(), topic.body());
+				if (score > 0) {
+					String body = topic.body();
+					list.add(new Entry(Icon.INFO, topic.title(), body.length() > 90 ? body.substring(0, 87) + "..." : body, "Help",
+							() -> openHelp(topic), null, score - 15));
 				}
 			}
 
@@ -210,9 +231,20 @@ public final class CommandPalette extends Widget {
 	}
 
 	private Entry moduleEntry(Module module, String group, int score) {
-		String state = module.isEnabled() ? (module.isRunning() ? "on" : "on, waiting: " + femboy.modules().availability(module).reason()) : "off";
-		return new Entry(Icon.byName(module.category().icon()), module.name(), state + "  ·  Enter: turn " + (module.isEnabled() ? "off" : "on") + ", Tab: settings",
-				group, () -> toggle(module), () -> screen.openModule(module), score);
+		ModuleStatus status = ModuleStatus.of(module, femboy.modules());
+		return new Entry(Icon.byName(module.category().icon()), module.name(), status.label() + "  ·  " + module.category().label() + "  ·  Tab: turn "
+				+ (module.isEnabled() ? "off" : "on"), group, () -> screen.openModule(module), () -> toggle(module), score);
+	}
+
+	private void openHudEditor(Module module) {
+		Minecraft.getInstance().setScreen(new HudEditorScreen(screen, femboy.hud()).select(module.id()));
+	}
+
+	private void openHelp(HelpTopics.Topic topic) {
+		var settings = screen.openSettings("Help");
+		if (settings.activeTab() instanceof io.github.theamethyx.femboyclient.client.gui.page.HelpPage help) {
+			help.setQuery(topic.title());
+		}
 	}
 
 	/** 0 = no match; higher = better. Name prefix beats word prefix beats substring beats description. */
@@ -250,19 +282,12 @@ public final class CommandPalette extends Widget {
 	}
 
 	private void openSetting(Module module, Setting<?> setting) {
-		if (setting.section() != null) {
-			GuiState.openSections.put(module.id() + "/" + setting.section(), true);
-		}
-
+		io.github.theamethyx.femboyclient.client.gui.widget.SettingRow.revealLater(module.id(), setting);
 		screen.openModule(module);
 	}
 
 	private void openSettingsTab(String tab) {
-		int index = screen.pageIndex(page -> page instanceof SettingsPage);
-		screen.showPage(index);
-		if (screen.currentPage() instanceof SettingsPage settings) {
-			settings.showTab(tab);
-		}
+		screen.openSettings(tab);
 	}
 
 	private void runSelected(boolean alternate) {
@@ -315,7 +340,7 @@ public final class CommandPalette extends Widget {
 			Entry entry = entries.get(i);
 			if (!entry.group().equals(last)) {
 				last = entry.group();
-				ui.textScaled(last.toUpperCase(Locale.ROOT), x + 10, rowY + 1, 0.7f, Theme.TEXT_MUTED);
+				ui.textScaled(last, x + 10, rowY + 1, 0.75f, Theme.TEXT_MUTED);
 				rowY += 10;
 			}
 
@@ -337,10 +362,10 @@ public final class CommandPalette extends Widget {
 		}
 
 		if (entries.isEmpty()) {
-			ui.text("Nothing found.", x + 12, rowY + 3, Theme.TEXT_MUTED);
+			ui.text("Nothing found. Try fewer or other words.", x + 12, rowY + 3, Theme.TEXT_MUTED);
 		}
 
-		ui.textScaled("↑↓ choose   Enter run   Tab settings   Esc close" + (entries.size() > MAX_SHOWN ? "   " + entries.size() + " results" : ""),
+		ui.textScaled("↑↓ choose   Enter open   Tab on/off   Esc close" + (entries.size() > MAX_SHOWN ? "   " + entries.size() + " results" : ""),
 				x + 10, y + height - 11, 0.75f, Theme.TEXT_MUTED);
 	}
 

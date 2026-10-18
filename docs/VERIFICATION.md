@@ -1,6 +1,18 @@
-# Verification report: Femboy Client 0.9.0
+# Verification report: Femboy Client 1.1.0
 
 Date: 2026-10-18. Sections up to "Servers and stability" were written for 0.4.0 and still pass; later additions are in the sections after it, ending with 0.9.0.
+
+## 1.1.0 (2026-10-18): interface redesign
+
+Commands: `./gradlew build` and `rm -rf build/run/clientGameTest/config/femboyclient && ./scripts/run-client-tests.sh` (in-game, Xvfb, Mesa llvmpipe); benchmark `./scripts/run-benchmark.sh` for 1.1.0 and for 1.0.0 (temporary worktree), one after the other.
+
+- `./gradlew build`: BUILD SUCCESSFUL. Unit tests: 143, 0 failures (new: the light module state query agrees with the health monitor and never asks for the workload; profiles list the modules they turn on and keep their notes through a rename and a restart; the advanced flag only marks a setting).
+- In-game suite: **Result: PASSED (321 checks)**, twice in a row on the final code. New checks (`UxTest`): every module is on exactly one of the section pages; World's groups and folded developer tools; the search finds settings, HUD elements, help topics and actions, and opens a setting folded behind More options; Settings › Help lists guides and glossary and its search narrows; Entity, Block and Storage ESP share Targets / Highlight / Labels / Target lines / Advanced and show a preview; tuning and rarely used settings start folded and open on click; status in words; the Show filter and its empty state; typing narrows a long dropdown; Home's parts hide and show; New profile and Delete through dialogs (Escape keeps the profile, Enter deletes); the HUD editor toolbar moves to the bottom and back; Ctrl+4, Down and Space; no layout overlaps at 854x480, 1280x720, 1920x1080 and menu scales 1x, 2x and Minecraft's; the menu reopens cleanly five times after being closed with the search or a dialog open. Updated checks: navigation (nine sections), Home and search instead of the module grid, Enter opens / Tab switches, help mode and tooltips, module reset with two clicks, profile export from the ⋯ menu.
+- Found by the tests and fixed: a dropdown near the bottom of the screen opens upward (the old test assumed downward). Found on the screenshots and fixed: Settings tabs showed only icons at 1280x720 (now labels, and the selected tab always keeps its label); the module header read "Visuals · Visual" (now "Visuals · Shows information"); HUD editor names ran under the "Turn on" buttons; the delete dialog said "its 0 enabled module(s)".
+- One run before the final ones crashed in Fabric's client-test network synchronizer while switching from the singleplayer world to the dedicated test server (an `AssertionError` in `NetworkSynchronizer`, no Femboy Client code in the stack), after all 291 singleplayer checks had passed. The next two runs of the same code passed completely. It is recorded here as a test-harness instability seen once under heavy memory pressure.
+- Benchmark: no slowdown against 1.0.0 measured in the same session (see `docs/benchmarks/README.md`).
+- Screenshots: `docs/screenshots/0018`-`0020` (Home, search, a module opened from the search) and `0097`-`0108` (World groups, Help, Entity ESP with preview, filter, Home, profile dialogs, profiles, HUD toolbar at the bottom, the layout at three window sizes).
+- **Not tested:** a real GPU; a real player's first impression (no user testing was done; "understandable without documentation" is a design goal checked only against the screenshots); keyboard focus moving with Tab between all controls (not implemented); screen readers (Minecraft has none for mod menus).
 
 ## 1.0.0 (2026-10-18)
 

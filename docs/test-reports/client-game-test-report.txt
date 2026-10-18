@@ -1,23 +1,22 @@
 Femboy Client client game test report
-Started: 2026-10-18T11:38:59.725260896
+Started: 2026-10-18T12:58:22.474692229
 
 PASS  Femboy Client entrypoint ran
 PASS  All 77 modules registered  -- 77
 PASS  No module is on by default  -- []
 PASS  No module is on at the first start  -- []
 PASS  Right Shift opens the Femboy Client screen
-PASS  Sidebar is exactly Home, Combat, Automation, Movement, Visuals, Inventory, World, Trackers, Profiles, Settings  -- [Home, Combat, Automation, Movement, Visuals, Inventory, World, Trackers, Profiles, Settings]
+PASS  Sidebar is exactly Home, Combat, Movement, Visuals, Inventory, World, Automation, Profiles, Settings  -- [Home, Combat, Movement, Visuals, Inventory, World, Automation, Profiles, Settings]
 PASS  No development pages (Scenarios, Analysis, Results, Dashboard) remain
 PASS  Every page rendered at 854x480 and 1280x720
 PASS  Escape closes the Femboy Client screen
-PASS  Header search 'geode' lists the Geode Analyzer on Home  -- [geode_analyzer]
-PASS  Escape in the search field only leaves the field
-PASS  Right-clicking a module on Home opens its settings panel (and does not turn it on)  -- geode_analyzer, off true
-PASS  The settings panel's Keybinds tab shows the key field
-PASS  Escape closes the settings panel and keeps the menu open
-PASS  Left-clicking a module on Home turns it on, and again off
-PASS  Opening a module shows it on its category page (World)  -- World / geode_analyzer
-PASS  A category page searches only its own modules  -- [chunk_borders, block_esp, coordinates_hud]
+PASS  Home shows an overview (favorites and recent modules), not every module
+PASS  Typing on Home searches; 'geode' finds the Geode Analyzer under Modules  -- [Modules:Geode Analyzer, HUD elements:Geode Analyzer on the HUD, Settings:List incomplete geodes]
+PASS  Escape closes the search and keeps the menu open
+PASS  Enter on a search result opens the module on its section (World) without switching it on  -- World / geode_analyzer / off true
+PASS  The module panel shows its key field right away (no tabs)
+PASS  Tab on a search result turns the module on, and again off
+PASS  The Visuals section lists its own modules (visuals, HUD and utilities) and no others  -- [entity_esp, storage_esp, hitboxes, entity_outlines, trajectories, fullbright, chunk_borders, block_esp, light_level, block_highlight, zoom, coordinates_hud, performance_hud, module_list_hud, keystrokes, notifications, better_chat, mention_alerts, compass, session_stats, xp_info, auto_reconnect]
 PASS  Clicking the switch enables Chunk Borders
 PASS  Key capture binds K to Chunk Borders  -- key=75
 PASS  Pressing K in the world toggles Chunk Borders off and on (keyboard mixin)  -- after first press false, after second true
@@ -55,7 +54,7 @@ PASS  At least one geode card is listed
 PASS  Clicking a geode card shows its exact counts and details
 PASS  A waypoint can be added at the player position  -- null
 PASS  In singleplayer the list has no other players (yourself excluded by default)  -- 0 entries
-PASS  With 'Include yourself' your own entry is listed with a known position  -- [Entry[id=2654e3c3-150d-3857-a426-0b141796a4e0, name=Player0, ping=0, gameMode=Creative, knowledge=IN_RANGE, position=(0.5, -60.0, 0.5), seenAt=1792316375923]]
+PASS  With 'Include yourself' your own entry is listed with a known position  -- [Entry[id=2654e3c3-150d-3857-a426-0b141796a4e0, name=Player0, ping=0, gameMode=Creative, knowledge=IN_RANGE, position=(0.5, -60.0, 0.5), seenAt=1792321135564]]
 PASS  The waypoint of this world is offered as a navigation target
 PASS  Clicking the waypoint starts navigation to it  -- Target[name=Spawn, position=(0.5, -59.5, 0.5), note=waypoint, color=-9524993]
 PASS  Stopping navigation clears the target
@@ -73,9 +72,10 @@ PASS  The profile file stores registry ids and hex colors  -- /var/home/TheAmeth
 PASS  Profiles keep independent module state  -- ok
 PASS  Clicking the right end of the 'Neighbor chunks' slider sets its maximum (4)  -- value 4.0
 PASS  A setting's reset button restores its default
-PASS  Hovering a setting shows its description as a tooltip  -- How many chunks around yours also get their corners marked. 0 shows only your chunk.
+PASS  Help mode shows a setting's explanation under its name; off, the row is compact and hovering shows it  -- 49 vs 32, tooltip How many chunks around yours also get their corners marked. 0 shows only your chunk. Range 0 to 4 chunks, default 1 chunks.
 PASS  Clicking a dropdown opens its option list
 PASS  Choosing 'Cyan' in the dropdown changes the setting  -- CYAN
+PASS  Resetting a module asks for a second click first
 PASS  The module Reset button restores all of a module's settings
 PASS  Clicking a color swatch sets that color  -- #F29E4C
 PASS  Settings has a Developer tab (health monitor, diagnostics and the log)
@@ -87,11 +87,11 @@ PASS  Holding a sword switches to its profile and turns its modules on  -- auto_
 PASS  Switching to the mace changes profile and turns modules outside it off  -- auto_mace fullbright=false coords=true
 PASS  A hand-picked profile is kept until the held item changes  -- default fullbright=false coords=false -> auto_sword fullbright=true coords=false
 NOTE  Automatic profile switches during the test: 3
-PASS  Profiles page: Export copies the profile to the clipboard  -- {
-  "femboyClientProfile": "auto_mace",
+PASS  Profiles page: the profile's ⋯ menu has Export, which copies the profile to the clipboard  -- {
+  "femboyClientProfile": "auto_sword",
   "schemaVersion": 3,
   "modules": {
-   
+  
 PASS  All 24 presets use only existing modules and valid setting values  -- []
 PASS  Switching preset profiles turns on exactly each preset's modules (no leftovers)  -- sword_pvp=[combat_info, health_armor, target_hud, weapon_info] crystal_pvp=[explosion_info, health_armor, item_counters, target_hud] elytra_pvp=[elytra_info, health_armor, item_counters, target_hud] sword_pvp=[combat_info, health_armor, target_hud, weapon_info]
 PASS  Resetting the active preset profile restores its settings and turns extra modules off  -- accuracy=true hitboxes=false
@@ -106,7 +106,7 @@ PASS  Item Counters: reminds to refill totems that are only in the inventory  --
 PASS  Health & Armor lists the nearly broken chestplate with its durability  -- [Health: 20.0, Food: 20  sat 4.0, Diamond Chestplate: 8  2%]
 PASS  Effects lists Speed II with its remaining time  -- [Speed II: 0:29]
 PASS  Hitboxes draws both zombies, and none once hostile mobs are filtered out  -- drawn 2, filtered 0
-PASS  Trajectories: a real snowball lands within 2 blocks of the predicted point  -- predicted (0.5, -55.19158995772563, 14.0), last server position (0.5236829919451356, -55.31299244002429, 13.795803621724996) (10 ticks), horizontal error 0.21
+PASS  Trajectories: a real snowball lands within 2 blocks of the predicted point  -- predicted (0.5, -55.19158995772563, 14.0), last server position (0.35133400347704924, -55.2704176474778, 13.975419028523108) (10 ticks), horizontal error 0.15
 PASS  Crystal & Anchor Info: obsidian within reach is a placement spot and under the crosshair it is the focus  -- spot true, focus Focus[label=Crystal here, center=(0.5, -60.0, 2.5), power=6.0, note=null, removed=null]; Block{minecraft:obsidian} [] (0.5, -60.0, 2.4309332234547383)
 PASS  Crystal damage estimate (no armor, Normal) matches the damage really taken within 0.5  -- estimate 14.13, taken 14.13
 PASS  Singleplayer counts as a test environment, so automation modules can run
@@ -120,7 +120,7 @@ PASS  Flight: hovers in survival, rises with jump (server agrees), falls again w
 PASS  AutoTotem moves a totem from the inventory into the offhand (client and server)  -- client true, server true, slot emptied true
 PASS  Test target holds up a shield (server and client agree)  -- server true, client true
 PASS  Auto StunSlam falling onto a shielding player: axe disables the shield, mace damages through it, slot restored  -- Axe and mace hit Bob; shield disabled true; health 20 -> 13.2; slot client 2 server 2 (mace = 2); max fall 4.8, crosshair on Bob true
-PASS  Spear reach: out of sword reach a click does nothing; with the rule it jabs with the spear and returns to the sword  -- without rule health 20.0; with rule hit true (health 14.1); slot client 0 server 0; SwapRecord[rule=SPEAR, item=Iron Spear, fromSlot=0, toSlot=1, target=Husk, at=1792316419674, usedForHit=true, restored=true, note=jabbed and switched back in the same tick]
+PASS  Spear reach: out of sword reach a click does nothing; with the rule it jabs with the spear and returns to the sword  -- without rule health 20.0; with rule hit true (health 14.1); slot client 0 server 0; SwapRecord[rule=SPEAR, item=Iron Spear, fromSlot=0, toSlot=1, target=Husk, at=1792321179215, usedForHit=true, restored=true, note=jabbed and switched back in the same tick]
 PASS  Spear lunge: holding attack with bread jabs the Lunge spear repeatedly and dashes forward; slot stays on the bread  -- without rule moved 0.00; with rule 6 lunges, moved 18.1 blocks forward (server agrees within 0.01); slot client 3 server 3
 PASS  Theme selector switches the menu colors; a custom accent overrides the theme's; default is the navy/magenta Femboy theme  -- default FF9D6BFF, midnight magenta FFE05CC8, custom FF33CC99, back FF9D6BFF
 PASS  HUD editor: Coordinates and the Keystrokes widget are placed; dragging Coordinates moves it and saves the position  -- placed [coordinates_hud, keystrokes]; moved Placed[moduleId=coordinates_hud, name=Coordinates, x=201, y=121, width=114, height=37, custom=true, hidden=false, scale=1.0]; saved {"version":2,"active":"Default","layouts":{"Default":{"elements":{"coordinates_hud":{"ax":0.5,"ay":0.5,"dx":44,"dy":19}}}}}
@@ -131,9 +131,9 @@ PASS  Block Counter counts the 2 diamond ores in loaded chunks and shows full sc
 PASS  Light Level marks grass with block light 0 as a spawn spot and stops once a torch lights it  -- before torch true, after torch false
 PASS  Block Highlight outlines the block under the crosshair  -- MutableBlockPos{x=0, y=-61, z=2} vs MutableBlockPos{x=0, y=-61, z=2}
 PASS  Notifications shows client messages as toasts while on  -- 1 toast(s)
-PASS  Better Chat adds a timestamp and stacks a repeated message into one line with x2  -- 1|[11:40] femboy repeat x2
+PASS  Better Chat adds a timestamp and stacks a repeated message into one line with x2  -- 1|[12:59] femboy repeat x2
 PASS  Auto Reconnect adds a reconnect button with a countdown to the disconnected screen  -- Reconnecting in 60 s
-PASS  Death Coordinates records where you died and saves a waypoint  -- Death[x=3, y=-60, z=7, dimension=minecraft:overworld, at=1792316429615], waypoint true
+PASS  Death Coordinates records where you died and saves a waypoint  -- Death[x=3, y=-60, z=7, dimension=minecraft:overworld, at=1792321188912], waypoint true
 PASS  Shulker Preview gives shulker boxes an item-grid tooltip only while on  -- on true, off true
 PASS  Auto Tool selects the pickaxe while mining stone and switches back afterwards  -- while mining slot 1, after 0
 PASS  Inventory Sorter orders the main inventory by item, merging stacks of the same item (server agrees)  -- minecraft:apple 1, minecraft:dirt 10, minecraft:stone 8, minecraft:air 0, 
@@ -167,7 +167,7 @@ PASS  Schematic Viewer reads .nbt, .schem and .litematic files (stone then oak p
 PASS  Schematic Viewer compares the placed schematic with the world (stone right, dirt where planks belong)  -- ok; 1 placed, 0 missing, 1 wrong
 PASS  Material List shows what is left to place and what you carry (1 oak planks left, carrying 3)  -- 1 missing; [Oak Planks 1/1 carrying 3]
 PASS  Auto Attribute Swap is on the Combat page
-PASS  Entity ESP settings are grouped into sections  -- [Targets, Boxes, Colors, Labels, Health, Target lines, Performance]
+PASS  Entity ESP settings are grouped into sections  -- [Targets, Highlight, Colors, Labels, Health, Target lines, Advanced, Performance]
 PASS  Free Camera is on the Movement page and Fullbright on Visuals  -- Movement / Visuals
 PASS  Outline thickness changes the rendered outline (magenta pixels at 1x vs 5x)  -- 2354 vs 7968 pixels
 PASS  Outline opacity changes the rendered outline (strongly magenta pixels at 100% vs 20%)  -- 7968 vs 36 pixels
@@ -185,7 +185,7 @@ PASS  Health can be limited to chosen categories  -- DrawnLabel[name=Target, x=1
 PASS  Long names are shortened to the maximum name width  -- DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true, equipment=0]
 PASS  Labels of entities at the same spot do not overlap  -- [DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=Stacked A, x=236, y=87, width=41, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=Stacked B, x=235, y=66, width=41, height=20, healthBar=true, healthText=true, equipment=0]]
 PASS  Labels are drawn at 854x480 as well  -- [DrawnLabel[name=Target, x=199, y=82, width=30, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=AveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongnameAveryveryveryveryveryveryverylongname, x=84, y=85, width=112, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=Stacked A, x=236, y=87, width=41, height=20, healthBar=true, healthText=true, equipment=0], DrawnLabel[name=Stacked B, x=235, y=66, width=41, height=20, healthBar=true, healthText=true, equipment=0]]
-NOTE  254 zombies in view (Mesa software rendering): average frame 23.7 ms with ESP (labels, health, tracers) and Trackers, 20.9 ms without. Average cost per call: entity_esp/tick 0.113 ms, entity_esp/render_world 0.084 ms, entity_esp/render_hud 0.190 ms, trackers/render_hud 0.091 ms, 
+NOTE  254 zombies in view (Mesa software rendering): average frame 26.0 ms with ESP (labels, health, tracers) and Trackers, 23.9 ms without. Average cost per call: entity_esp/tick 0.070 ms, entity_esp/render_world 0.069 ms, entity_esp/render_hud 0.224 ms, trackers/render_hud 0.127 ms, 
 PASS  With 254 entities, ESP keeps to its highlight limit (64)  -- 64 tracked
 PASS  No module errors with many entities
 PASS  Trackers: a mob in front gets an on-screen marker  -- Indicator[name=Ahead, source=HOSTILE, onScreen=true, x=214, y=134, label=Ahead · 8m]
@@ -216,10 +216,10 @@ PASS  Java Runner: compile errors are shown with the line number  -- COMPILE_ERR
 PASS  Java Runner: runtime exceptions are shown  -- FAILED: Exception: java.lang.IllegalStateException: boom
     at run (line 1)
 PASS  Java Runner: the game itself is not reachable (compile error)  -- COMPILE_ERROR: Line 1: package net.minecraft.client does not exist
-PASS  Minecraft keeps ticking while a program runs (20 ticks while the worker loops)  -- 20 ticks took 1.00 s, still running: true
-PASS  Java Runner: an endless loop is stopped at the time limit  -- TIMED_OUT, pid 254019
+PASS  Minecraft keeps ticking while a program runs (20 ticks while the worker loops)  -- 20 ticks took 0.99 s, still running: true
+PASS  Java Runner: an endless loop is stopped at the time limit  -- TIMED_OUT, pid 278346
 PASS  Java Runner: Stop kills the program  -- STOPPED
-PASS  Java Runner: excessive output is cut off  -- OUTPUT_LIMIT, 128 lines
+PASS  Java Runner: excessive output is cut off  -- OUTPUT_LIMIT, 161 lines
 PASS  Java Runner: code that deletes files asks for confirmation and does not run yet  -- [deletes files]
 PASS  Java Runner: Cancel runs nothing
 PASS  Java Runner: the 'Module overview' example runs  -- FINISHED: Module                 Enabled  Running
@@ -313,14 +313,14 @@ PASS  Low impact pauses KillAura and says why; it resumes in Balanced; intervals
 PASS  Turning Aim Assist on turns KillAura off (both turn your view) and says so  -- KillAura turned off: it cannot run together with Aim Assist
 PASS  Three entity modules share one entity list: built at most once per tick  -- 40 builds in 40 ticks
 PASS  HUD text is rebuilt once per tick, not every frame  -- 40 rebuilds in 40 ticks
-PASS  Fine-tuning sections start collapsed and open with a click (Entity ESP 'Performance')
+PASS  Tuning starts folded inside Advanced and opens with a click (Entity ESP 'Maximum highlights')
 PASS  A number can be typed exactly: 96 entered for 'Maximum highlights'  -- 96.0
 PASS  The profile selector in the header opens the profile list  -- ProfileMenu
 PASS  The bell opens the notification list and marks the messages read  -- NotificationList
-PASS  Resetting a category asks for a second click, then restores its modules (Chunk Borders radius 3 -> 1)  -- 3.0 / 'Click again to reset' / 1.0
+PASS  Resetting a category asks for a second click, then restores its modules (Chunk Borders radius 3 -> 1)  -- 3.0 / 'Click again to reset them all' / 1.0
 PASS  The menu keeps working with reduced motion
-PASS  Ctrl+K opens the command palette; typing finds Coordinates first and Enter turns it on  -- CommandPalette / Coordinates / true (focus before: nothing)
-PASS  Tab on a module in the palette opens its settings instead (Block ESP)  -- block_esp
+PASS  Ctrl+K opens the search; typing finds Coordinates first and Tab turns it on  -- CommandPalette / Coordinates / true (focus before: nothing)
+PASS  Enter on a module in the search opens its settings and leaves it off (Block ESP)  -- block_esp / off true
 PASS  Aliases find renamed modules: 'ore esp' finds Block ESP  -- Block ESP
 PASS  Escape closes the palette  -- none
 PASS  The palette jumps to a settings tab (Appearance)  -- Appearance
@@ -342,7 +342,7 @@ PASS  The configuration validator checks every profile  -- {default=[]}
 PASS  Rules run on their trigger: a notification and a visual module turned on  -- true / true
 PASS  Rules cannot turn on automation modules, and dry runs only record  -- false / true / true
 PASS  The timeline records profile switches, rules and markers, and search finds them
-PASS  The on/off comparison measures both halves and leaves the module as it was  -- null / [Result[module=Chunk Borders, seconds=2, frameMsOn=18.92788735185185, frameMsOff=24.928816, clientUsOn=92.80423148148148, clientUsOff=6.135841463414634, framesOn=108, framesOff=82, finishedAt=1792316551776]] / true
+PASS  The on/off comparison measures both halves and leaves the module as it was  -- null / [Result[module=Chunk Borders, seconds=2, frameMsOn=16.12597918548387, frameMsOff=17.976702807017546, clientUsOn=86.22816935483871, clientUsOff=8.765447368421052, framesOn=124, framesOff=114, finishedAt=1792321310562]] / true
 PASS  Automation modules cannot be compared (switching them on would make them act)  -- Only visual and assist modules can be profiled: switching KillAura on would make it act.
 PASS  The health monitor reports module states (Kill Aura off)  -- OFF
 PASS  A diagnostic report can be exported
@@ -350,30 +350,54 @@ PASS  Repeated notifications are folded into one with a count  -- 3
 PASS  Compass, Experience, Session Stats and Shape Planner show on the HUD  -- [compass, session_stats, shape_planner, xp_info]
 PASS  Shape Planner plans a hollow sphere and draws its outlines  -- 278 / 278 blocks planned, 174 outlines drawn
 PASS  Mention Alerts match your name and keywords as whole words, not your own messages
+PASS  Every module is on exactly one section page (none lost in the regrouping)  -- ok (77 modules)
+PASS  World groups world tools, search and trackers; developer tools start folded  -- [WORLD, TRACKERS]
+PASS  The search finds settings ("outline thickness" under Settings)  -- [Settings:Outline thickness]
+PASS  The search finds HUD elements ("coordinates hud")  -- [Modules:Death Coordinates, Modules:Coordinates, Help:HUD, HUD elements:Death Coordinates on the HUD, HUD elements:Coordinates on the HUD]
+PASS  The search finds help topics ("target line")  -- [Help:Target line, Settings:Target lines, Settings:Target lines, Settings:Target lines, Settings:Target lines, Help:ESP and target lines, Modules:Entity ESP, Modules:Trackers, Help:Tracer, Help:Line of sight]
+PASS  The search finds actions ("restore point") and no modules or settings for nonsense  -- [Help:Restore point, Actions:Create a restore point, Help:Backups and restore points] / []
+PASS  Choosing a setting in the search opens its module with the setting visible (Entity ESP, Background padding)  -- row height 49
+PASS  Settings › Help lists guides and a glossary  -- 34 topics
+PASS  Typing in the help search narrows it ("restore" finds Backups and restore points; nonsense finds nothing)  -- [Backups and restore points, Something is not working, Restore point] / []
+PASS  Entity, Block and Storage ESP use the same sections (Targets, Highlight, Labels, Target lines, Advanced) and show a preview  -- []
+PASS  Everyday ESP settings show at once; tuning (Advanced) and rarely used ones (More options) are folded away  -- 49/0/0
+PASS  Clicking Advanced and More options shows the folded settings  -- 49/30
+PASS  The ESP preview reads the module's own settings (outline, fill, labels, target lines)
+PASS  Module status is spelled out (On / Off), never only a color  -- On / Off
+PASS  The Show menu's "Turned on" lists only modules that are on  -- [chunk_borders]
+PASS  An empty filter explains what to do (no favorites yet: click the star)
+PASS  Long dropdown lists filter as you type ("12" leaves Option 12)  -- [12]
+PASS  Home's parts can be hidden and shown again (Customize Home)  -- 31 -> 22 -> 31
+PASS  New profile asks for a name in a dialog and creates the profile
+PASS  Deleting a profile asks first (Escape keeps it, Enter deletes)  -- true / Delete profile / true / true
+PASS  The HUD editor's toolbar moves to the bottom while an element is under it at the top, and back  -- true,true
+PASS  Ctrl+4 opens Visuals; Down selects the next module; Space switches it  -- Visuals / entity_esp -> storage_esp / false -> true
+PASS  No overlapping or clipped layout at 854x480, 1280x720, 1920x1080 and menu scales 1x, 2x and Minecraft's  -- []
+PASS  Opening and closing the menu five times leaves no stale overlay or focus  -- []
 PASS  No module errors were logged during the run
 PASS  Structure Finder finds the nearest stronghold in a normal singleplayer world  -- [Found[id=minecraft:village_plains, label=Village plains, pos=BlockPos{x=-304, y=0, z=-320}], Found[id=minecraft:stronghold, label=Stronghold, pos=BlockPos{x=1376, y=0, z=848}]]
-NOTE  Natural world (seed 8675309): 2 geode(s) in the scanned area, 2 complete
+NOTE  Natural world (seed 8675309): 2 geode(s) in the scanned area, 1 complete
 PASS  Naturally generated geodes are found and grouped in a normal world
 PASS  Every natural geode's completeness is stated (complete or incomplete with a reason)
-NOTE  Natural ticking: 2 geode(s) re-observed, 2 within simulation distance, 2 of those grew
+NOTE  Natural ticking: 2 geode(s) re-observed, 2 within simulation distance, 1 of those grew
 PASS  Natural geodes are re-identified by the same id after time passes  -- 2 matched
 PASS  No natural geode lost clusters without block removal  -- 0 lost clusters
-PASS  At least one geode within simulation distance grew under boosted random ticking  -- 2 of 2
+PASS  At least one geode within simulation distance grew under boosted random ticking  -- 1 of 2
 NOTE  Connected to dedicated test server at localhost:25565
 PASS  Every module runs on a dedicated server (no server list, no pausing)
 PASS  A dedicated server at localhost counts as a test environment (private address)  -- Server localhost:25565 (your network)
 PASS  A second player on the server reaches the client
 PASS  Player Alert warns when the player comes into range  -- [Alice (5 m ↑) is in range]
-PASS  Player Finder lists the player in range with their real position  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=IN_RANGE, position=(-3.5, -29.0, -1.5), seenAt=1792316609931]
+PASS  Player Finder lists the player in range with their real position  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=IN_RANGE, position=(4.5, -29.0, -1.5), seenAt=1792321375865]
 PASS  Entity ESP highlights the other player
 PASS  Player Alert reports when the player leaves range (setting on)  -- [Alice left your range, Alice (5 m ↑) is in range]
-PASS  Player Finder keeps the last seen position once the player is out of range  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=LAST_SEEN, position=(-3.5, -29.0, -1.5), seenAt=1792316610138]
+PASS  Player Finder keeps the last seen position once the player is out of range  -- Entry[id=fdb3c756-c1ec-35a3-ad31-628cbfe52f02, name=Alice, ping=0, gameMode=Survival, knowledge=LAST_SEEN, position=(4.5, -29.0, -1.5), seenAt=1792321375963]
 PASS  Trackers point to the last seen position, labelled with its age  -- [Indicator[name=Alice, source=LAST_SEEN, onScreen=true, x=214, y=114, label=Alice · 5m · last seen 0 s ago]]
 PASS  A player who logs off disappears from Player Finder
 PASS  Trackers drop a player who logged off
 PASS  Attribute swap: by default the axe is only used against a raised shield (no swap on a normal mob)  -- sword 0->1, axe 0->0
 PASS  Attribute swap: the server applied the hit with the axe (axe lost durability, sword did not)  -- sword 1->1, axe 0->2
-PASS  Attribute swap: switched back to the sword in the same tick, on client and server  -- client 0, server 0, SwapRecord[rule=AXE, item=Iron Axe, fromSlot=0, toSlot=1, target=Dummy, at=1792316613373, usedForHit=true, restored=true, note=switched back in the same tick]
+PASS  Attribute swap: switched back to the sword in the same tick, on client and server  -- client 0, server 0, SwapRecord[rule=AXE, item=Iron Axe, fromSlot=0, toSlot=1, target=Dummy, at=1792321379214, usedForHit=true, restored=true, note=switched back in the same tick]
 PASS  Attribute swap: no second swap during the axe's cooldown (1 s)  -- sword 1->2, axe 2->2, skip: Axe on cooldown
 PASS  Attribute swap: a longer per-item cooldown (3 s) blocks swaps for longer  -- axe 2->4->4
 PASS  Attribute swap: with a swap-back delay the axe stays selected for those ticks, then the sword returns  -- right after 1, later 0, server 0
@@ -386,10 +410,10 @@ PASS  The server keeps receiving the player's updates during free camera  -- ser
 PASS  The player stays put on the server and on the client  -- server moved 0.000, client moved 0.000
 PASS  Disabling the free camera returns the view to the player
 PASS  No rubber-band: server and client agree on the position after the camera returns  -- server-client difference 0.000
-PASS  After the camera returns, clicking works again (control: swing, block broken)  -- swung=true, aimed=true (BlockPos{x=-9, y=-34, z=-2} pitch 90.0, expected BlockPos{x=-9, y=-30, z=-2}), server: Block{minecraft:air}, held 1 minecraft:rotten_flesh, mode CREATIVE, at (-8.5, -30.14510670065164, -1.5)
+PASS  After the camera returns, clicking works again (control: swing, block broken)  -- swung=true, aimed=true (BlockPos{x=-1, y=-34, z=-2} pitch 90.0, expected BlockPos{x=-1, y=-30, z=-2}), server: Block{minecraft:air}, held 0 minecraft:air, mode CREATIVE, at (-0.5, -30.14510670065164, -1.5)
 PASS  Structure Finder is unavailable on a server and says why (no world seed)  -- Needs the world seed, so it only works in singleplayer (servers never send the seed).
 PASS  Player Alert's auto leave disconnects when a player comes into range and turns itself off  -- left true, reason Alice was 6 blocks away, server list true, auto leave off true
 NOTE  Ignored known offline-test noise: missing X11 cursor shapes (Xvfb), anisotropic filtering option, Realms and account-properties requests failing without a real login.
 PASS  No render-thread, server-thread or client-code errors in the client log
 
-Result: PASSED (297 checks passed, 285 s)
+Result: PASSED (321 checks passed, 288 s)

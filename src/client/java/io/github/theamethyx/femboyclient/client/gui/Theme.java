@@ -82,12 +82,27 @@ public final class Theme {
 	/** Second accent, the far end of accent gradients (magenta in the default theme). */
 	public static int ACCENT_2;
 
-	// Spacing.
+	// Spacing: every gap in the menu is one of these steps.
 	public static final int PAD = 6;
 	public static final int GAP = 4;
 	public static final int ROW = 18;
 	public static final int SIDEBAR_WIDTH = 92;
 	public static final int HEADER = 28;
+	/** Spacing steps (virtual pixels): extra small, small, medium, large. */
+	public static final int SPACE_XS = 2;
+	public static final int SPACE_S = 4;
+	public static final int SPACE_M = 8;
+	public static final int SPACE_L = 12;
+
+	// Typography: three sizes only. Body text is the font's own size (8 px); titles and small print scale it.
+	/** Page and panel titles. */
+	public static final float TEXT_TITLE = 1.2f;
+	/** Secondary lines: descriptions under names, captions, hints. */
+	public static final float TEXT_SMALL = 0.75f;
+
+	/** Corner radius of controls (buttons, fields, rows) and of panels and cards. */
+	public static final int RADIUS_CONTROL = 4;
+	public static final int RADIUS_PANEL = 6;
 
 	private static Palette current;
 
@@ -98,7 +113,7 @@ public final class Theme {
 	/** Whether sidebar and page icons take the accent color (false: plain text color). */
 	public static boolean ACCENT_ICONS = true;
 	/** Whether the menu draws its backdrop glows and sparkles. */
-	public static boolean BACKDROP_ART = true;
+	public static boolean BACKDROP_ART = false;
 
 	/**
 	 * Theme Studio's choices on top of a palette. Colors are RGB (or ARGB) or {@code null} for the palette's own;

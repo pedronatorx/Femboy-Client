@@ -66,8 +66,8 @@ public class Button extends Widget {
 		int foreground;
 		switch (style) {
 			case PRIMARY -> {
-				background = Theme.lerp(Theme.ACCENT_DIM, Theme.ACCENT, h * 0.6f);
-				foreground = Theme.TEXT;
+				background = Theme.lerp(Theme.ACCENT, Theme.ACCENT_STRONG, h * 0.35f);
+				foreground = 0xFFFFFFFF;
 			}
 			case DANGER -> {
 				background = Theme.lerp(0xFF3A1E22, 0xFF5A2329, h);

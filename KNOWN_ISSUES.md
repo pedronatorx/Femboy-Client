@@ -86,11 +86,21 @@
 - **No Fall** tells the server you are on the ground; it does not help when the server checks falls itself.
 - **HUD editor:** the name label of a block dragged to the very top can overlap the help panel.
 
+## 1.1.0 limitations (interface redesign)
+
+- **Small windows:** with the automatic menu scale, a window under about 1000x580 pixels draws the menu at 1x, where text is Minecraft's smallest size. Small print then stays full size (scaled text would be unreadable), so some lines are cut with "..." and show in full on hover. A fixed menu scale (Settings › General › Menu scale) can be chosen instead.
+- **Keyboard:** sections (Ctrl+1 to Ctrl+9, Ctrl+Tab), module lists (Up, Down, Space), the search, dialogs, text fields and the HUD editor work from the keyboard. Moving focus with Tab through every control (switches, sliders, dropdowns) is still not implemented; those need the mouse.
+- **Module icons:** modules have no icons of their own; section icons are used for groups and the sidebar. Each module row shows its name and a line of text instead.
+- **Help mode** is on by default, also for existing installations (the option is new). Turn it off with the i in any module's header for the previous, compact list.
+- **"Incompatible settings"** are not detected as a module state. Conflicting modules (which cannot run together) are listed in a module's "About this module" fold; switching one on switches the other off, as before.
+- **ESP preview** is a drawing of the settings, not a rendering of the world: it does not show depth ("hide behind blocks"), real distances or per-group overrides.
+- **HUD editor colors:** colors of HUD elements are module settings; the inspector's *Settings* button opens them in the menu rather than editing them in the editor.
+- **Background art** is now off by default. Profiles that stored the option before keep their choice.
+
 ## 1.0.0 limitations
 
 - **Command palette key** is unbound by default (K would take a key people often give to modules); Ctrl+K inside the menu always works. The quick toggle wheel key is unbound too.
 - **HUD opacity** fades backgrounds, text and icons, but item icons (Keystrokes, Item Counters, Target HUD) are drawn opaque by Minecraft.
-- **HUD editor toolbar** covers the top middle of the screen; an element there must be dragged by its uncovered part, or moved with the arrow keys after selecting it in the elements list.
 - **HUD layouts** anchor elements to the nearest screen third. An element placed exactly between two thirds may anchor differently than you expect after a large resize; drag it once more.
 - **Theme Studio:** only Minecraft's font; text size follows the menu scale, it cannot be set separately.
 - **Rules** see what the client sees once per tick. A profile switch made by a rule is noticed (and fires "the profile changes") on the next tick; the minimum cooldown of 3 s keeps two rules from switching back and forth. Rules cannot press keys, place blocks or switch on automation modules, by design.

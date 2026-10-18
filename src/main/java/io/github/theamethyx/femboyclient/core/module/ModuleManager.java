@@ -395,31 +395,47 @@ public final class ModuleManager {
 			}
 		}
 
-		ModuleHealth.State state;
-		String reason;
+		StateAndReason current = stateOf(module, now);
+		ModuleHealth.State state = current.state();
+		String reason = current.reason();
+		return new ModuleHealth(state, reason, sinceSuccess, module.lastError(), recent, module.errorCount(), workload);
+	}
+
+	/** A module's state and the reason for it. */
+	public record StateAndReason(ModuleHealth.State state, String reason) {
+	}
+
+	/**
+	 * Just the state and its reason, as in {@link #health}, without asking the module to describe its work: cheap enough
+	 * for the menu to show next to every module.
+	 */
+	public StateAndReason state(Module module) {
+		return stateOf(module, clock.getAsLong());
+	}
+
+	private StateAndReason stateOf(Module module, long now) {
 		if (!module.isEnabled()) {
 			boolean failed = module.lastError() != null;
-			state = failed ? ModuleHealth.State.ERROR : ModuleHealth.State.OFF;
-			reason = module.offReason() != null ? module.offReason() : failed ? module.lastError() : "";
-		} else if (module.isRunning()) {
-			state = ModuleHealth.State.ACTIVE;
-			reason = "";
-		} else if (module.suspendedUntil > now) {
-			state = ModuleHealth.State.SUSPENDED;
-			reason = "Restarts in " + Math.max(1, (module.suspendedUntil - now + 999) / 1000) + " s after: " + module.lastError();
-		} else {
-			Module.Availability availability = availability(module);
-			reason = availability.reason();
-			state = switch (availability.kind()) {
-				case WAITING -> ModuleHealth.State.WAITING;
-				case ENVIRONMENT -> ModuleHealth.State.UNSUPPORTED;
-				case REDUCED -> ModuleHealth.State.REDUCED;
-				case AVAILABLE -> ModuleHealth.State.WAITING;
-				case OTHER -> ModuleHealth.State.UNSUPPORTED;
-			};
+			return new StateAndReason(failed ? ModuleHealth.State.ERROR : ModuleHealth.State.OFF,
+					module.offReason() != null ? module.offReason() : failed ? module.lastError() : "");
 		}
 
-		return new ModuleHealth(state, reason, sinceSuccess, module.lastError(), recent, module.errorCount(), workload);
+		if (module.isRunning()) {
+			return new StateAndReason(ModuleHealth.State.ACTIVE, "");
+		}
+
+		if (module.suspendedUntil > now) {
+			return new StateAndReason(ModuleHealth.State.SUSPENDED,
+					"Restarts in " + Math.max(1, (module.suspendedUntil - now + 999) / 1000) + " s after: " + module.lastError());
+		}
+
+		Module.Availability availability = availability(module);
+		ModuleHealth.State state = switch (availability.kind()) {
+			case WAITING, AVAILABLE -> ModuleHealth.State.WAITING;
+			case ENVIRONMENT, OTHER -> ModuleHealth.State.UNSUPPORTED;
+			case REDUCED -> ModuleHealth.State.REDUCED;
+		};
+		return new StateAndReason(state, availability.reason());
 	}
 
 	private static int recentFailures(Module module, long now) {

@@ -60,6 +60,19 @@ The mode rounds ran after the Balanced rounds with the same modules on; each is 
 
 Within run-to-run variation; 1.0 neither sped up nor slowed down the measured modules. Each run is one measurement on a loaded machine with software rendering, so differences of a few hundredths of a millisecond are noise.
 
+## 1.1.0 against 1.0.0 (same scene, same session, Balanced)
+
+The redesign changed the menu, not the modules, so this run checks that playing did not get slower. Both builds were measured one after the other on the same machine (`1.1.0.txt` holds both runs). The machine was swapping heavily at the time, so all times are higher than in the older files; compare the two columns with each other only.
+
+| | 1.0.0 | 1.1.0 |
+|---|---|---|
+| Module tick work per tick | 0.18 to 0.27 ms | 0.18 to 0.22 ms |
+| Allocated during module ticks, per tick | 37 to 38 KB | 37 to 38 KB |
+| Client drawing (HUD + world overlays) per frame | 3.52 to 5.69 ms | 3.49 to 4.17 ms |
+| Entity ESP / Trackers / Keystrokes, per tick | 924 / 716 / 320 µs | 934 / 720 / 318 µs |
+
+Within run-to-run variation: no slowdown from the redesign. The menu itself is not part of this benchmark (it is closed while playing).
+
 ## Not measured
 
 - Frame rate on a real GPU (the NVIDIA card was not used; see above).

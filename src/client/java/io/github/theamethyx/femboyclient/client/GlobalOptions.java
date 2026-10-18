@@ -44,6 +44,7 @@ public final class GlobalOptions {
 
 	public static final String THEME_SECTION = "Theme";
 	public static final String MOTION_SECTION = "Motion";
+	public static final String HOME_SECTION = "Home screen";
 
 	/** Global settings that each profile stores as well, so switching profiles switches them (look and performance). */
 	public static final java.util.Set<String> PROFILE_OPTIONS = java.util.Set.of("theme", "custom_accent", "accent", "accent_2", "custom_surface",
@@ -77,6 +78,24 @@ public final class GlobalOptions {
 
 	public final BooleanSetting tooltips = settings.add(new BooleanSetting("tooltips", "Tooltips",
 			"Show an explanation when hovering over modules and settings.", true));
+	public final BooleanSetting helpMode = settings.add(new BooleanSetting("help_mode", "Help mode",
+			"Show every setting's explanation, allowed range and default right under its name, instead of only when you hover. "
+					+ "Turn off for a more compact menu.", true));
+
+	{
+		settings.section(HOME_SECTION);
+	}
+
+	public final BooleanSetting homeStatus = settings.add(new BooleanSetting("home_status", "Status cards",
+			"Show the profile, performance mode and client status cards at the top of Home.", true));
+	public final BooleanSetting homeFavorites = settings.add(new BooleanSetting("home_favorites", "Favorites",
+			"Show your starred modules on Home.", true));
+	public final BooleanSetting homeRecent = settings.add(new BooleanSetting("home_recent", "Recently used",
+			"Show the modules you opened or switched recently on Home.", true));
+	public final BooleanSetting homeShortcuts = settings.add(new BooleanSetting("home_shortcuts", "Shortcuts",
+			"Show shortcuts to profiles, the HUD editor, appearance and help on Home.", true));
+	public final BooleanSetting homeTips = settings.add(new BooleanSetting("home_tips", "Getting-started tip",
+			"Show the short getting-started tip on Home until you dismiss it.", true));
 
 	{
 		settings.section(THEME_SECTION);
@@ -123,7 +142,7 @@ public final class GlobalOptions {
 	public final BooleanSetting accentIcons = settings.add(new BooleanSetting("accent_icons", "Colored icons",
 			"Tint sidebar icons with the accent color; off: plain text color.", true));
 	public final BooleanSetting backdropArt = settings.add(new BooleanSetting("backdrop_art", "Background art",
-			"Soft accent glows and sparkles around the menu.", true));
+			"Soft accent glows and sparkles around the menu.", false));
 	public final io.github.theamethyx.femboyclient.core.setting.NumberSetting hudBackground = settings.add(
 			new io.github.theamethyx.femboyclient.core.setting.NumberSetting("hud_background", "HUD background",
 					"Opacity of HUD panel backgrounds.", 82, 0, 100, 5, "%"));

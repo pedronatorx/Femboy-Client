@@ -600,7 +600,7 @@ final class AdvancedFeaturesTest {
 		ClientGameTest.openModule(context, EntityEspModule.class);
 		List<String> sections = context.computeOnClient(client -> ((io.github.theamethyx.femboyclient.client.gui.ClientScreen) client.screen).currentPage()
 				.descendants(SettingRow.SectionHeader.class).stream().map(SettingRow.SectionHeader::title).toList());
-		report.check("Entity ESP settings are grouped into sections", sections.equals(List.of("Targets", "Boxes", "Colors", "Labels", "Health", "Target lines", "Performance")),
+		report.check("Entity ESP settings are grouped into sections", sections.equals(List.of("Targets", "Highlight", "Colors", "Labels", "Health", "Target lines", "Advanced", "Performance")),
 				sections.toString());
 		context.takeScreenshot("visuals-entity-esp-sections");
 		ClientGameTest.openModule(context, FreeCameraModule.class);

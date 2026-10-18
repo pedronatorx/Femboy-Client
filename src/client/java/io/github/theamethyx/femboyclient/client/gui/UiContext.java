@@ -151,7 +151,7 @@ public final class UiContext {
 
 	private void drawTooltip(String text, int screenWidth, int screenHeight) {
 		int maxWidth = Math.min(220, screenWidth - 16);
-		List<FormattedCharSequence> lines = font.split(Component.literal(text), maxWidth - 10);
+		List<FormattedCharSequence> lines = lines(text, maxWidth - 10);
 		int width = 0;
 		for (FormattedCharSequence line : lines) {
 			width = Math.max(width, font.width(line));
@@ -526,9 +526,31 @@ public final class UiContext {
 		return available <= 0 ? "" : font.plainSubstrByWidth(text, available) + ellipsis;
 	}
 
+	/**
+	 * Wrapped lines by width and text. Splitting text allocates, and the same descriptions are drawn every frame, so the
+	 * result is kept; the cache is simply emptied when it grows large (e.g. after browsing many modules).
+	 */
+	private final java.util.Map<String, List<FormattedCharSequence>> wrapCache = new java.util.HashMap<>();
+
+	private List<FormattedCharSequence> lines(String text, int maxWidth) {
+		int width = Math.max(10, maxWidth);
+		String key = width + "|" + text;
+		List<FormattedCharSequence> lines = wrapCache.get(key);
+		if (lines == null) {
+			if (wrapCache.size() > 600) {
+				wrapCache.clear();
+			}
+
+			lines = font.split(Component.literal(text), width);
+			wrapCache.put(key, lines);
+		}
+
+		return lines;
+	}
+
 	/** Draws wrapped text and returns the height used. */
 	public int wrapped(String text, int x, int y, int maxWidth, int color) {
-		List<FormattedCharSequence> lines = font.split(Component.literal(text), Math.max(10, maxWidth));
+		List<FormattedCharSequence> lines = lines(text, maxWidth);
 		for (int i = 0; i < lines.size(); i++) {
 			graphics.drawString(font, lines.get(i), x, y + i * 10, a(color), false);
 		}
@@ -537,7 +559,50 @@ public final class UiContext {
 	}
 
 	public int wrappedHeight(String text, int maxWidth) {
-		return font.split(Component.literal(text), Math.max(10, maxWidth)).size() * 10;
+		return lines(text, maxWidth).size() * 10;
+	}
+
+	/** Draws wrapped text at {@code scale} (lines {@code 10 * scale} apart); returns the height used, rounded up. */
+	public int wrappedScaled(String text, int x, int y, int maxWidth, float scale, int color) {
+		if (scale == 1) {
+			return wrapped(text, x, y, maxWidth, color);
+		}
+
+		List<FormattedCharSequence> lines = lines(text, Math.round(maxWidth / scale));
+		var pose = graphics.pose();
+		pose.pushMatrix();
+		pose.translate(x, y);
+		pose.scale(scale, scale);
+		for (int i = 0; i < lines.size(); i++) {
+			graphics.drawString(font, lines.get(i), 0, i * 10, a(color), false);
+		}
+
+		pose.popMatrix();
+		return (int) Math.ceil(lines.size() * 10 * scale);
+	}
+
+	public int wrappedHeightScaled(String text, int maxWidth, float scale) {
+		return scale == 1 ? wrappedHeight(text, maxWidth) : (int) Math.ceil(lines(text, Math.round(maxWidth / scale)).size() * 10 * scale);
+	}
+
+	/** Physical pixels per menu pixel; set by the screen that owns this context. */
+	private int pixelScale = 2;
+
+	public void setPixelScale(int pixelScale) {
+		this.pixelScale = Math.max(1, pixelScale);
+	}
+
+	/**
+	 * Size for small print ({@link Theme#TEXT_SMALL}), or full size when the menu is drawn at one physical pixel per menu
+	 * pixel: scaled-down text would be only six pixels tall there, too small to read.
+	 */
+	public float small() {
+		return pixelScale >= 2 ? Theme.TEXT_SMALL : 1;
+	}
+
+	/** Line height of small print. */
+	public int smallLine() {
+		return Math.round(10 * small());
 	}
 
 	/** Draws an icon at {@code size}x{@code size} GUI pixels, tinted with {@code color}. */

@@ -43,7 +43,18 @@ final class UiDriver {
 	/** Opens a collapsed settings section on the current page by clicking its header, like a user would. */
 	void openSection(String title) {
 		var header = find(io.github.theamethyx.femboyclient.client.gui.widget.SettingRow.SectionHeader.class, h -> h.title().equals(title));
-		if (header != null && context.computeOnClient(client -> header.collapsed())) {
+		if (header == null) {
+			return;
+		}
+
+		// A section inside the Advanced fold: open the fold first (by clicking it), so the section's heading can be clicked.
+		var parent = header.parent();
+		if (parent != null && context.computeOnClient(client -> parent.collapsed())) {
+			click(parent);
+			context.waitTicks(2);
+		}
+
+		if (context.computeOnClient(client -> header.collapsed())) {
 			click(header);
 			context.waitTicks(2);
 		}
@@ -53,6 +64,13 @@ final class UiDriver {
 	void click(Widget widget) {
 		context.runOnClient(client -> {
 			if (client.screen instanceof ClientScreen screen) {
+				// A setting folded away (closed section, "More options", Advanced) is opened first, as a player would.
+				for (var row : screen.currentPage().descendants(io.github.theamethyx.femboyclient.client.gui.widget.SettingRow.class)) {
+					if (row == widget || row.children().contains(widget)) {
+						row.reveal();
+					}
+				}
+
 				for (io.github.theamethyx.femboyclient.client.gui.widget.ScrollList list : screen.currentPage().descendants(io.github.theamethyx.femboyclient.client.gui.widget.ScrollList.class)) {
 					list.revealDescendant(widget);
 				}

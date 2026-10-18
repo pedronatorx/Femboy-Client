@@ -119,21 +119,21 @@ public final class TrackersModule extends Module implements ClientHooks.ScreenOv
 	private final NumberSetting maxDistance = settings().add(new NumberSetting("max_distance", "Maximum distance",
 			"Targets farther away are not tracked. Waypoints and last-seen positions count too.", 256, 16, 2048, 16, "blocks"));
 	private final NumberSetting maxIndicators = settings().add(new NumberSetting("max_indicators", "Maximum indicators",
-			"Only the nearest targets up to this number get an indicator.", 12, 1, 64, 1, ""));
+			"Only the nearest targets up to this number get an indicator.", 12, 1, 64, 1, "")).advanced();
 	private final NumberSetting updateInterval = settings().add(new NumberSetting("update_interval", "Update interval",
-			"How often the target list is rebuilt. Arrows still follow moving targets every frame.", 4, 1, 40, 1, "ticks"));
+			"How often the target list is rebuilt. Arrows still follow moving targets every frame.", 4, 1, 40, 1, "ticks")).advanced();
 
-	{ settings().section("Style"); }
+	{ settings().section("Indicators"); }
 	private final BooleanSetting arrows = settings().add(new BooleanSetting("arrows", "Edge arrows and markers",
 			"Arrows at the screen edge for targets outside your view, markers on those inside it. Target lines are set below.", true));
 	private final NumberSetting size = settings().add(new NumberSetting("size", "Indicator size", "Size of the arrows and markers.", 10, 6, 24, 1, "px"));
 	private final NumberSetting edgeMargin = settings().add(new NumberSetting("edge_margin", "Distance from screen edge",
-			"How far from the screen edge the arrows sit.", 28, 8, 120, 2, "px"));
+			"How far from the screen edge the arrows sit.", 28, 8, 120, 2, "px")).advanced();
 	private final BooleanSetting onScreenMarkers = settings().add(new BooleanSetting("on_screen_markers", "Markers on screen",
 			"Show a small marker on targets that are on screen. Off: only off-screen targets get an arrow.", true));
 	private final BooleanSetting labels = settings().add(new BooleanSetting("labels", "Labels", "Show the name next to each indicator.", true));
 	private final BooleanSetting showDistance = settings().add(new BooleanSetting("show_distance", "Distance", "Add the distance to the label.", true));
-	private final NumberSetting labelScale = settings().add(new NumberSetting("label_scale", "Label size", "Size of the label text.", 0.7, 0.5, 1.5, 0.05, "x"));
+	private final NumberSetting labelScale = settings().add(new NumberSetting("label_scale", "Label size", "Size of the label text.", 0.7, 0.5, 1.5, 0.05, "x")).advanced();
 	private final NumberSetting opacity = settings().add(new NumberSetting("opacity", "Opacity", "How solid the indicators are.", 0.9, 0.2, 1, 0.05, ""));
 
 	{ settings().section("Colors"); }

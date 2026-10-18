@@ -115,4 +115,15 @@ class SettingsTest {
 		assertTrue(flag.get(), "missing key resets to default");
 		assertThrows(IllegalArgumentException.class, () -> group.add(new BooleanSetting("flag", "Again", "", false)));
 	}
+
+	@Test
+	void advancedOnlyMarksASettingForTheMenu() {
+		NumberSetting plain = radius();
+		NumberSetting tuned = radius().advanced();
+		assertFalse(plain.isAdvanced());
+		assertTrue(tuned.isAdvanced());
+		assertNull(tuned.set(8.0));
+		assertEquals(plain.toJson().getClass(), tuned.toJson().getClass());
+		assertTrue(tuned.isListed(), "advanced settings stay in the list (folded), unlike panel-only ones");
+	}
 }

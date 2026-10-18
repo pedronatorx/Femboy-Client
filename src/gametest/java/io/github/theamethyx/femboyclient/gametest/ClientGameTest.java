@@ -31,7 +31,7 @@ import io.github.theamethyx.femboyclient.client.gui.widget.GeodePanel;
 import io.github.theamethyx.femboyclient.client.gui.widget.IdSetRow;
 import io.github.theamethyx.femboyclient.client.gui.widget.KeybindButton;
 import io.github.theamethyx.femboyclient.client.gui.widget.ModuleRow;
-import io.github.theamethyx.femboyclient.client.gui.widget.ModuleTile;
+import io.github.theamethyx.femboyclient.client.gui.CommandPalette;
 import io.github.theamethyx.femboyclient.client.gui.widget.SettingRow;
 import io.github.theamethyx.femboyclient.client.gui.widget.TextField;
 import io.github.theamethyx.femboyclient.client.gui.widget.Widget;
@@ -64,7 +64,7 @@ public class ClientGameTest implements FabricClientGameTest {
 	static final BlockPos PLAYER = new BlockPos(0, -60, 0);
 	/** Center of the geode fixture's stone cube; the cube spans chunks x -1..1, z 0..2. */
 	static final BlockPos GEODE_CENTER = new BlockPos(0, -41, 30);
-	static final List<String> NAVIGATION = List.of("Home", "Combat", "Automation", "Movement", "Visuals", "Inventory", "World", "Trackers", "Profiles",
+	static final List<String> NAVIGATION = List.of("Home", "Combat", "Movement", "Visuals", "Inventory", "World", "Automation", "Profiles",
 			"Settings");
 
 	@Override
@@ -123,6 +123,7 @@ public class ClientGameTest implements FabricClientGameTest {
 			AdvancedFeaturesTest.javaRunner(context, ui, report);
 			OverhaulTest.run(context, singleplayer, ui, report);
 			ProductTest.run(context, singleplayer, ui, report);
+			UxTest.run(context, singleplayer, ui, report);
 
 			int errors = context.computeOnClient(client -> FemboyClient.get().diagnostics().errorCount());
 			report.check("No module errors were logged during the run", errors == 0, errors == 0 ? ""
@@ -267,80 +268,59 @@ public class ClientGameTest implements FabricClientGameTest {
 		report.check("Escape closes the Femboy Client screen", true);
 	}
 
-	/** Home search opens modules on their category page; toggle, key bind and in-world key press. */
+	/** Home and the search open modules on their section page; toggle, key bind and in-world key press. */
 	private static void moduleBrowser(ClientGameTestContext context, UiDriver ui, TestReport report) {
 		openMenu(context);
 		showPage(context, "Home");
-		context.takeScreenshot("home-grid");
-		TextField search = context.computeOnClient(client -> ((ClientScreen) client.screen).searchField());
-		ui.click(search);
+		context.takeScreenshot("home");
+		boolean noWall = context.computeOnClient(client -> ((HomePage) ((ClientScreen) client.screen).currentPage()).rows().size() <= 16);
+		report.check("Home shows an overview (favorites and recent modules), not every module", noWall);
+
+		// Typing on Home starts the search.
 		ui.type("geode");
 		context.waitTicks(2);
-		List<String> listed = context.computeOnClient(client -> ((ClientScreen) client.screen).currentPage().descendants(ModuleTile.class)
-				.stream().map(tile -> tile.module().id()).toList());
-		report.check("Header search 'geode' lists the Geode Analyzer on Home", listed.contains("geode_analyzer"), listed.toString());
-		context.takeScreenshot("home-search-geode");
+		List<String> found = context.computeOnClient(client -> ((ClientScreen) client.screen).uiContext().overlay() instanceof CommandPalette palette
+				? palette.entries().stream().map(entry -> entry.group() + ":" + entry.title()).toList() : List.of());
+		report.check("Typing on Home searches; 'geode' finds the Geode Analyzer under Modules", found.contains("Modules:Geode Analyzer"), found.toString());
+		context.takeScreenshot("search-geode");
 		ui.key(GLFW.GLFW_KEY_ESCAPE);
 		context.waitTicks(1);
-		boolean menuStillOpen = context.computeOnClient(client -> client.screen instanceof ClientScreen);
-		report.check("Escape in the search field only leaves the field", menuStillOpen);
+		boolean menuStillOpen = context.computeOnClient(client -> client.screen instanceof ClientScreen screen && screen.uiContext().overlay() == null);
+		report.check("Escape closes the search and keeps the menu open", menuStillOpen);
 
-		ModuleTile tile = ui.find(ModuleTile.class, t -> t.module().id().equals("geode_analyzer"));
-		ui.rightClick(tile);
-		context.waitTicks(10);
-		String opened = context.computeOnClient(client -> ((ClientScreen) client.screen).currentPage() instanceof HomePage home
-				&& home.settingsModule() != null ? home.settingsModule().id() : "none");
-		boolean stillOff = context.computeOnClient(client -> !femboy().modules().get("geode_analyzer").isEnabled());
-		report.check("Right-clicking a module on Home opens its settings panel (and does not turn it on)", opened.equals("geode_analyzer") && stillOff,
-				opened + ", off " + stillOff);
-		context.takeScreenshot("home-settings-panel");
-
-		int keybindsTab = context.computeOnClient(client -> {
-			HomePage home = (HomePage) ((ClientScreen) client.screen).currentPage();
-			home.settingsPanel().showTab(1);
-			return home.settingsPanel().tab();
-		});
-		boolean keyField = context.computeOnClient(client -> !((ClientScreen) client.screen).currentPage().descendants(KeybindButton.class).isEmpty());
-		report.check("The settings panel's Keybinds tab shows the key field", keybindsTab == 1 && keyField);
-		ui.key(GLFW.GLFW_KEY_ESCAPE);
+		// Enter on a module opens it (and does not switch it on).
+		context.runOnClient(client -> ((ClientScreen) client.screen).openSearch("geode analyzer"));
+		context.waitTicks(1);
+		ui.key(GLFW.GLFW_KEY_ENTER);
 		context.waitTicks(3);
-		boolean closed = context.computeOnClient(client -> client.screen instanceof ClientScreen screen && screen.currentPage() instanceof HomePage home
-				&& home.settingsModule() == null);
-		report.check("Escape closes the settings panel and keeps the menu open", closed);
-
-		ModuleTile again = ui.find(ModuleTile.class, t -> t.module().id().equals("geode_analyzer"));
-		ui.clickVirtual(again.x() + 30, again.y() + again.height() / 2.0);
-		boolean toggledOn = context.computeOnClient(client -> femboy().modules().get("geode_analyzer").isEnabled());
-		ui.clickVirtual(again.x() + 30, again.y() + again.height() / 2.0);
-		boolean toggledOff = context.computeOnClient(client -> !femboy().modules().get("geode_analyzer").isEnabled());
-		report.check("Left-clicking a module on Home turns it on, and again off", toggledOn && toggledOff);
-		// Clear the search again, so later pages and screenshots show every module.
-		context.runOnClient(client -> {
-			ClientScreen screen = (ClientScreen) client.screen;
-			screen.searchField().setText("");
-			io.github.theamethyx.femboyclient.client.gui.GuiState.search = "";
-			((HomePage) screen.currentPage()).setQuery("");
-		});
-
-		openModule(context, GeodeAnalyzerModule.class);
 		String page = currentTitle(context);
 		String selected = context.computeOnClient(client -> ((ClientScreen) client.screen).currentPage() instanceof ModulesPage modules
 				&& modules.selected() != null ? modules.selected().id() : "none");
-		report.check("Opening a module shows it on its category page (World)", page.equals("World") && selected.equals("geode_analyzer"),
-				page + " / " + selected);
+		boolean stillOff = context.computeOnClient(client -> !femboy().modules().get("geode_analyzer").isEnabled());
+		report.check("Enter on a search result opens the module on its section (World) without switching it on",
+				page.equals("World") && selected.equals("geode_analyzer") && stillOff, page + " / " + selected + " / off " + stillOff);
+		boolean keyField = context.computeOnClient(client -> !((ClientScreen) client.screen).currentPage().descendants(KeybindButton.class).isEmpty());
+		report.check("The module panel shows its key field right away (no tabs)", keyField);
+		context.takeScreenshot("world-geode-selected");
+
+		// Tab on a module result switches it on and off.
+		context.runOnClient(client -> ((ClientScreen) client.screen).openSearch("geode analyzer"));
+		context.waitTicks(1);
+		ui.key(GLFW.GLFW_KEY_TAB);
+		boolean toggledOn = context.computeOnClient(client -> femboy().modules().get("geode_analyzer").isEnabled());
+		context.runOnClient(client -> ((ClientScreen) client.screen).openSearch("geode analyzer"));
+		context.waitTicks(1);
+		ui.key(GLFW.GLFW_KEY_TAB);
+		boolean toggledOff = context.computeOnClient(client -> !femboy().modules().get("geode_analyzer").isEnabled());
+		report.check("Tab on a search result turns the module on, and again off", toggledOn && toggledOff);
 
 		showPage(context, "Visuals");
-		TextField visualSearch = ui.find(TextField.class, field -> true);
-		ui.click(visualSearch);
-		ui.type("chunk");
-		context.waitTicks(2);
 		List<String> visuals = context.computeOnClient(client -> ((ClientScreen) client.screen).currentPage().descendants(ModuleRow.class)
 				.stream().map(r -> r.module().id()).toList());
 		boolean allVisuals = context.computeOnClient(client -> ((ClientScreen) client.screen).currentPage().descendants(ModuleRow.class)
 				.stream().allMatch(r -> r.module().category() == io.github.theamethyx.femboyclient.core.module.ModuleCategory.VISUALS
 						|| r.module().category() == io.github.theamethyx.femboyclient.core.module.ModuleCategory.HUD));
-		// Geode Analyzer mentions chunks too, but it lives on World, so it must not appear here.
-		report.check("A category page searches only its own modules", visuals.contains("chunk_borders") && allVisuals
+		report.check("The Visuals section lists its own modules (visuals, HUD and utilities) and no others", visuals.contains("chunk_borders") && allVisuals
 				&& !visuals.contains("geode_analyzer"), visuals.toString());
 
 		ModuleRow chunkRow = ui.find(ModuleRow.class, r -> r.module().id().equals("chunk_borders"));
@@ -354,12 +334,6 @@ public class ClientGameTest implements FabricClientGameTest {
 		report.check("Key capture binds K to Chunk Borders", key == GLFW.GLFW_KEY_K, "key=" + key);
 		context.takeScreenshot("visuals-chunk-borders-selected");
 
-		ui.click(visualSearch);
-		context.getInput().holdControl();
-		context.getInput().pressKey(GLFW.GLFW_KEY_A);
-		context.getInput().releaseControl();
-		ui.key(GLFW.GLFW_KEY_BACKSPACE);
-		ui.key(GLFW.GLFW_KEY_ESCAPE); // leaves the text field
 		closeMenu(context, ui);
 
 		ui.key(GLFW.GLFW_KEY_K);
@@ -792,27 +766,41 @@ public class ClientGameTest implements FabricClientGameTest {
 		boolean restored = context.computeOnClient(client -> femboy().modules().get("chunk_borders").settings().get("radius").isDefault());
 		report.check("A setting's reset button restores its default", restored);
 
-		// Hovering a setting shows its description as a tooltip after the hover delay.
-		ui.hoverVirtual(radiusRow.x() + 20, radiusRow.y() + 6);
+		// Help mode (on by default) shows the explanation under the name; with it off, hovering shows it as a tooltip.
+		String description = context.computeOnClient(client -> femboy().modules().get("chunk_borders").settings().get("radius").description());
+		int helpHeight = radiusRow.height();
+		context.runOnClient(client -> femboy().options().helpMode.set(false));
+		context.waitTicks(3);
+		SettingRow compactRow = ui.find(SettingRow.class, row -> row.setting().id().equals("radius"));
+		int compactHeight = compactRow.height();
+		ui.hoverVirtual(compactRow.x() + 20, compactRow.y() + 6);
 		context.waitTicks(15);
 		String tooltip = context.computeOnClient(client -> ((ClientScreen) client.screen).uiContext().shownTooltip());
-		String description = context.computeOnClient(client -> femboy().modules().get("chunk_borders").settings().get("radius").description());
-		report.check("Hovering a setting shows its description as a tooltip", description.equals(tooltip), String.valueOf(tooltip));
+		report.check("Help mode shows a setting's explanation under its name; off, the row is compact and hovering shows it",
+				helpHeight > compactHeight && tooltip != null && tooltip.startsWith(description) && tooltip.contains("default"),
+				helpHeight + " vs " + compactHeight + ", tooltip " + tooltip);
 		context.takeScreenshot("visuals-tooltip");
+		context.runOnClient(client -> femboy().options().helpMode.set(true));
+		context.waitTicks(2);
 
 		SettingRow colorRow = ui.find(SettingRow.class, row -> row.setting().id().equals("color"));
 		ui.click(colorRow.control());
 		boolean open = context.computeOnClient(client -> ((Dropdown<?>) colorRow.control()).isOpen(((ClientScreen) client.screen).uiContext()));
 		report.check("Clicking a dropdown opens its option list", open);
 		context.takeScreenshot("visuals-dropdown-open");
-		var dropdown = colorRow.control();
-		ui.clickVirtual(dropdown.x() + 20, dropdown.y() + dropdown.height() + 1 + 13 + 6);
+		// The list opens below the dropdown, or above it near the bottom of the screen: aim at the second option where it is.
+		var options = ((Dropdown<?>) colorRow.control()).optionList();
+		ui.clickVirtual(options.x() + 20, options.y() + 1 + 13 + 6);
 		Object color = context.computeOnClient(client -> femboy().modules().get("chunk_borders").settings().get("color").get());
 		report.check("Choosing 'Cyan' in the dropdown changes the setting", String.valueOf(color).equals("CYAN"), String.valueOf(color));
 
 		openModule(context, EntityEspModule.class);
 		context.runOnClient(client -> ((NumberSetting) femboy().modules().get(EntityEspModule.class).settings().get("max_labels")).set(5.0));
-		ui.click(ui.find(Button.class, b -> b.label().equals("Reset")));
+		Button moduleResetButton = ui.find(Button.class, b -> b.label().equals("Reset to defaults"));
+		ui.click(moduleResetButton);
+		boolean notYet = context.computeOnClient(client -> !femboy().modules().get(EntityEspModule.class).settings().allDefault());
+		ui.click(moduleResetButton);
+		report.check("Resetting a module asks for a second click first", notYet);
 		boolean moduleReset = context.computeOnClient(client -> femboy().modules().get(EntityEspModule.class).settings().allDefault());
 		report.check("The module Reset button restores all of a module's settings", moduleReset);
 		ui.openSection("Colors");

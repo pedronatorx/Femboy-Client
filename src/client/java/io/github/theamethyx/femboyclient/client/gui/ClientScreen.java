@@ -28,22 +28,27 @@ import io.github.theamethyx.femboyclient.core.module.Module;
 import io.github.theamethyx.femboyclient.core.module.ModuleCategory;
 
 /**
- * The Femboy Client menu: a sidebar (Home, Combat, Automation, Movement, Visuals, Inventory, World, Profiles,
- * Settings), a header with the page title, a search field for all modules, the profile selector and the notification
- * bell, and the active page.
+ * The Femboy Client menu: a sidebar with the module sections (Home, Combat, Movement, Visuals, Inventory, World,
+ * Automation) and, set apart, Profiles and Settings; a header with the page title, one search for everything (it opens the
+ * command palette), the profile selector and the notification bell; and the active page.
  *
  * <p>The menu is laid out in its own "virtual" pixel space so it can use a different (always whole-number, hence crisp)
  * scale than Minecraft's GUI scale. {@code f} converts virtual pixels to Minecraft GUI pixels.
  *
  * <p>Motion: the menu fades and slides in, page changes cross-fade, highlights glide. Animations follow the Animations
  * option and the performance mode; "Reduce motion" keeps only fades.
+ *
+ * <p>Keyboard: Ctrl+K or Ctrl+F search, Ctrl+Tab and Ctrl+Shift+Tab change section, Ctrl+1 to Ctrl+9 jump to a section,
+ * Escape closes an open list first, then the menu.
  */
 public class ClientScreen extends Screen {
 	/** Smallest virtual size the layout is designed for; "Auto" scale keeps at least this much room. */
 	private static final int MIN_WIDTH = 500;
 	private static final int MIN_HEIGHT = 290;
 	private static final int RADIUS = 8;
-	private static final int SEARCH_WIDTH = 150;
+	private static final int SEARCH_WIDTH = 170;
+	/** Pages after this index are the management pages (Profiles, Settings), drawn below a divider. */
+	private static final int MODULE_PAGES = 7;
 
 	private final FemboyClient femboy = FemboyClient.get();
 	private final List<Page> pages = new ArrayList<>();
@@ -76,10 +81,17 @@ public class ClientScreen extends Screen {
 		return screen;
 	}
 
-	/** Opens the command palette over the current page. */
+	/** Opens the command palette (the search) over the current page. */
 	public CommandPalette openPalette() {
 		CommandPalette palette = new CommandPalette(this, ui);
 		ui.openOverlay(palette);
+		return palette;
+	}
+
+	/** Opens the search with some text already typed. */
+	public CommandPalette openSearch(String text) {
+		CommandPalette palette = openPalette();
+		palette.setQuery(text);
 		return palette;
 	}
 
@@ -87,25 +99,22 @@ public class ClientScreen extends Screen {
 	protected void init() {
 		if (ui == null) {
 			ui = new UiContext(font);
-			home = new HomePage(ui, this::openModule);
+			home = new HomePage(ui, this);
 			pages.add(home);
-			addCategoryPage("Combat", "Combat information, target and weapon timing, explosions and attribute swapping.", Icon.COMBAT, ModuleCategory.COMBAT);
-			addCategoryPage("Automation", "Combat automation for singleplayer and servers in your own network.", Icon.BOLT, ModuleCategory.AUTOMATION);
-			addCategoryPage("Movement", "Free camera, sprinting, falls, elytra and movement helpers.", Icon.MOVEMENT, ModuleCategory.MOVEMENT);
-			addCategoryPage("Visuals", "ESP with target lines, highlights, HUD panels and screen tools.", Icon.VISUAL, ModuleCategory.VISUALS,
+			addCategoryPage("Combat", "Information for fights: your target, weapon timing, clicks and explosions.", Icon.COMBAT, ModuleCategory.COMBAT);
+			addCategoryPage("Movement", "Free camera, sprinting, falling, elytra and other ways to move.", Icon.MOVEMENT, ModuleCategory.MOVEMENT);
+			addCategoryPage("Visuals", "Highlights (ESP), HUD panels and tools that change what you see.", Icon.VISUAL, ModuleCategory.VISUALS,
 					ModuleCategory.HUD);
-			addCategoryPage("Inventory", "Item counters, refills, armor, sorting and hotbar layouts.", Icon.STORAGE, ModuleCategory.INVENTORY);
-			addCategoryPage("World", "World analysis, schematics, building tools and the Java runner.", Icon.GLOBE, ModuleCategory.WORLD,
-					ModuleCategory.DEVELOPER);
-			addCategoryPage("Trackers", "Find players and places: trackers with target lines, alerts, waypoints and death points.", Icon.TARGET,
-					ModuleCategory.TRACKERS);
+			addCategoryPage("Inventory", "Item counts, refills, armor, sorting and hotbar layouts.", Icon.STORAGE, ModuleCategory.INVENTORY);
+			addCategoryPage("World", "World tools, finding players and places, building helpers, developer tools.", Icon.GLOBE, ModuleCategory.WORLD,
+					ModuleCategory.TRACKERS, ModuleCategory.DEVELOPER);
+			addCategoryPage("Automation", "Modules that act for you. Only where you are allowed to use them.", Icon.BOLT, ModuleCategory.AUTOMATION);
 			pages.add(new ProfilesPage(ui));
 			pages.add(new SettingsPage(ui));
 			current = Math.max(0, Math.min(pages.size() - 1, GuiState.page));
 			navHighlight.snap(current);
-			search = new TextField("Search modules", 40).icon(Icon.SEARCH).onChange(this::searchChanged);
-			search.tooltip("Find a module by name, description or setting name; results appear on Home. Ctrl+F jumps here.");
-			search.setText(GuiState.search);
+			search = new TextField("Search", 40).icon(Icon.SEARCH);
+			search.tooltip("Search modules, settings, profiles, HUD elements, help and actions (Ctrl+K).");
 			pages.get(current).onShow();
 		}
 
@@ -126,15 +135,6 @@ public class ClientScreen extends Screen {
 				return;
 			}
 		}
-	}
-
-	private void searchChanged(String text) {
-		GuiState.search = text;
-		if (pages.get(current) != home && !text.isBlank()) {
-			showPage(0);
-		}
-
-		home.setQuery(text);
 	}
 
 	/** Chooses the menu's pixel scale and lays everything out in virtual pixels. */
@@ -161,6 +161,7 @@ public class ClientScreen extends Screen {
 
 		appliedScale = option.ordinal() * 100 + scale;
 		f = (float) scale / mcScale;
+		ui.setPixelScale(scale);
 		vw = Math.round(width / f);
 		vh = Math.round(height / f);
 		ui.setScreenSize(vw, vh);
@@ -169,20 +170,25 @@ public class ClientScreen extends Screen {
 		panelH = Math.min(vh - 16, 520);
 		panelX = (vw - panelW) / 2;
 		panelY = (vh - panelH) / 2;
-		sidebar = panelW >= 640 ? 124 : panelW >= 480 ? 108 : 94;
+		sidebar = panelW >= 640 ? 118 : panelW >= 480 ? 104 : 92;
 		layoutPage();
 	}
 
 	private int contentX() {
-		return panelX + sidebar + Theme.PAD + 4;
+		return panelX + sidebar + Theme.SPACE_L;
 	}
 
 	private void layoutPage() {
 		int contentX = contentX();
-		int contentY = panelY + Theme.HEADER + 8;
-		pages.get(current).setBounds(contentX, contentY, panelX + panelW - Theme.PAD - 2 - contentX, panelY + panelH - Theme.PAD - 2 - contentY);
+		int contentY = panelY + Theme.HEADER + 10;
+		pages.get(current).setBounds(contentX, contentY, panelX + panelW - Theme.SPACE_L - contentX, panelY + panelH - Theme.SPACE_L - contentY);
 		int searchW = Math.min(SEARCH_WIDTH, Math.max(90, (panelX + panelW - contentX) / 3));
-		search.setBounds(headerRight() - searchW, panelY + 9, searchW, 15);
+		search.setBounds(headerRight() - searchW, panelY + 10, searchW, 15);
+	}
+
+	/** Whether the header shows the search field (Home has its own, larger one). */
+	private boolean headerSearch() {
+		return pages.get(current) != home;
 	}
 
 	/** Right edge of the search field: left of the profile chip, the bell and the close button. */
@@ -196,10 +202,7 @@ public class ClientScreen extends Screen {
 		}
 
 		ui.closeOverlay();
-		if (ui.focused() != search) {
-			ui.focus(null);
-		}
-
+		ui.focus(null);
 		current = index;
 		GuiState.page = index;
 		pageFade.snap(0);
@@ -207,7 +210,7 @@ public class ClientScreen extends Screen {
 		layoutPage();
 	}
 
-	/** Shows a module on its category page, selected. */
+	/** Shows a module on its section page, selected. */
 	public void openModule(Module module) {
 		femboy.quickAccess().touch(module);
 		GuiState.selectedModule = module.id();
@@ -222,6 +225,14 @@ public class ClientScreen extends Screen {
 				return;
 			}
 		}
+	}
+
+	/** Shows the Settings page on a tab (General, Appearance, Performance, Rules, Timeline, Help, Developer). */
+	public SettingsPage openSettings(String tab) {
+		showPage(pageIndex(page -> page instanceof SettingsPage));
+		SettingsPage settings = (SettingsPage) pages.get(current);
+		settings.showTab(tab);
+		return settings;
 	}
 
 	/** Index of the first page of a type, or -1 (used by automated UI tests). */
@@ -258,17 +269,63 @@ public class ClientScreen extends Screen {
 
 	/** {x, y, width, height} of the profile selector in the header (used by automated UI tests). */
 	public int[] profileChipBounds() {
-		return new int[] {profileChipX(), panelY + 9, profileChipWidth(), 15};
+		return new int[] {profileChipX(), panelY + 10, profileChipWidth(), 15};
 	}
 
 	/** {x, y, width, height} of the notification bell (used by automated UI tests). */
 	public int[] bellBounds() {
-		return new int[] {bellX() - 2, panelY + 9, 15, 15};
+		return new int[] {bellX() - 2, panelY + 10, 15, 15};
+	}
+
+	/** {x, y, width, height} of the header search field, which opens the search (used by automated UI tests). */
+	public int[] paletteButtonBounds() {
+		return new int[] {search.x(), search.y(), search.width(), search.height()};
 	}
 
 	/** The header search field (used by automated UI tests). */
 	public TextField searchField() {
 		return search;
+	}
+
+	/**
+	 * Checks the current layout for overlaps and things that do not fit: sidebar entries running into the status line,
+	 * the header's search, profile chip, bell and close button overlapping, and the page leaving the panel. Empty when
+	 * everything fits (used by automated UI tests at several window sizes and scales).
+	 */
+	public List<String> layoutProblems() {
+		List<String> problems = new ArrayList<>();
+		int lastBottom = navY(pages.size() - 1) + navItem() - 2;
+		if (lastBottom > panelY + panelH - 28) {
+			problems.add("sidebar entries reach the status line (" + lastBottom + " > " + (panelY + panelH - 28) + ")");
+		}
+
+		if (search.x() + search.width() > profileChipX()) {
+			problems.add("search overlaps the profile chip");
+		}
+
+		if (profileChipX() + profileChipWidth() > bellX() - 2) {
+			problems.add("profile chip overlaps the bell");
+		}
+
+		if (search.x() < contentX() + 40) {
+			problems.add("search leaves no room for the title");
+		}
+
+		Page page = pages.get(current);
+		if (page.x() < panelX + sidebar || page.x() + page.width() > panelX + panelW || page.y() + page.height() > panelY + panelH) {
+			problems.add("page " + page.navLabel() + " leaves the panel");
+		}
+
+		if (page.width() < 200 || page.height() < 120) {
+			problems.add("page " + page.navLabel() + " is too small (" + page.width() + "x" + page.height() + ")");
+		}
+
+		return problems;
+	}
+
+	/** Menu pixels per screen pixel and the panel size, e.g. "2x, 900x520" (for test reports). */
+	public String layoutSummary() {
+		return ui == null ? "?" : Math.round(f * minecraft.getWindow().getGuiScale()) + "x, panel " + panelW + "x" + panelH + " in " + vw + "x" + vh;
 	}
 
 	/** Converts a Minecraft GUI coordinate to this menu's virtual coordinate. */
@@ -304,13 +361,16 @@ public class ClientScreen extends Screen {
 		graphics.fillGradient(0, 0, width, height, Theme.withAlpha(Theme.BACKDROP, t), Theme.withAlpha(0xC0050409, t));
 	}
 
-	/** Soft accent glows and a few sparkles behind the panel: the menu's backdrop art, drawn from two small textures. */
+	/** Soft accent glows and a few sparkles behind the panel (Appearance › Background art; off by default). */
 	private void renderBackdropArt(float t) {
-		ui.glow(panelX + panelW / 5, panelY + panelH / 6, Math.max(120, panelW / 3), Theme.withAlpha(Theme.ACCENT, 0.22f * t));
-		ui.glow(panelX + panelW * 4 / 5, panelY + panelH * 5 / 6, Math.max(120, panelW / 3), Theme.withAlpha(Theme.ACCENT_2, 0.18f * t));
-		// Fixed sparkle positions (relative to the screen), so they do not jump between frames.
+		if (!Theme.BACKDROP_ART) {
+			return;
+		}
+
+		ui.glow(panelX + panelW / 5, panelY + panelH / 6, Math.max(120, panelW / 3), Theme.withAlpha(Theme.ACCENT, 0.18f * t));
+		ui.glow(panelX + panelW * 4 / 5, panelY + panelH * 5 / 6, Math.max(120, panelW / 3), Theme.withAlpha(Theme.ACCENT_2, 0.14f * t));
 		int[][] sparkles = {{7, 12, 6}, {91, 9, 5}, {12, 88, 5}, {86, 84, 7}, {50, 4, 4}, {96, 47, 4}, {3, 52, 4}};
-		for (int[] s : Theme.BACKDROP_ART ? sparkles : new int[0][]) {
+		for (int[] s : sparkles) {
 			int sx = vw * s[0] / 100;
 			int sy = vh * s[1] / 100;
 			if (sx > panelX - 8 && sx < panelX + panelW + 8 && sy > panelY - 8 && sy < panelY + panelH + 8) {
@@ -373,69 +433,103 @@ public class ClientScreen extends Screen {
 	}
 
 	private void renderPanel() {
-		ui.shadow(panelX, panelY, panelW, panelH, RADIUS, 1.6f);
+		ui.shadow(panelX, panelY, panelW, panelH, RADIUS, 1.4f);
 		ui.roundRect(panelX, panelY, panelW, panelH, Theme.PANEL, RADIUS);
-		// A faint lighter band at the top of the content area gives the panel some depth.
-		ui.graphics().fillGradient(panelX + sidebar + 1, panelY + RADIUS, panelX + panelW - RADIUS, panelY + 46,
-				Theme.withAlpha(Theme.ACCENT, 0.06f), 0x00000000);
 		ui.roundRect(panelX, panelY, sidebar + 1, panelH, Theme.SIDEBAR, RADIUS);
 		ui.rect(panelX + sidebar - RADIUS + 1, panelY, RADIUS, panelH, Theme.SIDEBAR);
-		ui.rect(panelX + sidebar + 1, panelY + 8, 1, panelH - 16, Theme.BORDER);
-		ui.rect(panelX + sidebar + 1 + Theme.PAD, panelY + Theme.HEADER + 3, panelW - sidebar - 2 * Theme.PAD - 1, 1, Theme.withAlpha(Theme.BORDER, 0.8f));
+		ui.rect(panelX + sidebar + 1, panelY, 1, panelH, Theme.withAlpha(Theme.BORDER, 0.7f));
+	}
+
+	/** Y of a sidebar entry: the management pages sit below a small gap. */
+	private int navY(int index) {
+		return navTop() + index * navItem() + (index >= MODULE_PAGES ? 9 : 0);
 	}
 
 	private void renderSidebar() {
 		int x = panelX + 1;
-		// Brand: the logo badge, name and tagline.
-		ui.logo(x + 8, panelY + 8, 20);
-		ui.textClipped("Femboy Client", x + 33, panelY + 9, sidebar - 37, Theme.TEXT);
-		ui.textScaled(ui.ellipsize("Play Your Way", Math.round((sidebar - 37) / 0.75f)), x + 33, panelY + 19, 0.75f, Theme.ACCENT_STRONG);
+		// Brand: the logo badge and name.
+		ui.logo(x + 9, panelY + 9, 18);
+		ui.textClipped("Femboy Client", x + 32, panelY + 14, sidebar - 36, Theme.TEXT);
 
-		int top = navTop();
+		int itemW = sidebar - 12;
+		int itemH = navItem() - 2;
 		float highlight = navHighlight.update(current, ui.frameSeconds(), ui.motion());
-		int highlightY = top + Math.round(highlight * navItem());
-		ui.gradientRect(x + 5, highlightY, sidebar - 10, navItem() - 3, Theme.withAlpha(Theme.ACCENT, 0.95f), Theme.withAlpha(Theme.ACCENT_2, 0.8f), 5);
+		// The highlight glides between entries (jumping across the divider).
+		int from = (int) Math.floor(highlight);
+		float frac = highlight - from;
+		int highlightY = Math.round(navY(from) + (navY(Math.min(pages.size() - 1, from + 1)) - navY(from)) * frac);
+		ui.roundRect(x + 6, highlightY, itemW, itemH, Theme.SURFACE_ACTIVE, Theme.RADIUS_CONTROL + 1);
+		ui.roundRect(x + 6, highlightY + 4, 2, itemH - 8, Theme.ACCENT, 1);
+
+		if (pages.size() > MODULE_PAGES) {
+			ui.rect(x + 12, navY(MODULE_PAGES) - 6, itemW - 12, 1, Theme.withAlpha(Theme.BORDER, 0.8f));
+		}
 
 		for (int i = 0; i < pages.size(); i++) {
 			Page page = pages.get(i);
-			int itemY = top + i * navItem();
-			boolean hot = ui.hovered(x + 5, itemY, sidebar - 10, navItem() - 3);
+			int itemY = navY(i);
+			boolean hot = ui.hovered(x + 6, itemY, itemW, itemH);
 			if (hot && i != current) {
-				ui.roundRect(x + 5, itemY, sidebar - 10, navItem() - 3, Theme.withAlpha(Theme.SURFACE_HOVER, 0.85f), 5);
+				ui.roundRect(x + 6, itemY, itemW, itemH, Theme.withAlpha(Theme.SURFACE_HOVER, 0.8f), Theme.RADIUS_CONTROL + 1);
 				ui.pointer();
 			}
 
-			int color = i == current ? 0xFFFFFFFF : hot ? Theme.TEXT : Theme.TEXT_SECONDARY;
-			int textY = itemY + (navItem() - 3 - 8) / 2;
-			ui.icon(page.icon(), x + 11, textY, 9, i == current ? 0xFFFFFFFF : Theme.ACCENT_ICONS ? Theme.lerp(color, Theme.ACCENT, 0.45f) : color);
-			ui.textClipped(page.navLabel(), x + 25, textY + 1, sidebar - 32, color);
+			boolean selected = i == current;
+			int color = selected ? Theme.TEXT : hot ? Theme.TEXT : Theme.TEXT_SECONDARY;
+			int textY = itemY + (itemH - 8) / 2;
+			int iconColor = selected ? Theme.ACCENT_STRONG : Theme.ACCENT_ICONS ? Theme.lerp(color, Theme.ACCENT, 0.3f) : color;
+			ui.icon(page.icon(), x + 14, textY, 9, iconColor);
+			ui.textClipped(page.navLabel(), x + 28, textY + 1, sidebar - 36, color);
 			if (hot) {
-				ui.tooltip(page, page.title() + ": " + page.subtitle());
+				ui.tooltip(page, page.subtitle() + (i < 9 ? "\nCtrl+" + (i + 1) : ""));
 			}
 		}
 
-		// Status card: client state, enabled modules, performance mode, profile and environment.
-		int cardY = panelY + panelH - 50;
-		ui.roundRect(x + 5, cardY, sidebar - 10, 44, Theme.SURFACE, 6);
-		long enabled = femboy.modules().all().stream().filter(Module::isEnabled).count();
-		boolean errors = femboy.modules().all().stream().anyMatch(m -> m.lastError() != null);
-		ui.roundRect(x + 10, cardY + 7, 5, 5, errors ? Theme.ERROR : Theme.SUCCESS, 2);
-		ui.textClipped(errors ? "Module error" : "Client ready", x + 19, cardY + 6, sidebar - 28, errors ? Theme.ERROR : Theme.SUCCESS);
-		ui.textScaled(ui.ellipsize(enabled == 0 ? "No modules enabled" : enabled + " modules enabled", Math.round((sidebar - 24) / 0.75f)), x + 10, cardY + 17,
-				0.75f, Theme.TEXT_MUTED);
-		String mode = Performance.mode().label() + " mode";
-		ui.textScaled(ui.ellipsize(mode, Math.round((sidebar - 24) / 0.75f)), x + 10, cardY + 26, 0.75f, Theme.ACCENT_STRONG);
-		String where = femboy.modules().environment().describe();
-		ui.textScaled(ui.ellipsize(where, Math.round((sidebar - 24) / 0.75f)), x + 10, cardY + 35, 0.75f, Theme.TEXT_SECONDARY);
-		if (ui.hovered(x + 5, cardY, sidebar - 10, 44)) {
-			ui.tooltip("footer", "Profile: " + femboy.config().activeProfile() + "\nEnvironment: " + where + "\nEnabled modules: " + enabled
+		renderStatus(x);
+	}
+
+	/** One quiet line at the bottom of the sidebar: whether everything is fine, and the performance mode. */
+	private void renderStatus(int x) {
+		int attention = 0;
+		int enabled = 0;
+		for (Module module : femboy.modules().all()) {
+			if (module.isEnabled()) {
+				enabled++;
+			}
+
+			if (ModuleStatus.of(module, femboy.modules()).needsAttention()) {
+				attention++;
+			}
+		}
+
+		int y = panelY + panelH - 26;
+		boolean hot = ui.hovered(x + 6, y - 2, sidebar - 12, 22);
+		if (hot) {
+			ui.roundRect(x + 6, y - 2, sidebar - 12, 22, Theme.withAlpha(Theme.SURFACE_HOVER, 0.8f), Theme.RADIUS_CONTROL);
+			ui.pointer();
+		}
+
+		Icon icon = attention > 0 ? Icon.WARNING : Icon.CHECK;
+		int color = attention > 0 ? Theme.WARNING : Theme.SUCCESS;
+		String text = attention > 0 ? attention + (attention == 1 ? " module needs a look" : " modules need a look") : "All good";
+		ui.icon(icon, x + 12, y + 1, 8, color);
+		ui.textClipped(text, x + 23, y + 1, sidebar - 30, attention > 0 ? Theme.WARNING : Theme.TEXT_SECONDARY);
+		String detail = enabled + " on  ·  " + Performance.mode().label();
+		ui.textScaled(ui.ellipsize(detail, Math.round((sidebar - 30) / ui.small())), x + 23, y + 11, ui.small(), Theme.TEXT_MUTED);
+		if (hot) {
+			ui.tooltip("status", (attention > 0 ? text + ". Click to see which (Settings › Developer)." : "No module has a problem. Click for details.")
+					+ "\nProfile: " + femboy.config().activeProfile() + "\nWhere: " + femboy.modules().environment().describe() + "\nModules on: " + enabled
 					+ "\n" + Performance.summary());
 		}
 	}
 
+	private boolean statusHit(double mx, double my) {
+		return UiContext.inside(mx, my, panelX + 7, panelY + panelH - 28, sidebar - 12, 22);
+	}
+
 	/** Height of one sidebar entry: roomier when the window is tall, never less than 15. */
 	private int navItem() {
-		return Math.max(15, Math.min(22, (panelH - 38 - 58) / Math.max(1, pages.size())));
+		return Math.max(15, Math.min(21, (panelH - 44 - 44 - 9) / Math.max(1, pages.size())));
 	}
 
 	private int navTop() {
@@ -443,7 +537,7 @@ public class ClientScreen extends Screen {
 	}
 
 	private int closeX() {
-		return panelX + panelW - Theme.PAD - 12;
+		return panelX + panelW - Theme.SPACE_L - 10;
 	}
 
 	private int bellX() {
@@ -455,16 +549,7 @@ public class ClientScreen extends Screen {
 	}
 
 	private int profileChipX() {
-		return bellX() - 6 - profileChipWidth();
-	}
-
-	private int paletteX() {
-		return search.x() - 18;
-	}
-
-	/** {x, y, width, height} of the command palette button (used by automated UI tests). */
-	public int[] paletteButtonBounds() {
-		return new int[] {paletteX(), panelY + 9, 15, 15};
+		return bellX() - 8 - profileChipWidth();
 	}
 
 	private int unreadNotifications() {
@@ -481,35 +566,26 @@ public class ClientScreen extends Screen {
 	private void renderHeader() {
 		Page page = pages.get(current);
 		int x = contentX();
-		ui.textScaled(page.title(), x, panelY + 8, 1.2f, Theme.TEXT);
-		int subtitleWidth = paletteX() - x - 8;
-		boolean cut = ui.textClipped(page.subtitle(), x, panelY + 21, subtitleWidth, Theme.TEXT_MUTED);
-		if (cut && ui.hovered(x, panelY + 19, subtitleWidth, 10)) {
+		int titleRight = (headerSearch() ? search.x() : profileChipX()) - 10;
+		ui.textScaled(ui.ellipsize(page.title(), Math.round((titleRight - x) / Theme.TEXT_TITLE)), x, panelY + 9, Theme.TEXT_TITLE, Theme.TEXT);
+		boolean cut = ui.textClipped(page.subtitle(), x, panelY + 22, titleRight - x, Theme.TEXT_MUTED);
+		if (cut && ui.hovered(x, panelY + 20, titleRight - x, 10)) {
 			ui.tooltip(page.subtitle(), page.subtitle());
 		}
 
-		search.render(ui);
-
-		// Command palette button, left of the search field.
-		int px = paletteX();
-		boolean paletteHot = ui.hovered(px, panelY + 9, 15, 15);
-		if (paletteHot) {
-			ui.roundRect(px, panelY + 9, 15, 15, Theme.SURFACE_HOVER, 5);
-			ui.pointer();
-			ui.tooltip("palette", "Command palette (Ctrl+K): find and run modules, pages, profiles, settings and actions.");
+		if (headerSearch()) {
+			renderSearchButton();
 		}
-
-		ui.icon(Icon.COMMAND, px + 3, panelY + 12, 9, paletteHot ? Theme.TEXT : Theme.TEXT_MUTED);
 
 		// Profile selector: the active profile; a click opens the list.
 		String profile = femboy.config().activeProfile();
 		int chipX = profileChipX();
 		int chipW = profileChipWidth();
-		boolean chipHot = ui.hovered(chipX, panelY + 9, chipW, 15);
-		ui.roundRect(chipX, panelY + 9, chipW, 15, chipHot ? Theme.SURFACE_HOVER : Theme.SURFACE, 7);
-		ui.icon(Icon.LAYERS, chipX + 5, panelY + 12, 9, Theme.ACCENT);
-		ui.textClipped(profile, chipX + 17, panelY + 13, chipW - 28, Theme.TEXT);
-		ui.icon(Icon.CHEVRON_DOWN, chipX + chipW - 10, panelY + 13, 7, Theme.TEXT_MUTED);
+		boolean chipHot = ui.hovered(chipX, panelY + 10, chipW, 15);
+		ui.roundRect(chipX, panelY + 10, chipW, 15, chipHot ? Theme.SURFACE_HOVER : Theme.SURFACE, Theme.RADIUS_CONTROL + 1);
+		ui.icon(Icon.LAYERS, chipX + 5, panelY + 13, 9, Theme.ACCENT);
+		ui.textClipped(profile, chipX + 17, panelY + 14, chipW - 28, Theme.TEXT);
+		ui.icon(Icon.CHEVRON_DOWN, chipX + chipW - 10, panelY + 14, 7, Theme.TEXT_MUTED);
 		if (chipHot) {
 			ui.pointer();
 			ui.tooltip("profile-chip", "Active profile: " + profile + ". Click to switch or manage profiles.");
@@ -517,14 +593,14 @@ public class ClientScreen extends Screen {
 
 		// Notification bell with the number of new messages.
 		int unread = unreadNotifications();
-		boolean bellHot = ui.hovered(bellX() - 2, panelY + 9, 15, 15);
+		boolean bellHot = ui.hovered(bellX() - 2, panelY + 10, 15, 15);
 		float pulse = bellPulse.update(unread > 0 ? 1 : 0, ui.frameSeconds(), ui.animate());
-		ui.icon(Icon.BELL, bellX(), panelY + 11, 11, bellHot ? Theme.TEXT : Theme.lerp(Theme.TEXT_MUTED, Theme.ACCENT_STRONG, pulse));
+		ui.icon(Icon.BELL, bellX(), panelY + 12, 11, bellHot ? Theme.TEXT : Theme.lerp(Theme.TEXT_MUTED, Theme.ACCENT_STRONG, pulse));
 		if (unread > 0) {
 			String count = unread > 9 ? "9+" : String.valueOf(unread);
 			int w = Math.max(8, ui.textWidth(count) + 4);
-			ui.roundRect(bellX() + 7, panelY + 6, w, 8, Theme.ACCENT_2, 4);
-			ui.textScaled(count, bellX() + 7 + (w - ui.textWidth(count) * 0.75f) / 2, panelY + 7.5f, 0.75f, 0xFFFFFFFF);
+			ui.roundRect(bellX() + 7, panelY + 7, w, 8, Theme.ACCENT, 4);
+			ui.textScaled(count, bellX() + 7 + (w - ui.textWidth(count) * 0.75f) / 2, panelY + 8.5f, 0.75f, 0xFFFFFFFF);
 		}
 
 		if (bellHot) {
@@ -532,11 +608,32 @@ public class ClientScreen extends Screen {
 			ui.tooltip("bell", unread == 0 ? "Notifications" : unread + " new notification(s)");
 		}
 
-		boolean closeHot = ui.hovered(closeX() - 1, panelY + 10, 12, 12);
-		ui.icon(Icon.CLOSE, closeX(), panelY + 12, 8, closeHot ? Theme.TEXT : Theme.TEXT_MUTED);
+		boolean closeHot = ui.hovered(closeX() - 1, panelY + 11, 12, 12);
+		ui.icon(Icon.CLOSE, closeX(), panelY + 13, 8, closeHot ? Theme.TEXT : Theme.TEXT_MUTED);
 		if (closeHot) {
 			ui.pointer();
 			ui.tooltip("close", "Close (Esc or " + ClientKeys.openMenu.getTranslatedKeyMessage().getString() + ")");
+		}
+
+		ui.rect(contentX(), panelY + Theme.HEADER + 4, panelX + panelW - Theme.SPACE_L - contentX(), 1, Theme.withAlpha(Theme.BORDER, 0.6f));
+	}
+
+	/** The header search: looks like a field, opens the search (command palette) when clicked or typed into. */
+	private void renderSearchButton() {
+		int sx = search.x();
+		int sy = search.y();
+		int sw = search.width();
+		boolean hot = ui.hovered(sx, sy, sw, 15);
+		ui.roundRect(sx, sy, sw, 15, hot ? Theme.SURFACE_HOVER : Theme.SURFACE, Theme.RADIUS_CONTROL + 1);
+		ui.outline(sx, sy, sw, 15, hot ? Theme.BORDER_STRONG : Theme.BORDER, Theme.RADIUS_CONTROL + 1);
+		ui.icon(Icon.SEARCH, sx + 5, sy + 3, 9, Theme.TEXT_MUTED);
+		String shortcut = "Ctrl+K";
+		int shortcutWidth = Math.round(ui.textWidth(shortcut) * ui.small());
+		ui.textClipped("Search", sx + 17, sy + 4, sw - 26 - shortcutWidth, Theme.TEXT_MUTED);
+		ui.textScaled(shortcut, sx + sw - shortcutWidth - 5, sy + 4 + (8 - 8 * ui.small()) / 2, ui.small(), Theme.TEXT_MUTED);
+		if (hot) {
+			ui.pointer();
+			ui.tooltip("search", "Search modules, settings, profiles, HUD elements, help and actions.");
 		}
 	}
 
@@ -557,7 +654,7 @@ public class ClientScreen extends Screen {
 			float alpha = Math.min(1, Math.min(age / 150f, (4000 - age) / 400f));
 			String text = toast.text().isEmpty() ? toast.title() : toast.title() + ": " + toast.text();
 			int w = Math.min(panelW / 2, ui.textWidth(text) + 18);
-			int x = panelX + panelW - Theme.PAD - w;
+			int x = panelX + panelW - Theme.SPACE_L - w;
 			y -= 18;
 			int slide = ui.motion() ? Math.round((1 - Math.min(1, age / 200f)) * 12) : 0;
 			ui.graphics().nextStratum();
@@ -575,8 +672,8 @@ public class ClientScreen extends Screen {
 		private final List<String> names = femboy.config().profiles();
 
 		ProfileMenu() {
-			int w = Math.max(profileChipWidth(), 140);
-			setBounds(profileChipX() + profileChipWidth() - w, panelY + 27, w, names.size() * 14 + 22);
+			int w = Math.max(profileChipWidth(), 150);
+			setBounds(profileChipX() + profileChipWidth() - w, panelY + 28, w, names.size() * 14 + 22);
 		}
 
 		@Override
@@ -633,6 +730,11 @@ public class ClientScreen extends Screen {
 		}
 	}
 
+	/** Opens the profile list (what the header chip and Home's profile card do). */
+	public void openProfileMenu() {
+		ui.openOverlay(new ProfileMenu());
+	}
+
 	/** The latest client messages, newest first. */
 	private final class NotificationList extends Widget {
 		private final List<Notifications.Toast> shown;
@@ -642,7 +744,7 @@ public class ClientScreen extends Screen {
 			java.util.Collections.reverse(all);
 			shown = all.subList(0, Math.min(8, all.size()));
 			int w = 220;
-			setBounds(closeX() + 12 - w, panelY + 27, w, Math.max(1, shown.size()) * 22 + 10);
+			setBounds(closeX() + 12 - w, panelY + 28, w, Math.max(1, shown.size()) * 22 + 10);
 			GuiState.notificationsSeenAt = System.currentTimeMillis();
 		}
 
@@ -695,33 +797,33 @@ public class ClientScreen extends Screen {
 		}
 
 		Widget previousFocus = ui.focused();
-		if (UiContext.inside(mx, my, closeX() - 2, panelY + 9, 14, 14)) {
+		if (UiContext.inside(mx, my, closeX() - 2, panelY + 10, 14, 14)) {
 			onClose();
 			return true;
 		}
 
-		if (UiContext.inside(mx, my, profileChipX(), panelY + 9, profileChipWidth(), 15)) {
-			ui.openOverlay(new ProfileMenu());
+		if (UiContext.inside(mx, my, profileChipX(), panelY + 10, profileChipWidth(), 15)) {
+			openProfileMenu();
 			return true;
 		}
 
-		if (UiContext.inside(mx, my, bellX() - 2, panelY + 9, 15, 15)) {
+		if (UiContext.inside(mx, my, bellX() - 2, panelY + 10, 15, 15)) {
 			ui.openOverlay(new NotificationList());
 			return true;
 		}
 
-		if (UiContext.inside(mx, my, paletteX(), panelY + 9, 15, 15)) {
+		if (headerSearch() && search.contains(mx, my)) {
 			openPalette();
 			return true;
 		}
 
-		if (search.mouseClicked(ui, mx, my, button)) {
+		if (statusHit(mx, my)) {
+			openSettings("Developer");
 			return true;
 		}
 
-		int top = navTop();
 		for (int i = 0; i < pages.size(); i++) {
-			if (UiContext.inside(mx, my, panelX + 6, top + i * navItem(), sidebar - 10, navItem() - 3)) {
+			if (UiContext.inside(mx, my, panelX + 7, navY(i), sidebar - 12, navItem() - 2)) {
 				showPage(i);
 				return true;
 			}
@@ -761,16 +863,24 @@ public class ClientScreen extends Screen {
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
-		if (ui.overlay() instanceof CommandPalette palette) {
-			return palette.mouseScrolled(ui, toVirtual(mouseX), toVirtual(mouseY), vertical);
+		Widget overlay = ui.overlay();
+		double vx = toVirtual(mouseX);
+		double vy = toVirtual(mouseY);
+		if (overlay instanceof CommandPalette palette) {
+			return palette.mouseScrolled(ui, vx, vy, vertical);
 		}
 
-		if (ui.overlay() != null) {
+		if (overlay != null) {
+			// A long open list scrolls; scrolling elsewhere closes it.
+			if (overlay.contains(vx, vy) && overlay.mouseScrolled(ui, vx, vy, vertical)) {
+				return true;
+			}
+
 			ui.closeOverlay();
 			return true;
 		}
 
-		return pages.get(current).mouseScrolled(ui, toVirtual(mouseX), toVirtual(mouseY), vertical);
+		return pages.get(current).mouseScrolled(ui, vx, vy, vertical);
 	}
 
 	@Override
@@ -780,20 +890,23 @@ public class ClientScreen extends Screen {
 			return true;
 		}
 
-		if (control(event) && (event.key() == GLFW.GLFW_KEY_K || event.key() == GLFW.GLFW_KEY_P) && (ui.focused() == null || ui.focused() == search)) {
-			openPalette();
-			return true;
-		}
+		Widget overlay = ui.overlay();
+		if (overlay != null) {
+			// An open list (profiles, notifications, a dropdown) gets keys first; Escape closes it whatever has the keyboard.
+			if (overlay.keyPressed(ui, event)) {
+				return true;
+			}
 
-		if (ui.overlay() != null && event.key() == GLFW.GLFW_KEY_ESCAPE) {
-			// An open list (profiles, notifications, a dropdown) closes first, whatever has the keyboard.
-			ui.closeOverlay();
-			return true;
+			if (event.key() == GLFW.GLFW_KEY_ESCAPE) {
+				ui.closeOverlay();
+				return true;
+			}
 		}
 
 		Widget focused = ui.focused();
-		if (focused == search && event.key() == GLFW.GLFW_KEY_ESCAPE) {
-			ui.focus(null);
+		if (control(event) && (event.key() == GLFW.GLFW_KEY_K || event.key() == GLFW.GLFW_KEY_P || event.key() == GLFW.GLFW_KEY_F)
+				&& (focused == null || focused == search)) {
+			openPalette();
 			return true;
 		}
 
@@ -803,23 +916,18 @@ public class ClientScreen extends Screen {
 			return true;
 		}
 
-		if (ui.overlay() != null && event.key() == GLFW.GLFW_KEY_ESCAPE) {
-			ui.closeOverlay();
-			return true;
-		}
-
 		if (ClientKeys.openMenu.matches(event)) {
 			onClose();
 			return true;
 		}
 
-		if (control(event) && event.key() == GLFW.GLFW_KEY_F) {
-			ui.focus(search);
+		if (control(event) && event.key() == GLFW.GLFW_KEY_TAB) {
+			showPage((current + (event.hasShiftDown() ? pages.size() - 1 : 1)) % pages.size());
 			return true;
 		}
 
-		if (control(event) && event.key() == GLFW.GLFW_KEY_TAB) {
-			showPage((current + (event.hasShiftDown() ? pages.size() - 1 : 1)) % pages.size());
+		if (control(event) && event.key() >= GLFW.GLFW_KEY_1 && event.key() <= GLFW.GLFW_KEY_9) {
+			showPage(event.key() - GLFW.GLFW_KEY_1);
 			return true;
 		}
 
@@ -834,6 +942,11 @@ public class ClientScreen extends Screen {
 	public boolean charTyped(CharacterEvent event) {
 		if (ui.overlay() instanceof CommandPalette palette) {
 			return palette.charTyped(ui, event);
+		}
+
+		Widget overlay = ui.overlay();
+		if (overlay != null && overlay.charTyped(ui, event)) {
+			return true;
 		}
 
 		Widget focused = ui.focused();

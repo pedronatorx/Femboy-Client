@@ -78,21 +78,21 @@ public final class EntityEspModule extends Module implements ClientHooks.WorldRe
 	private final NumberSetting maxDistance = settings().add(new NumberSetting("max_distance", "Maximum distance",
 			"Entities farther away than this are not highlighted.", 64, 8, 256, 8, "blocks"));
 
-	{ settings().section("Boxes"); }
+	{ settings().section("Highlight"); }
 	private final BooleanSetting outline = settings().add(new BooleanSetting("outline", "Outline", "Draw the edges of each entity's box.", true));
 	private final NumberSetting outlineWidth = settings().add(new NumberSetting("outline_width", "Outline thickness",
 			"Line thickness, as a multiple of the normal line width.", 1.5, 0.5, 6, 0.5, "x"));
 	private final NumberSetting outlineOpacity = settings().add(new NumberSetting("outline_opacity", "Outline opacity",
 			"How solid the outline is.", 1, 0.1, 1, 0.05, ""));
-	private final BooleanSetting outlinePlayers = settings().add(new BooleanSetting("outline_players", "Outline players", "Draw outlines around players.", true));
-	private final BooleanSetting outlineHostile = settings().add(new BooleanSetting("outline_hostile", "Outline hostile mobs", "Draw outlines around hostile mobs.", true));
+	private final BooleanSetting outlinePlayers = settings().add(new BooleanSetting("outline_players", "Outline players", "Draw outlines around players.", true)).advanced();
+	private final BooleanSetting outlineHostile = settings().add(new BooleanSetting("outline_hostile", "Outline hostile mobs", "Draw outlines around hostile mobs.", true)).advanced();
 	private final BooleanSetting outlinePassive = settings().add(new BooleanSetting("outline_passive", "Outline passive mobs and pets",
-			"Draw outlines around passive mobs and tamed animals.", true));
-	private final BooleanSetting outlineVillagers = settings().add(new BooleanSetting("outline_villagers", "Outline villagers", "Draw outlines around villagers and traders.", true));
-	private final BooleanSetting outlineItems = settings().add(new BooleanSetting("outline_items", "Outline items", "Draw outlines around dropped items.", true));
+			"Draw outlines around passive mobs and tamed animals.", true)).advanced();
+	private final BooleanSetting outlineVillagers = settings().add(new BooleanSetting("outline_villagers", "Outline villagers", "Draw outlines around villagers and traders.", true)).advanced();
+	private final BooleanSetting outlineItems = settings().add(new BooleanSetting("outline_items", "Outline items", "Draw outlines around dropped items.", true)).advanced();
 	private final BooleanSetting outlineProjectiles = settings().add(new BooleanSetting("outline_projectiles", "Outline projectiles",
-			"Draw outlines around arrows, tridents, pearls and other projectiles.", true));
-	private final BooleanSetting outlineOther = settings().add(new BooleanSetting("outline_other", "Outline other entities", "Draw outlines around everything else.", true));
+			"Draw outlines around arrows, tridents, pearls and other projectiles.", true)).advanced();
+	private final BooleanSetting outlineOther = settings().add(new BooleanSetting("outline_other", "Outline other entities", "Draw outlines around everything else.", true)).advanced();
 	private final BooleanSetting fill = settings().add(new BooleanSetting("fill", "Fill", "Fill each box with a faint tint.", false));
 	private final NumberSetting fillOpacity = settings().add(new NumberSetting("fill_opacity", "Fill opacity",
 			"How strong the fill tint is.", 0.15, 0.05, 0.6, 0.05, ""));
@@ -110,35 +110,35 @@ public final class EntityEspModule extends Module implements ClientHooks.WorldRe
 			"Highlight color for projectiles.", 0x4CC9C0));
 	private final ColorSetting otherColor = settings().add(new ColorSetting("color_other", "Other color", "Highlight color for everything else.", 0x6EA8FF));
 	private final IdSetSetting overrideTypes = settings().add(new IdSetSetting("override_types", "Color override: entity types",
-			"Entity types drawn in the override color instead of their group color, e.g. to make one mob stand out.", Set.of()));
+			"Entity types drawn in the override color instead of their group color, e.g. to make one mob stand out.", Set.of())).advanced();
 	private final ColorSetting overrideColor = settings().add(new ColorSetting("override_color", "Override color",
-			"Color for the entity types chosen above.", 0xF29E4C));
+			"Color for the entity types chosen above.", 0xF29E4C)).advanced();
 
 	{ settings().section("Labels"); }
 	private final BooleanSetting names = settings().add(new BooleanSetting("names", "Names", "Show the entity's name above it.", true));
 	private final NumberSetting nameScale = settings().add(new NumberSetting("name_scale", "Name size",
-			"Size of the name text, relative to the normal GUI font.", 0.75, 0.5, 2, 0.05, "x"));
+			"Size of the name text, relative to the normal GUI font.", 0.75, 0.5, 2, 0.05, "x")).advanced();
 	private final BooleanSetting coloredNames = settings().add(new BooleanSetting("colored_names", "Names in group color",
 			"Draw names in the entity's highlight color. When off, names use the text color below.", true));
 	private final ColorSetting textColor = settings().add(new ColorSetting("text_color", "Text color",
-			"Color of the distance text, and of names when 'Names in group color' is off.", 0xFFFFFF));
+			"Color of the distance text, and of names when 'Names in group color' is off.", 0xFFFFFF)).advanced();
 	private final BooleanSetting distance = settings().add(new BooleanSetting("distance", "Distance", "Show the distance in blocks.", true));
 	private final NumberSetting distanceScale = settings().add(new NumberSetting("distance_scale", "Distance size",
-			"Size of the distance text.", 0.65, 0.5, 2, 0.05, "x"));
+			"Size of the distance text.", 0.65, 0.5, 2, 0.05, "x")).advanced();
 	private final NumberSetting labelBackground = settings().add(new NumberSetting("label_background", "Background opacity",
-			"How dark the box behind each label is. 0 removes it.", 0.5, 0, 1, 0.05, ""));
+			"How dark the box behind each label is. 0 removes it.", 0.5, 0, 1, 0.05, "")).advanced();
 	private final NumberSetting labelPadding = settings().add(new NumberSetting("label_padding", "Background padding",
-			"Space between the text and the edge of its box.", 2, 0, 6, 1, "px"));
+			"Space between the text and the edge of its box.", 2, 0, 6, 1, "px")).advanced();
 	private final NumberSetting textSpacing = settings().add(new NumberSetting("text_spacing", "Text spacing",
-			"Space between the lines of a label.", 1, 0, 4, 1, "px"));
+			"Space between the lines of a label.", 1, 0, 4, 1, "px")).advanced();
 	private final NumberSetting maxNameWidth = settings().add(new NumberSetting("max_name_width", "Maximum name width",
-			"Longer names are shortened with '...'.", 110, 40, 240, 10, "px"));
+			"Longer names are shortened with '...'.", 110, 40, 240, 10, "px")).advanced();
 	private final BooleanSetting equipment = settings().add(new BooleanSetting("equipment", "Armor and held items",
 			"Show the armor and held items of players (and mobs that wear some) as icons above their label, with durability bars.", false));
 	private final NumberSetting equipmentScale = settings().add(new NumberSetting("equipment_scale", "Item icon size",
-			"Size of the equipment icons; 1 is the size of an inventory slot.", 0.75, 0.4, 1.5, 0.05, "x")).visibleWhen(equipment::get);
+			"Size of the equipment icons; 1 is the size of an inventory slot.", 0.75, 0.4, 1.5, 0.05, "x")).visibleWhen(equipment::get).advanced();
 	private final NumberSetting maxLabels = settings().add(new NumberSetting("max_labels", "Maximum labels",
-			"Clutter limit: labels are drawn for the nearest entities only.", 16, 0, 64, 1, ""));
+			"Clutter limit: labels are drawn for the nearest entities only.", 16, 0, 64, 1, "")).advanced();
 
 	{ settings().section("Health"); }
 	private final BooleanSetting health = settings().add(new BooleanSetting("health", "Health indicator",
@@ -146,28 +146,28 @@ public final class EntityEspModule extends Module implements ClientHooks.WorldRe
 	private final EnumSetting<EspRenderer.HealthStyle> healthStyle = settings().add(new EnumSetting<>("health_style", "Health style",
 			"A compact bar, the number of health points, or both.", EspRenderer.HealthStyle.BAR));
 	private final NumberSetting healthBarScale = settings().add(new NumberSetting("health_bar_scale", "Health bar size",
-			"Width and thickness of the health bar.", 1, 0.5, 3, 0.25, "x"));
+			"Width and thickness of the health bar.", 1, 0.5, 3, 0.25, "x")).advanced();
 	private final NumberSetting healthTextScale = settings().add(new NumberSetting("health_text_scale", "Health text size",
-			"Size of the health number.", 0.65, 0.5, 2, 0.05, "x"));
+			"Size of the health number.", 0.65, 0.5, 2, 0.05, "x")).advanced();
 	private final NumberSetting healthOpacity = settings().add(new NumberSetting("health_opacity", "Health opacity",
-			"How solid the health bar and number are.", 0.9, 0.2, 1, 0.05, ""));
-	private final BooleanSetting healthPlayers = settings().add(new BooleanSetting("health_players", "Health for players", "Show health on players.", true));
-	private final BooleanSetting healthHostile = settings().add(new BooleanSetting("health_hostile", "Health for hostile mobs", "Show health on hostile mobs.", true));
+			"How solid the health bar and number are.", 0.9, 0.2, 1, 0.05, "")).advanced();
+	private final BooleanSetting healthPlayers = settings().add(new BooleanSetting("health_players", "Health for players", "Show health on players.", true)).advanced();
+	private final BooleanSetting healthHostile = settings().add(new BooleanSetting("health_hostile", "Health for hostile mobs", "Show health on hostile mobs.", true)).advanced();
 	private final BooleanSetting healthPassive = settings().add(new BooleanSetting("health_passive", "Health for passive mobs and pets",
-			"Show health on passive mobs and tamed animals.", false));
-	private final BooleanSetting healthVillagers = settings().add(new BooleanSetting("health_villagers", "Health for villagers", "Show health on villagers and traders.", false));
-	private final BooleanSetting healthOther = settings().add(new BooleanSetting("health_other", "Health for other entities", "Show health on other living entities.", false));
+			"Show health on passive mobs and tamed animals.", false)).advanced();
+	private final BooleanSetting healthVillagers = settings().add(new BooleanSetting("health_villagers", "Health for villagers", "Show health on villagers and traders.", false)).advanced();
+	private final BooleanSetting healthOther = settings().add(new BooleanSetting("health_other", "Health for other entities", "Show health on other living entities.", false)).advanced();
 
 	private final TargetLines.Settings lines = new TargetLines.Settings(settings(), false, TargetLines.Visibility.ALWAYS, 128, 256, 24);
-	private final BooleanSetting linesPlayers = settings().add(new BooleanSetting("lines_players", "Lines to players", "Players get a line.", true));
-	private final BooleanSetting linesHostile = settings().add(new BooleanSetting("lines_hostile", "Lines to hostile mobs", "Hostile mobs get a line.", true));
+	private final BooleanSetting linesPlayers = settings().add(new BooleanSetting("lines_players", "Lines to players", "Players get a line.", true)).advanced();
+	private final BooleanSetting linesHostile = settings().add(new BooleanSetting("lines_hostile", "Lines to hostile mobs", "Hostile mobs get a line.", true)).advanced();
 	private final BooleanSetting linesPassive = settings().add(new BooleanSetting("lines_passive", "Lines to passive mobs and pets",
-			"Passive mobs and tamed animals get a line.", true));
-	private final BooleanSetting linesVillagers = settings().add(new BooleanSetting("lines_villagers", "Lines to villagers", "Villagers and traders get a line.", true));
-	private final BooleanSetting linesItems = settings().add(new BooleanSetting("lines_items", "Lines to items", "Dropped items get a line.", true));
+			"Passive mobs and tamed animals get a line.", true)).advanced();
+	private final BooleanSetting linesVillagers = settings().add(new BooleanSetting("lines_villagers", "Lines to villagers", "Villagers and traders get a line.", true)).advanced();
+	private final BooleanSetting linesItems = settings().add(new BooleanSetting("lines_items", "Lines to items", "Dropped items get a line.", true)).advanced();
 	private final BooleanSetting linesProjectiles = settings().add(new BooleanSetting("lines_projectiles", "Lines to projectiles",
-			"Projectiles get a line.", true));
-	private final BooleanSetting linesOther = settings().add(new BooleanSetting("lines_other", "Lines to other entities", "Everything else gets a line.", true));
+			"Projectiles get a line.", true)).advanced();
+	private final BooleanSetting linesOther = settings().add(new BooleanSetting("lines_other", "Lines to other entities", "Everything else gets a line.", true)).advanced();
 
 	{ settings().section("Performance"); }
 	private final NumberSetting maxEntities = settings().add(new NumberSetting("max_entities", "Maximum highlights",

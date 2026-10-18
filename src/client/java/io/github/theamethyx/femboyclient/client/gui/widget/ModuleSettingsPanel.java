@@ -4,8 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.github.theamethyx.femboyclient.client.FemboyClient;
-import io.github.theamethyx.femboyclient.client.gui.Anim;
+import io.github.theamethyx.femboyclient.client.gui.GuiState;
 import io.github.theamethyx.femboyclient.client.gui.Icon;
+import io.github.theamethyx.femboyclient.client.gui.ModuleStatus;
 import io.github.theamethyx.femboyclient.client.gui.Theme;
 import io.github.theamethyx.femboyclient.client.gui.UiContext;
 import io.github.theamethyx.femboyclient.client.module.ClientHooks;
@@ -13,43 +14,207 @@ import io.github.theamethyx.femboyclient.core.module.Module;
 import io.github.theamethyx.femboyclient.core.module.ModuleManager;
 
 /**
- * The side panel that opens when a module is right-clicked: name, switch and description on top, then three tabs:
- * <b>Settings</b> (all settings and the module's own controls), <b>Keybinds</b> (key, toggle or hold) and <b>Info</b>
- * (tier, status, why it is paused), and a Reset button at the bottom.
+ * Everything about one module, the same wherever a module is opened:
+ * <ul>
+ * <li>a fixed header: name, favorite star and on/off switch; category and kind; what it does; its status in words;</li>
+ * <li>a scrolling body: its key, a live preview for ESP modules, its settings grouped into sections (rarely used ones
+ * folded behind "More options" and "Advanced"), its own controls, and an "About" fold with the technical details;</li>
+ * <li>a footer with "Reset to defaults", which asks for a second click.</li>
+ * </ul>
  */
 public class ModuleSettingsPanel extends Container {
-	public static final String[] TABS = {"Settings", "Keybinds", "Info"};
-	private static final int TAB_HEIGHT = 16;
-	private static final int FOOTER = 22;
+	private static final int FOOTER = 20;
 
 	private final UiContext ui;
 	private final ModuleManager modules;
-	private final Runnable onClose;
 	private final ScrollList content;
-	private final Button reset;
-	private final Anim tabLine = new Anim(0, 20);
+	private final ConfirmButton reset;
+	private final FavoriteStar star;
+	private final HelpToggle help;
 	private ToggleSwitch toggle;
 	private Module module;
-	private int tab;
+	private boolean helpShown;
 
-	public ModuleSettingsPanel(UiContext ui, ModuleManager modules, Runnable onClose) {
+	public ModuleSettingsPanel(UiContext ui, ModuleManager modules) {
 		this.ui = ui;
 		this.modules = modules;
-		this.onClose = onClose;
-		content = add(new ScrollList(ui, 3, 0));
-		reset = add(new Button("Reset Module", Button.Style.SECONDARY, () -> {
+		content = add(new ScrollList(ui, 1, 0));
+		reset = add(new ConfirmButton("Reset to defaults", "Click again to reset this module", Button.Style.GHOST, () -> {
 			if (module != null) {
 				modules.resetToDefaults(module);
 				rebuild();
 			}
-		}).icon(Icon.RESET));
-		reset.tooltip("Restore this module's settings, key, key mode and on/off state to the defaults.");
+		}));
+		reset.icon(Icon.RESET);
+		reset.tooltip("Put this module's settings, key and on/off state back to how they were after installing. Asks for a second click.");
 		star = add(new FavoriteStar());
+		help = add(new HelpToggle());
 	}
 
-	private final FavoriteStar star;
+	public Module module() {
+		return module;
+	}
 
-	/** Star in the header: marks the module as a favorite (Home, command palette, quick toggle wheel). */
+	public void show(Module module) {
+		boolean same = module == this.module;
+		this.module = module;
+		children.remove(toggle);
+		toggle = add(new ToggleSwitch(module::isEnabled, value -> modules.setEnabled(module, value)));
+		toggle.tooltip(() -> module.isEnabled() ? "On. Click to turn " + module.name() + " off." : "Off. Click to turn " + module.name() + " on.");
+		rebuild();
+		layout();
+		if (!same) {
+			content.scrollToTop();
+		}
+	}
+
+	/** Rebuilds the body (after a reset, or when a module's own controls change). */
+	public void rebuild() {
+		if (module == null) {
+			return;
+		}
+
+		helpShown = FemboyClient.get().options().helpMode.get();
+		List<Widget> rows = new ArrayList<>();
+		rows.add(new KeyRow(module));
+		if (EspPreview.applies(module.settings())) {
+			rows.add(new EspPreview(module.settings()));
+		}
+
+		if (module.settings().all().stream().noneMatch(setting -> setting.isListed())) {
+			rows.add(new Note("Nothing to set up: turn it on and it works.", Theme.TEXT_MUTED));
+		} else {
+			rows.addAll(SettingRow.rowsFor(module.id(), module.settings().all()));
+		}
+
+		if (module instanceof ClientHooks.CustomControls custom) {
+			rows.addAll(custom.createControls(ui, this::rebuildKeepScroll));
+		}
+
+		rows.add(new AboutFold());
+		rows.addAll(aboutNotes());
+		content.setChildren(rows);
+	}
+
+	private void rebuildKeepScroll() {
+		rebuild();
+	}
+
+	private String description() {
+		return module.testEnvironmentOnly() ? module.description() + " " + Module.TEST_ENVIRONMENT_ONLY : module.description();
+	}
+
+	/** "Visuals  ·  Shows information": the section group and, in plain words, what kind of module it is. */
+	private String kindLabel() {
+		String kind = switch (module.tier()) {
+			case VISUAL -> "Shows information";
+			case ASSIST -> "Assists";
+			case AUTOMATION -> "Acts for you";
+			case SANDBOX -> "Test environments only";
+		};
+		return io.github.theamethyx.femboyclient.client.gui.page.ModulesPage.groupLabel(module.category()) + "  ·  " + kind;
+	}
+
+	/** Height of the fixed header for the current width. */
+	private int headerHeight() {
+		if (module == null) {
+			return 0;
+		}
+
+		ModuleStatus status = ModuleStatus.of(module, modules);
+		int h = 8 + 12 + 11 + ui.wrappedHeight(description(), width - 16) + 4 + 14;
+		if (!status.detail().isEmpty()) {
+			h += ui.wrappedHeightScaled(status.detail(), width - 16, ui.small()) + 2;
+		}
+
+		return h + 4;
+	}
+
+	private int layoutHeader = -1;
+
+	private void layout() {
+		if (module == null) {
+			return;
+		}
+
+		int header = headerHeight();
+		layoutHeader = header;
+		toggle.setBounds(x + width - ToggleSwitch.WIDTH - 8, y + 9, ToggleSwitch.WIDTH, ToggleSwitch.HEIGHT);
+		star.setBounds(x + width - ToggleSwitch.WIDTH - 26, y + 7, 14, 14);
+		help.setBounds(x + width - ToggleSwitch.WIDTH - 42, y + 7, 14, 14);
+		content.setBounds(x + 4, y + header, width - 8, height - header - FOOTER - 4);
+		reset.setBounds(x + 6, y + height - FOOTER, Math.min(width - 12, reset.naturalWidth(ui) + 8), 16);
+	}
+
+	@Override
+	protected void onLayout() {
+		layout();
+	}
+
+	@Override
+	public void render(UiContext ui) {
+		if (module == null) {
+			return;
+		}
+
+		if (layoutHeader != headerHeight()) {
+			// The status line changed length (e.g. a reason appeared); move the body to fit.
+			layout();
+		}
+
+		if (helpShown != FemboyClient.get().options().helpMode.get()) {
+			rebuild();
+		}
+
+		ui.roundRect(x, y, width, height, Theme.withAlpha(Theme.SURFACE, 0.55f), Theme.RADIUS_PANEL);
+
+		// Header: name, kind, description, status.
+		int left = x + 8;
+		ui.textScaled(ui.ellipsize(module.name(), Math.round((width - 70) / Theme.TEXT_TITLE)), left, y + 8, Theme.TEXT_TITLE, Theme.TEXT);
+		int ty = y + 21;
+		ui.textScaled(kindLabel(), left, ty, ui.small(), Theme.TEXT_MUTED);
+		if (ui.hovered(left, ty, Math.round(ui.textWidth(kindLabel()) * ui.small()), 8)) {
+			ui.tooltip(this, module.tier().label() + ": " + module.tier().meaning());
+		}
+
+		ty += 11;
+		ty += ui.wrapped(description(), left, ty, width - 16, Theme.TEXT_SECONDARY) + 4;
+		ModuleStatus status = ModuleStatus.of(module, modules);
+		status.drawPill(ui, left, ty);
+		String key = module.key() == Module.NO_KEY ? null : KeybindButton.keyName(module.key()) + (module.isHoldKey() ? " (hold)" : "");
+		if (key != null) {
+			ui.icon(Icon.KEY, left + status.label().length() * 6 + 26, ty + 2, 8, Theme.TEXT_MUTED);
+			ui.text(key, left + status.label().length() * 6 + 37, ty + 2, Theme.TEXT_SECONDARY);
+		}
+
+		ty += 14;
+		if (!status.detail().isEmpty()) {
+			ui.wrappedScaled(status.detail(), left, ty, width - 16, ui.small(), status.color());
+		}
+
+		ui.rect(x + 6, content.y() - 2, width - 12, 1, Theme.BORDER);
+		ui.pushClip(content.x(), content.y(), content.width(), content.height());
+		content.render(ui);
+		ui.popClip();
+		toggle.render(ui);
+		star.render(ui);
+		help.render(ui);
+		reset.render(ui);
+	}
+
+	@Override
+	public boolean mouseClicked(UiContext ui, double mouseX, double mouseY, int button) {
+		if (module == null || !contains(mouseX, mouseY)) {
+			return false;
+		}
+
+		super.mouseClicked(ui, mouseX, mouseY, button);
+		return true;
+	}
+
+	// ----- parts -----------------------------------------------------------------------------
+
+	/** Star in the header: marks the module as a favorite (Home, the search and the quick toggle wheel). */
 	private final class FavoriteStar extends Widget {
 		@Override
 		public void render(UiContext ui) {
@@ -62,7 +227,8 @@ public class ModuleSettingsPanel extends Container {
 			ui.icon(Icon.STAR, x + 2, y + 2, 10, favorite ? Theme.WARNING : hot ? Theme.TEXT : Theme.TEXT_MUTED);
 			if (hot) {
 				ui.pointer();
-				ui.tooltip(this, favorite ? "Remove from favorites." : "Add to favorites: shown on Home, first in the command palette and on the quick toggle wheel.");
+				ui.tooltip(this, favorite ? "Favorite. Click to remove it from your favorites."
+						: "Add to favorites: shown on Home, first in the search and on the quick toggle wheel.");
 			}
 		}
 
@@ -77,257 +243,179 @@ public class ModuleSettingsPanel extends Container {
 		}
 	}
 
-	public Module module() {
-		return module;
-	}
-
-	public int tab() {
-		return tab;
-	}
-
-	public void show(Module module) {
-		boolean same = module == this.module;
-		this.module = module;
-		children.remove(toggle);
-		toggle = add(new ToggleSwitch(module::isEnabled, value -> modules.setEnabled(module, value)));
-		if (!same) {
-			tab = 0;
-			tabLine.snap(0);
-		}
-
-		rebuild();
-		layout();
-	}
-
-	public void showTab(int index) {
-		tab = Math.max(0, Math.min(TABS.length - 1, index));
-		rebuild();
-	}
-
-	private String description() {
-		return module.testEnvironmentOnly() ? module.description() + " " + Module.TEST_ENVIRONMENT_ONLY : module.description();
-	}
-
-	private int headerHeight() {
-		return module == null ? 0 : 32 + ui.wrappedHeight(description(), width - 16) + 6;
-	}
-
-	private void layout() {
-		if (module == null) {
-			return;
-		}
-
-		int top = y + headerHeight();
-		toggle.setBounds(x + width - ToggleSwitch.WIDTH - 22, y + 9, ToggleSwitch.WIDTH, ToggleSwitch.HEIGHT);
-		star.setBounds(x + width - ToggleSwitch.WIDTH - 40, y + 6, 14, 14);
-		content.setBounds(x + 6, top + TAB_HEIGHT + 6, width - 12, height - (top - y) - TAB_HEIGHT - 6 - FOOTER - 4);
-		reset.setBounds(x + 6, y + height - FOOTER, width - 12, 16);
-	}
-
-	@Override
-	protected void onLayout() {
-		layout();
-	}
-
-	private void rebuild() {
-		if (module == null) {
-			return;
-		}
-
-		List<Widget> rows = new ArrayList<>();
-		switch (tab) {
-			case 0 -> {
-				if (module.settings().isEmpty()) {
-					rows.add(new Note("This module has no settings.", Theme.TEXT_MUTED));
-				} else {
-					rows.addAll(SettingRow.rowsFor(module.id(), module.settings().all()));
-				}
-
-				if (module instanceof ClientHooks.CustomControls custom) {
-					rows.addAll(custom.createControls(ui, this::rebuild));
-				}
+	/** "?" in the header: turns help mode (explanations under every setting) on or off. */
+	private final class HelpToggle extends Widget {
+		@Override
+		public void render(UiContext ui) {
+			boolean on = FemboyClient.get().options().helpMode.get();
+			boolean hot = hovered(ui);
+			if (on) {
+				ui.roundRect(x, y, width, height, Theme.ACCENT_TINT, Theme.RADIUS_CONTROL);
 			}
-			case 1 -> {
-				rows.add(new KeyRow(module));
-				rows.add(new Note("Click the key field and press a key; Backspace removes it. Toggle turns the module on or off with each press, "
-						+ "Hold keeps it on only while the key is held.", Theme.TEXT_MUTED));
-				List<Module> shared = FemboyClient.get().keybinds().modulesBoundTo(module.key());
-				shared.remove(module);
-				if (module.key() != Module.NO_KEY && !shared.isEmpty()) {
-					rows.add(new Note("Also bound to this key: " + String.join(", ", shared.stream().map(Module::name).toList()), Theme.WARNING));
-				}
-			}
-			default -> {
-				Module.Tier tier = module.tier();
-				rows.add(new Note("Tier: " + tier.label() + ". " + tier.meaning(), tierColor(tier)));
-				ModuleRow.StatusView status = ModuleRow.status(module, modules);
-				rows.add(new Note("Status: " + status.text(), status.color()));
-				String limitation = module.lowImpactLimitation();
-				if (limitation != null) {
-					rows.add(new Note("Low-Impact mode: paused there, because " + limitation, Theme.WARNING));
-				}
 
-				rows.add(new Note("Performance mode: " + io.github.theamethyx.femboyclient.client.Performance.summary(), Theme.TEXT_SECONDARY));
-				for (Module.Requirement requirement : module.requirements()) {
-					Module other = modules.get(requirement.moduleId());
-					if (other != null) {
-						rows.add(new Note("Uses " + other.name() + " for " + requirement.purpose() + (other.isRunning() ? " (on)." : " (off: turn it on for this)."),
-								other.isRunning() ? Theme.SUCCESS : Theme.WARNING));
-					}
-				}
-
-				for (Module other : modules.all()) {
-					if (modules.conflict(module, other)) {
-						rows.add(new Note("Cannot run together with " + other.name() + ": turning one on turns the other off.", Theme.TEXT_SECONDARY));
-					}
-				}
-
-				rows.add(new Note("Category: " + module.category().label() + "   Id: " + module.id(), Theme.TEXT_SECONDARY));
-				rows.add(new Note(module.settings().all().size() + " settings. Changes are saved to the active profile right away.", Theme.TEXT_MUTED));
-			}
-		}
-
-		content.setChildren(rows);
-		content.scrollToTop();
-	}
-
-	private static int tierColor(Module.Tier tier) {
-		return tier == Module.Tier.SANDBOX ? Theme.WARNING : tier == Module.Tier.AUTOMATION ? Theme.INFO : Theme.ACCENT_STRONG;
-	}
-
-	@Override
-	public void render(UiContext ui) {
-		if (module == null) {
-			return;
-		}
-
-		ui.shadow(x, y, width, height, 6, 1.2f);
-		ui.roundRect(x, y, width, height, Theme.PANEL, 7);
-		ui.outline(x, y, width, height, Theme.BORDER, 7);
-
-		// Header: icon, name, badges, description.
-		ui.gradientRect(x + 8, y + 7, 20, 20, Theme.ACCENT, Theme.ACCENT_2, 6);
-		ui.icon(Icon.byName(module.category().icon()), x + 13, y + 12, 10, 0xFFFFFFFF);
-		ui.textScaled(ui.ellipsize(module.name(), Math.round((width - 110) / 1.25f)), x + 33, y + 6, 1.25f, Theme.TEXT);
-		Module.Tier tier = module.tier();
-		int badgeX = x + 33;
-		int categoryWidth = Math.round(ui.textWidth(module.category().label()) * 0.75f) + 8;
-		ui.roundRect(badgeX, y + 18, categoryWidth, 10, Theme.withAlpha(Theme.ACCENT, 0.25f), 2);
-		ui.textScaled(module.category().label(), badgeX + 4, y + 19.5f, 0.75f, Theme.ACCENT_STRONG);
-		int tierWidth = Math.round(ui.textWidth(tier.label()) * 0.75f) + 8;
-		ui.roundRect(badgeX + categoryWidth + 3, y + 18, tierWidth, 10, Theme.withAlpha(tierColor(tier), 0.18f), 2);
-		ui.textScaled(tier.label(), badgeX + categoryWidth + 7, y + 19.5f, 0.75f, tierColor(tier));
-		if (ui.hovered(badgeX + categoryWidth + 3, y + 18, tierWidth, 10)) {
-			ui.tooltip(this, tier.label() + ": " + tier.meaning());
-		}
-
-		ui.wrapped(description(), x + 8, y + 32, width - 16, Theme.TEXT_SECONDARY);
-
-		boolean closeHot = ui.hovered(x + width - 16, y + 6, 12, 12);
-		ui.icon(Icon.CLOSE, x + width - 14, y + 9, 7, closeHot ? Theme.TEXT : Theme.TEXT_MUTED);
-		if (closeHot) {
-			ui.pointer();
-			ui.tooltip("close-panel", "Close (Esc)");
-		}
-
-		// Tabs with a sliding underline.
-		int tabsY = y + headerHeight();
-		int tabWidth = (width - 12) / TABS.length;
-		ui.roundRect(x + 6, tabsY, width - 12, TAB_HEIGHT, Theme.SURFACE, 6);
-		float line = tabLine.update(tab, ui.frameSeconds(), ui.motion());
-		ui.gradientRect(x + 6 + Math.round(line * tabWidth), tabsY, tabWidth, TAB_HEIGHT, Theme.withAlpha(Theme.ACCENT, 0.9f),
-				Theme.withAlpha(Theme.ACCENT_2, 0.75f), 6);
-		for (int i = 0; i < TABS.length; i++) {
-			int tx = x + 6 + i * tabWidth;
-			boolean hot = ui.hovered(tx, tabsY, tabWidth, TAB_HEIGHT);
-			ui.textCentered(TABS[i], tx + tabWidth / 2, tabsY + 4, i == tab ? 0xFFFFFFFF : hot ? Theme.TEXT : Theme.TEXT_SECONDARY);
-			if (hot && i != tab) {
+			ui.icon(Icon.INFO, x + 2, y + 2, 10, on ? Theme.ACCENT_STRONG : hot ? Theme.TEXT : Theme.TEXT_MUTED);
+			if (hot) {
 				ui.pointer();
+				ui.tooltip(this, on ? "Help mode is on: every setting shows its explanation. Click for a compact list."
+						: "Help mode is off. Click to show every setting's explanation, range and default.");
 			}
 		}
 
-		ui.pushClip(content.x(), content.y(), content.width(), content.height());
-		content.render(ui);
-		ui.popClip();
-		toggle.render(ui);
-		reset.render(ui);
-	}
+		@Override
+		public boolean mouseClicked(UiContext ui, double mouseX, double mouseY, int button) {
+			if (button != 0 || !contains(mouseX, mouseY)) {
+				return false;
+			}
 
-	@Override
-	public boolean mouseClicked(UiContext ui, double mouseX, double mouseY, int button) {
-		if (module == null || !contains(mouseX, mouseY)) {
-			return false;
-		}
-
-		if (UiContext.inside(mouseX, mouseY, x + width - 16, y + 6, 12, 12)) {
-			onClose.run();
+			var option = FemboyClient.get().options().helpMode;
+			option.set(!option.get());
 			return true;
 		}
-
-		int tabsY = y + headerHeight();
-		int tabWidth = (width - 12) / TABS.length;
-		if (UiContext.inside(mouseX, mouseY, x + 6, tabsY, tabWidth * TABS.length, TAB_HEIGHT)) {
-			showTab((int) ((mouseX - x - 6) / tabWidth));
-			return true;
-		}
-
-		super.mouseClicked(ui, mouseX, mouseY, button);
-		return true;
 	}
 
-	/** Key field and Toggle/Hold switch. */
+	/** The key that turns the module on or off while playing, and whether it toggles or must be held. */
 	private final class KeyRow extends Container {
 		private final KeybindButton key;
-		private final Button mode;
+		private final Dropdown<Boolean> mode;
+		private final Module module;
 
 		KeyRow(Module module) {
-			key = add(new KeybindButton(module::key, code -> {
-				modules.setKey(module, code);
-				rebuild();
-			}));
-			key.tooltip("Key for this module while playing. Click, then press a key; Backspace removes it.");
-			mode = add(new Button(() -> module.isHoldKey() ? "Hold" : "Toggle", Button.Style.SECONDARY,
-					() -> modules.setHoldKey(module, !module.isHoldKey())));
-			mode.tooltip(() -> module.isHoldKey() ? "Hold: on only while the key is held. Click for Toggle." : "Toggle: each press turns it on or off. Click for Hold.");
+			this.module = module;
+			key = add(new KeybindButton(module::key, code -> modules.setKey(module, code)));
+			key.tooltip("Click, then press the key that turns " + module.name() + " on or off while playing. Backspace removes it; Escape cancels.");
+			mode = add(new Dropdown<>(() -> List.of(false, true), module::isHoldKey, hold -> modules.setHoldKey(module, hold),
+					hold -> hold ? "Hold" : "Toggle"));
+			mode.tooltip("Toggle: each press turns the module on or off. Hold: it is on only while you hold the key.");
+		}
+
+		private String conflict() {
+			if (module.key() == Module.NO_KEY) {
+				return null;
+			}
+
+			List<Module> shared = FemboyClient.get().keybinds().modulesBoundTo(module.key());
+			shared.remove(module);
+			return shared.isEmpty() ? null : "This key also switches " + String.join(", ", shared.stream().map(Module::name).toList()) + ".";
 		}
 
 		@Override
 		public int preferredHeight(UiContext ui, int width) {
-			return 30;
+			String conflict = conflict();
+			return 22 + (conflict == null ? 0 : ui.wrappedHeightScaled(conflict, width - 12, ui.small()) + 2);
 		}
 
 		@Override
 		protected void onLayout() {
-			key.setBounds(x + 4, y + 13, width - 60, 14);
-			mode.setBounds(x + width - 52, y + 13, 48, 14);
+			int modeWidth = 58;
+			key.setBounds(x + 44, y + 4, width - 44 - modeWidth - 10, 14);
+			mode.setBounds(x + width - modeWidth - 4, y + 4, modeWidth, 14);
 		}
 
 		@Override
 		public void render(UiContext ui) {
-			ui.roundRect(x, y, width, height, Theme.SURFACE, 3);
-			ui.text("Key", x + 5, y + 3, Theme.TEXT);
+			ui.text("Key", x + 6, y + 7, Theme.TEXT);
+			String conflict = conflict();
+			if (conflict != null) {
+				ui.icon(Icon.WARNING, x + 6, y + 21, 7, Theme.WARNING);
+				ui.wrappedScaled(conflict, x + 16, y + 21, width - 22, ui.small(), Theme.WARNING);
+			}
+
 			super.render(ui);
 		}
+	}
+
+	/** "About this module": closed by default; holds the details most people never need. */
+	private final class AboutFold extends Widget {
+		@Override
+		public int preferredHeight(UiContext ui, int width) {
+			return 20;
+		}
+
+		boolean open() {
+			return Boolean.TRUE.equals(GuiState.openSections.get(module.id() + "/About"));
+		}
+
+		@Override
+		public void render(UiContext ui) {
+			boolean hot = hovered(ui);
+			ui.icon(open() ? Icon.CHEVRON_DOWN : Icon.CHEVRON_RIGHT, x + 2, y + 8, 8, hot ? Theme.TEXT : Theme.TEXT_MUTED);
+			ui.text("About this module", x + 13, y + 9, hot ? Theme.ACCENT_STRONG : Theme.TEXT);
+			ui.rect(x + 2, y + height - 2, width - 4, 1, Theme.BORDER);
+			if (hot) {
+				ui.pointer();
+			}
+		}
+
+		@Override
+		public boolean mouseClicked(UiContext ui, double mouseX, double mouseY, int button) {
+			if (button != 0 || !contains(mouseX, mouseY)) {
+				return false;
+			}
+
+			GuiState.openSections.put(module.id() + "/About", !open());
+			return true;
+		}
+	}
+
+	private List<Widget> aboutNotes() {
+		List<Widget> notes = new ArrayList<>();
+		java.util.function.BooleanSupplier closed = () -> !Boolean.TRUE.equals(GuiState.openSections.get(module.id() + "/About"));
+		Module.Tier tier = module.tier();
+		notes.add(new Note(tier.label() + ": " + tier.meaning(), Theme.TEXT_SECONDARY).hiddenWhen(closed));
+		String limitation = module.lowImpactLimitation();
+		if (limitation != null) {
+			notes.add(new Note("In Low-impact mode it pauses, because " + limitation, Theme.TEXT_SECONDARY).hiddenWhen(closed));
+		}
+
+		for (Module.Requirement requirement : module.requirements()) {
+			Module other = modules.get(requirement.moduleId());
+			if (other != null) {
+				notes.add(new Note("Uses " + other.name() + " for " + requirement.purpose() + (other.isRunning() ? " (on)." : " (off: turn it on for this)."),
+						other.isRunning() ? Theme.TEXT_SECONDARY : Theme.WARNING).hiddenWhen(closed));
+			}
+		}
+
+		for (Module other : modules.all()) {
+			if (modules.conflict(module, other)) {
+				notes.add(new Note("Cannot run together with " + other.name() + ": turning one on turns the other off.", Theme.TEXT_SECONDARY).hiddenWhen(closed));
+			}
+		}
+
+		if (!module.aliases().isEmpty()) {
+			notes.add(new Note("Also found by searching: " + String.join(", ", module.aliases()) + ".", Theme.TEXT_MUTED).hiddenWhen(closed));
+		}
+
+		notes.add(new Note("Id: " + module.id() + ". " + module.settings().all().size() + " settings, saved to the active profile as you change them.",
+				Theme.TEXT_MUTED).hiddenWhen(closed));
+		return notes;
 	}
 
 	/** A wrapped line of text. */
 	public static final class Note extends Widget {
 		private final String text;
 		private final int color;
+		private java.util.function.BooleanSupplier hidden = () -> false;
 
 		public Note(String text, int color) {
 			this.text = text;
 			this.color = color;
 		}
 
+		Note hiddenWhen(java.util.function.BooleanSupplier hidden) {
+			this.hidden = hidden;
+			return this;
+		}
+
 		@Override
 		public int preferredHeight(UiContext ui, int width) {
-			return ui.wrappedHeight(text, width - 8) + 6;
+			return hidden.getAsBoolean() ? 0 : ui.wrappedHeight(text, width - 12) + 6;
 		}
 
 		@Override
 		public void render(UiContext ui) {
-			ui.wrapped(text, x + 4, y + 3, width - 8, color);
+			if (!hidden.getAsBoolean()) {
+				ui.wrapped(text, x + 6, y + 3, width - 12, color);
+			}
 		}
 	}
 }

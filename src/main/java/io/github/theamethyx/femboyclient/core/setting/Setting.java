@@ -26,6 +26,7 @@ public abstract class Setting<T> {
 	private BooleanSupplier visibleWhen = () -> true;
 	private String section;
 	private boolean listed = true;
+	private boolean advanced;
 	private T value;
 
 	protected Setting(String id, String name, String description, T defaultValue) {
@@ -203,6 +204,20 @@ public abstract class Setting<T> {
 
 	public final boolean isListed() {
 		return listed;
+	}
+
+	/**
+	 * Marks the setting as fine-tuning most people never change: the GUI keeps it in its section but folds it away
+	 * behind "More options" until asked. Nothing else about the setting changes.
+	 */
+	@SuppressWarnings("unchecked")
+	public final <S extends Setting<T>> S advanced() {
+		this.advanced = true;
+		return (S) this;
+	}
+
+	public final boolean isAdvanced() {
+		return advanced;
 	}
 
 	/** Heading this setting is listed under in the GUI, or {@code null}. Set by {@link ModuleSettings#section}. */

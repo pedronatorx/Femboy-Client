@@ -606,6 +606,12 @@ public final class ConfigurationManager {
 
 		profileRules.replaceAll(rule -> rule.profile().equals(from) ? new ProfileRule(rule.item(), rule.dimension(), to) : rule);
 		history.replaceAll(entry -> entry.profile().equals(from) ? new HistoryEntry(to, entry.timeMillis()) : entry);
+		String note = profileNote(from);
+		if (!note.isEmpty()) {
+			setProfileNote(from, null);
+			setProfileNote(to, note);
+		}
+
 		saveNow();
 		diagnostics.info(SOURCE, "Renamed profile '" + from + "' to '" + to + "'.");
 		return null;
@@ -1062,6 +1068,48 @@ public final class ConfigurationManager {
 			diagnostics.warn(SOURCE, "Could not read profile '" + name + "': " + e.getMessage());
 			return null;
 		}
+	}
+
+	/**
+	 * Ids of the modules a profile turns on, in the order they are stored, without applying anything.
+	 *
+	 * @return the ids, or {@code null} if the profile could not be read
+	 */
+	public List<String> enabledModules(String name) {
+		JsonObject modulesJson = profileModules(name);
+		if (modulesJson == null) {
+			return null;
+		}
+
+		List<String> enabled = new ArrayList<>();
+		for (var entry : modulesJson.entrySet()) {
+			if (entry.getValue() instanceof JsonObject module && module.get("enabled") instanceof com.google.gson.JsonPrimitive on && on.isBoolean()
+					&& on.getAsBoolean()) {
+				enabled.add(entry.getKey());
+			}
+		}
+
+		return enabled;
+	}
+
+	/** Key of the client section holding the profiles' notes (a short description per profile, written by the user). */
+	public static final String NOTES_SECTION = "profile_notes";
+
+	/** The user's note for a profile, or an empty string. */
+	public String profileNote(String name) {
+		return section(NOTES_SECTION) instanceof JsonObject notes && notes.get(name) instanceof com.google.gson.JsonPrimitive note ? note.getAsString() : "";
+	}
+
+	/** Sets (or, when blank, removes) the note for a profile. */
+	public void setProfileNote(String name, String note) {
+		JsonObject notes = section(NOTES_SECTION) instanceof JsonObject existing ? existing.deepCopy() : new JsonObject();
+		if (note == null || note.isBlank()) {
+			notes.remove(name);
+		} else {
+			notes.addProperty(name, note.strip());
+		}
+
+		setSection(NOTES_SECTION, notes);
 	}
 
 	/**

@@ -11,8 +11,9 @@ import io.github.theamethyx.femboyclient.client.gui.Theme;
 import io.github.theamethyx.femboyclient.client.gui.UiContext;
 
 /**
- * Settings, in tabs: General (options and files), Appearance (Theme Studio), Performance (Performance Center), Rules,
- * Timeline and Developer (module health, tools and the log). Tabs show only their icon when the panel is narrow.
+ * Settings, in tabs: General (options, backups and files), Appearance (Theme Studio), Performance (Performance Center),
+ * Rules, Timeline, Help (guides and glossary) and Developer (module health, tools and the log). Tabs show only their icon
+ * when the panel is narrow.
  */
 public class SettingsPage extends Page {
 	private static final int TAB_HEIGHT = 16;
@@ -22,7 +23,7 @@ public class SettingsPage extends Page {
 	public SettingsPage(UiContext ui) {
 		super(ui);
 		tabs = List.of(new ConfigPage(ui), new ThemeStudioPage(ui), new PerformanceCenterPage(ui), new RulesPage(ui), new TimelinePage(ui),
-				new DiagnosticsPage(ui));
+				new HelpPage(ui), new DiagnosticsPage(ui));
 	}
 
 	private Page active() {
@@ -39,7 +40,7 @@ public class SettingsPage extends Page {
 		}
 	}
 
-	/** Switches to the tab with this label (General, Appearance, Performance, Rules, Timeline, Developer). */
+	/** Switches to the tab with this label (General, Appearance, Performance, Rules, Timeline, Help, Developer). */
 	public void showTab(String label) {
 		for (int i = 0; i < tabs.size(); i++) {
 			if (tabs.get(i).navLabel().equalsIgnoreCase(label)) {
@@ -87,17 +88,18 @@ public class SettingsPage extends Page {
 		active().setBounds(x, y + TAB_HEIGHT + Theme.GAP, width, height - TAB_HEIGHT - Theme.GAP);
 	}
 
+	/** Whether every tab label fits; when not, only the selected tab keeps its label and the others show their icon. */
 	private boolean compact(UiContext ui) {
 		int total = 0;
 		for (Page tab : tabs) {
-			total += ui.textWidth(tab.navLabel()) + 26 + Theme.GAP;
+			total += ui.textWidth(tab.navLabel()) + 22 + Theme.GAP;
 		}
 
 		return total > width;
 	}
 
 	private int tabWidth(UiContext ui, int index, boolean compact) {
-		return compact ? 22 : ui.textWidth(tabs.get(index).navLabel()) + 26;
+		return compact && index != GuiState.settingsTab ? 22 : ui.textWidth(tabs.get(index).navLabel()) + 22;
 	}
 
 	@Override
@@ -115,8 +117,8 @@ public class SettingsPage extends Page {
 
 			int color = selected ? Theme.ACCENT_STRONG : hot ? Theme.TEXT : Theme.TEXT_SECONDARY;
 			ui.icon(tab.icon(), tx + 7, y + 4, 8, color);
-			if (!compact) {
-				ui.text(tab.navLabel(), tx + 19, y + 4, color);
+			if (!compact || selected) {
+				ui.text(tab.navLabel(), tx + 18, y + 4, color);
 			}
 
 			if (selected) {

@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.1.0 - 2026-10-18
+
+A redesign of the whole interface for clarity: fewer things on screen at once, one way to do each thing, and explanations where they are needed. No module or setting was removed, and saved settings and profiles load unchanged.
+
+### Changed
+- **Navigation:** nine sections in the order people look for them: Home, Combat, Movement, Visuals, Inventory, World, Automation, then Profiles and Settings below a divider. Trackers moved into World as the *Search and trackers* group, the Java Runner into World as *Developer tools* (folded until opened); the HUD and utility modules are a group in Visuals. Ctrl+1 to Ctrl+9 jump to a section.
+- **Home** is an overview instead of a list of all 77 modules: a search box, a getting-started tip (dismissible), cards for the profile, the performance mode (changeable there) and the client status, favorites, recently used modules and shortcuts (Profiles, Edit HUD, Appearance, Help, Settings). **Customize Home** hides or shows each part.
+- **One search** for everything: the header field, Home's search box, Ctrl+K/Ctrl+F/Ctrl+P and the palette key all open the same search. Results are grouped (modules, settings, HUD elements, help, pages, profiles, appearance, actions). **Enter now opens** a module (it used to switch it); **Tab switches** it. The second search field on each section page is gone; the **Show** menu filters the list instead (turned on, favorites, with a key, needs attention, or by kind).
+- **Module list entries** look the same everywhere: name, one line on what the module does (or what is wrong), its key, a favorite star, and the switch. The repeated category icon and the colored dot are gone; the state is spelled out.
+- **Module panel** (one panel for every module, no tabs): name, favorite star, help-mode toggle and switch; section and kind; description; status in words with the reason; key and Toggle/Hold; settings; an "About this module" fold with the technical details; **Reset to defaults** (two clicks).
+- **Settings are grouped**: the settings before a module's first section are under *General*; less common settings of a section fold behind **More options**; update rates and limits (Performance and Limits sections) sit in one **Advanced** fold at the end. Settings are drawn as plain rows on the panel instead of one card each. Section headings use plain text instead of upper-case accent letters.
+- **ESP modules share one structure:** Targets, Highlight, Colors, Labels, Target lines, Advanced. Entity ESP's "Boxes" is now "Highlight"; Block ESP's "Blocks" is now "Targets"; Storage ESP, which had no sections, has them now. Per-group switches, label spacing and sizes, override colors and line limits are under More options. Trackers' "Style" is now "Indicators".
+- **Profiles page:** New profile and Import ask for a name in a dialog instead of three permanent text fields; each profile is a card (Active badge with a check mark, a description, Preview and Use) with a ⋯ menu for duplicate, rename, export, description, reset and delete; "what a profile stores", recently used profiles, presets and automatic switching are folds. Resetting a preset profile asks in a dialog that says what is lost.
+- **Settings › General** lists client options first, then the HUD layout, backups, files, emergency off and reset everything.
+- **HUD editor:** the toolbar moves to the bottom while an element is under it at the top (it used to cover the top middle); the elements list has *Showing* (eye to hide) and *Turned off* (one click turns a module on) groups; the inspector has *More* for when an element shows, alignment buttons (corners, top center, center) and a link to the module's settings.
+- **Look:** calmer sidebar (a light highlight with a thin accent bar instead of a gradient), one quiet status line instead of a four-line card, no tagline, solid accent for switches and the main button instead of gradients, background glows off by default (Appearance › Background art turns them on; profiles that stored the option keep their choice), consistent spacing, corner and text-size tokens.
+- Dropdown lists are themed, scroll when long, and lists of nine or more options can be narrowed by typing.
+
+### Added
+- **Help mode** (on by default): each setting shows its explanation, allowed range and default under its name. The i in a module's header or Settings › General turns it off for a compact list; tooltips then show the same text.
+- **Settings › Help:** thirteen short guides and a glossary of 21 terms, with a search field; the search finds them too.
+- **Module status in words** everywhere (On, Off, Waiting, Not available here, Reduced, On but limited, Restarting, Error) with an icon and the reason, including when a module needs another one for part of its work. The sidebar's status line counts modules that need a look; clicking it opens Settings › Developer.
+- **ESP preview:** a small live drawing of the outline, fill, label, health bar and target lines (color, thickness, opacity, fading) at the top of Entity, Block and Storage ESP.
+- Profile **descriptions** (your own note; otherwise the modules a profile turns on). Notes follow a rename.
+- Reusable dialogs for prompts and confirmations, a ⋯ popup menu, empty states with advice, and a "more" icon.
+- Keyboard: Up/Down move through a module list, Space switches the selected module.
+
+### Fixed
+- Long dropdown lists ran off the screen; they now scroll.
+- Page subtitles were often cut off in the header; they are shorter now (the full text still shows on hover when a narrow window cuts one).
+
+### Performance
+- Wrapped text is cached instead of being split again every frame.
+- The status shown next to every module uses a light state query (without asking modules to describe their work) and is cached for 150 ms.
+
 ## 1.0.0 - 2026-10-18
 
 ### Added

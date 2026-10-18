@@ -84,24 +84,34 @@ public final class StorageEspModule extends Module implements ClientHooks.WorldR
 		};
 	}
 
+	// The same sections as the other ESP modules: Targets, Highlight, Colors, Labels, Target lines, Performance.
+	{ settings().section("Targets"); }
 	private final IdSetSetting blocks = settings().add(new IdSetSetting("blocks", "Storage blocks",
 			"Which storage blocks to highlight. Click a group to select or clear all of it.", defaultBlocks()));
+	private final NumberSetting maxDistance = settings().add(new NumberSetting("max_distance", "Maximum distance",
+			"Storage blocks farther away than this are not highlighted.", 64, 16, 256, 16, "blocks"));
+
+	{ settings().section("Highlight"); }
 	private final BooleanSetting outline = settings().add(new BooleanSetting("outline", "Outline", "Draw the edges of each block.", true));
 	private final BooleanSetting fill = settings().add(new BooleanSetting("fill", "Fill", "Fill each block with a faint tint.", true));
 	private final BooleanSetting throughWalls = settings().add(new BooleanSetting("through_walls", "Show through walls",
 			"Draw highlights even when other blocks are in the way.", true));
-	private final BooleanSetting labels = settings().add(new BooleanSetting("labels", "Labels", "Show the block's name and distance above it.", false));
-	private final NumberSetting maxLabels = settings().add(new NumberSetting("max_labels", "Most labels", "Labels for the nearest storage blocks only.",
-			24, 1, 64, 1, "")).visibleWhen(labels::get);
+
+	{ settings().section("Colors"); }
 	private final BooleanSetting customColors = settings().add(new BooleanSetting("custom_colors", "Custom colors",
 			"Choose your own color for each group instead of the built-in palette.", false));
 	private final Map<Group, ColorSetting> colors = groupColors();
-	private final NumberSetting maxDistance = settings().add(new NumberSetting("max_distance", "Maximum distance",
-			"Storage blocks farther away than this are not highlighted.", 64, 16, 256, 16, "blocks"));
+
+	{ settings().section("Labels"); }
+	private final BooleanSetting labels = settings().add(new BooleanSetting("labels", "Labels", "Show the block's name and distance above it.", false));
+	private final NumberSetting maxLabels = settings().add(new NumberSetting("max_labels", "Most labels", "Labels for the nearest storage blocks only.",
+			24, 1, 64, 1, "")).visibleWhen(labels::get).advanced();
+
+	{ settings().section("Performance"); }
 	private final NumberSetting interval = settings().add(new NumberSetting("scan_interval", "Scan interval",
-			"Performance option: how often the loaded chunks are checked for storage blocks.", 1, 0.25, 10, 0.25, "s"));
+			"How often the loaded chunks are checked for storage blocks. Shorter finds new chests sooner and costs more.", 1, 0.25, 10, 0.25, "s"));
 	private final NumberSetting maxTargets = settings().add(new NumberSetting("max_targets", "Maximum highlights",
-			"Performance limit: only the nearest storage blocks up to this number are drawn.", 256, 16, 2048, 16, ""));
+			"Only the nearest storage blocks up to this number are drawn.", 256, 16, 2048, 16, ""));
 
 	private final TargetLines.Settings lines = new TargetLines.Settings(settings(), false, TargetLines.Visibility.ALWAYS, 64, 256, 16);
 	private final IdSetSetting lineGroups = settings().add(new IdSetSetting("line_groups", "Lines to",

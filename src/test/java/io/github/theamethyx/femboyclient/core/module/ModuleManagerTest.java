@@ -498,4 +498,33 @@ class ModuleManagerTest {
 		assertFalse(hud.isEnabled());
 		manager.resetCategory(ModuleCategory.COMBAT); // no modules there: nothing happens
 	}
+
+	@Test
+	void theCheapStateAgreesWithTheHealthMonitor() {
+		RecordingModule plain = manager.register(new RecordingModule("plain", "Plain", Module.NO_KEY));
+		RecordingModule sandbox = manager.register(new RecordingModule("sandbox", "Sandbox", Module.NO_KEY) {
+			@Override
+			public boolean testEnvironmentOnly() {
+				return true;
+			}
+
+			@Override
+			public String workload() {
+				throw new AssertionError("the menu's state query must not ask for the workload");
+			}
+		});
+
+		assertEquals(manager.health(plain).state(), manager.state(plain).state());
+		environment.inWorld = false;
+		manager.setEnabled(plain, true);
+		assertEquals(ModuleHealth.State.WAITING, manager.state(plain).state());
+		assertEquals(manager.health(plain).reason(), manager.state(plain).reason());
+		environment.inWorld = true;
+		manager.tick();
+		assertEquals(ModuleHealth.State.ACTIVE, manager.state(plain).state());
+
+		manager.setEnabled(sandbox, true);
+		assertEquals(ModuleHealth.State.UNSUPPORTED, manager.state(sandbox).state());
+		assertEquals(Module.TEST_ENVIRONMENT_ONLY, manager.state(sandbox).reason());
+	}
 }

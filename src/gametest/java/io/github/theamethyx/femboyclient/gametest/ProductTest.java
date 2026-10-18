@@ -103,18 +103,20 @@ final class ProductTest {
 			return "none";
 		});
 		context.takeScreenshot("palette-search");
-		ui.key(GLFW.GLFW_KEY_ENTER);
+		ui.key(GLFW.GLFW_KEY_TAB);
 		context.waitTicks(2);
 		boolean toggled = context.computeOnClient(client -> femboy().modules().get(CoordinatesHudModule.class).isEnabled());
-		report.check("Ctrl+K opens the command palette; typing finds Coordinates first and Enter turns it on",
+		report.check("Ctrl+K opens the search; typing finds Coordinates first and Tab turns it on",
 				overlay.equals("CommandPalette") && first.equals("Coordinates") && toggled, overlay + " / " + first + " / " + toggled + " (focus before: " + focus + ")");
 
 		context.runOnClient(client -> ((ClientScreen) client.screen).openPalette().setQuery("block esp"));
 		context.waitTicks(1);
-		ui.key(GLFW.GLFW_KEY_TAB);
+		ui.key(GLFW.GLFW_KEY_ENTER);
 		context.waitTicks(2);
 		String selected = GuiState.selectedModule;
-		report.check("Tab on a module in the palette opens its settings instead (Block ESP)", "block_esp".equals(selected), String.valueOf(selected));
+		boolean blockOff = context.computeOnClient(client -> !femboy().modules().get("block_esp").isEnabled());
+		report.check("Enter on a module in the search opens its settings and leaves it off (Block ESP)", "block_esp".equals(selected) && blockOff,
+				selected + " / off " + blockOff);
 
 		context.runOnClient(client -> ((ClientScreen) client.screen).openPalette().setQuery("ore esp"));
 		context.waitTicks(1);

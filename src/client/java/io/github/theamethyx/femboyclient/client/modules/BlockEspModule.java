@@ -72,7 +72,7 @@ public final class BlockEspModule extends Module implements ClientHooks.WorldRen
 		}
 	}
 
-	{ settings().section("Blocks"); }
+	{ settings().section("Targets"); }
 	private final IdSetSetting blocks = settings().add(new IdSetSetting("blocks", "Blocks",
 			"Blocks to highlight. Click a category (ores, containers, redstone, plants...) to select or clear all of it.", DEFAULT_ORES));
 	private final NumberSetting radius = settings().add(new NumberSetting("radius", "Radius", "Chunks around you to search.", 4, 1, 12, 1, "chunks"));
@@ -94,7 +94,7 @@ public final class BlockEspModule extends Module implements ClientHooks.WorldRen
 	private final BooleanSetting labels = settings().add(new BooleanSetting("labels", "Name and distance",
 			"Show the block's name and distance above the nearest highlighted blocks.", false));
 	private final NumberSetting maxLabels = settings().add(new NumberSetting("max_labels", "Most labels", "Labels for the nearest blocks only.",
-			12, 1, 64, 1, "")).visibleWhen(labels::get);
+			12, 1, 64, 1, "")).visibleWhen(labels::get).advanced();
 
 	private final TargetLines.Settings lines = new TargetLines.Settings(settings(), false, TargetLines.Visibility.ALWAYS, 64, 192, 16);
 

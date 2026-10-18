@@ -31,12 +31,11 @@ public class ToggleSwitch extends Widget {
 		float t = position.update(on ? 1 : 0, ui.frameSeconds(), ui.animate());
 		float h = hover.update(hovered(ui) ? 1 : 0, ui.frameSeconds(), ui.animate());
 
-		// A pill: grey when off, the accent gradient fading in when on.
+		// A pill: grey when off, the accent fading in when on. The knob's side shows the state too, not only the color.
 		int off = Theme.lerp(Theme.SURFACE_ACTIVE, Theme.BORDER_STRONG, h * 0.6f);
 		ui.roundRect(x, y, width, height, off, height / 2);
 		if (t > 0.01f) {
-			float glow = 0.85f + 0.15f * h;
-			ui.gradientRect(x, y, width, height, Theme.withAlpha(Theme.ACCENT, t * glow), Theme.withAlpha(Theme.ACCENT_2, t * glow), height / 2);
+			ui.roundRect(x, y, width, height, Theme.withAlpha(Theme.lerp(Theme.ACCENT, Theme.ACCENT_STRONG, h * 0.4f), t), height / 2);
 		}
 
 		int knobSize = height - 4;

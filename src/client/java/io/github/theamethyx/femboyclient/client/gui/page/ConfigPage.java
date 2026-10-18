@@ -39,7 +39,7 @@ public class ConfigPage extends Page {
 
 	@Override
 	public String subtitle() {
-		return "Emergency off, client options, backups and config files.";
+		return "Client options, the HUD layout, backups, files and resets.";
 	}
 
 	@Override
@@ -63,24 +63,21 @@ public class ConfigPage extends Page {
 		List<Widget> rows = new ArrayList<>();
 		rows.add(new Feedback());
 
-		rows.add(new SectionTitle("Emergency off", "Turns every module off at once; each one restores what it changed (camera, "
-				+ "lighting, held item). Automatic profile switching is paused too. Bind a key for it in Minecraft's Options > "
-				+ "Controls > Key Binds under 'Femboy Client' (currently " + ClientKeys.disableAll.getTranslatedKeyMessage().getString() + ")."));
-		rows.add(new DisableAllRow());
-
-		rows.add(new SectionTitle("HUD layout", "Drag HUD blocks anywhere on the screen. Turn on the HUD modules you want to place first."));
-		rows.add(new HudEditorRow());
-
-		rows.add(new SectionTitle("Client options", "The look (theme, motion) is on the Appearance tab. Profiles have their own page."));
+		// Everyday options first; backups, files and the drastic actions after them.
+		rows.add(new SectionTitle("Client options", "How the menu behaves. The look (theme, motion) is on the Appearance tab; profiles have "
+				+ "their own page."));
 		rows.addAll(SettingRow.rowsFor("options", femboy.options().settings.all().stream()
 				.filter(setting -> !io.github.theamethyx.femboyclient.client.GlobalOptions.THEME_SECTION.equals(setting.section())
 						&& !io.github.theamethyx.femboyclient.client.GlobalOptions.MOTION_SECTION.equals(setting.section())
 						&& !io.github.theamethyx.femboyclient.client.GlobalOptions.SMART_SECTION.equals(setting.section()))
 				.<io.github.theamethyx.femboyclient.core.setting.Setting<?>>map(setting -> setting).toList()));
 
-		rows.add(new SectionTitle("Restore points", "Copies of all settings and profiles. One is made automatically before a restore, "
-				+ "a full reset, replacing a profile with a preset, and a configuration format update; the newest "
-				+ ConfigurationManager.MAX_RESTORE_POINTS + " are kept."));
+		rows.add(new SectionTitle("HUD layout", "Move, resize and hide HUD elements on a live preview."));
+		rows.add(new HudEditorRow());
+
+		rows.add(new SectionTitle("Backups (restore points)", "A restore point is a copy of all settings and profiles. One is made "
+				+ "automatically before a restore, a full reset, replacing a profile with a preset and a format update; the newest "
+				+ ConfigurationManager.MAX_RESTORE_POINTS + " are kept. Restoring one makes a new restore point first, so it can be undone."));
 		rows.add(new CreateRestorePoint());
 		List<ConfigurationManager.RestorePoint> points = config.restorePoints();
 		for (int i = 0; i < Math.min(8, points.size()); i++) {
@@ -93,16 +90,21 @@ public class ConfigPage extends Page {
 			rows.add(new ModulesPage.Message((points.size() - 8) + " older restore point(s) are in the restore-points folder."));
 		}
 
-		rows.add(new SectionTitle("Reset everything", "Puts client options, the HUD layout, switching rules and every module of the active "
-				+ "profile back to a fresh installation's state (all modules off). Other profiles are kept, and a restore point is made "
-				+ "first, so this can be undone above."));
-		rows.add(new ResetEverything());
-
-		rows.add(new SectionTitle("Files", "Stored in " + config.root().toAbsolutePath()));
+		rows.add(new SectionTitle("Files", "Settings are saved automatically as you change them. Stored in " + config.root().toAbsolutePath()));
 		rows.add(new FileActions());
 		for (String problem : config.lastReport()) {
 			rows.add(new ModulesPage.Message("Recovered at startup: " + problem));
 		}
+
+		rows.add(new SectionTitle("Emergency off", "Turns every module off at once; each one restores what it changed (camera, "
+				+ "lighting, held item). Automatic profile switching is paused too. Its key is in Minecraft's Options › Controls › Key "
+				+ "Binds under 'Femboy Client' (currently " + ClientKeys.disableAll.getTranslatedKeyMessage().getString() + ")."));
+		rows.add(new DisableAllRow());
+
+		rows.add(new SectionTitle("Reset everything", "Puts client options, the HUD layout, switching rules and every module of the active "
+				+ "profile back to a fresh installation's state (all modules off). Other profiles are kept, and a restore point is made "
+				+ "first, so this can be undone under Backups."));
+		rows.add(new ResetEverything());
 
 		content.setChildren(rows);
 	}
@@ -137,13 +139,17 @@ public class ConfigPage extends Page {
 
 		@Override
 		public int preferredHeight(UiContext ui, int width) {
-			return 16 + ui.wrappedHeight(description, width - 4);
+			return 20 + (description.isEmpty() ? 0 : ui.wrappedHeight(description, width - 4));
 		}
 
 		@Override
 		public void render(UiContext ui) {
-			ui.text(title, x + 2, y + 4, Theme.ACCENT_STRONG);
-			ui.wrapped(description, x + 2, y + 15, width - 4, Theme.TEXT_MUTED);
+			// Same heading style as setting sections: plain text and a thin rule, the explanation below in muted text.
+			ui.text(title, x + 2, y + 7, Theme.TEXT);
+			ui.rect(x + 2, y + 17, width - 4, 1, Theme.BORDER);
+			if (!description.isEmpty()) {
+				ui.wrapped(description, x + 2, y + 20, width - 4, Theme.TEXT_MUTED);
+			}
 		}
 	}
 

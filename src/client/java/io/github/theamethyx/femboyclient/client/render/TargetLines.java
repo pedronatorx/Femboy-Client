@@ -104,7 +104,7 @@ public final class TargetLines {
 			maxDistance = settings.add(new NumberSetting("tracer_max_distance", "Line distance",
 					"Targets farther away get no line (the highlight stays).", defaultDistance, 4, maxDistanceLimit, 4, "blocks")).visibleWhen(enabled::get);
 			maxCount = settings.add(new NumberSetting("tracer_max_count", "Most lines",
-					"Only the nearest targets up to this number get a line.", defaultCount, 1, 128, 1, "")).visibleWhen(enabled::get);
+					"Only the nearest targets up to this number get a line.", defaultCount, 1, 128, 1, "")).visibleWhen(enabled::get).advanced();
 			colorMode = settings.add(new EnumSetting<>("tracer_color_mode", "Line color",
 					"Use each target's highlight color, or one color for all lines.", ColorMode.TARGET)).visibleWhen(enabled::get);
 			color = settings.add(new ColorSetting("tracer_color", "Custom line color", "Color of every line when 'One custom color' is chosen.",
@@ -114,9 +114,9 @@ public final class TargetLines {
 			width = settings.add(new NumberSetting("tracer_width", "Line thickness",
 					"Thickness, as a multiple of the normal line width.", 1, 0.5, 4, 0.5, "x")).visibleWhen(enabled::get);
 			fade = settings.add(new BooleanSetting("tracer_fade", "Fade with distance",
-					"Lines to far targets are fainter, so near ones stand out.", true)).visibleWhen(enabled::get);
+					"Lines to far targets are fainter, so near ones stand out.", true)).visibleWhen(enabled::get).advanced();
 			depth = settings.add(new BooleanSetting("tracer_depth", "Hide behind blocks",
-					"Lines are hidden where blocks are in front of them, like normal world geometry.", false)).visibleWhen(enabled::get);
+					"Lines are hidden where blocks are in front of them, like normal world geometry.", false)).visibleWhen(enabled::get).advanced();
 		}
 
 		/** Lines drawn in the last frame (for tests). */

@@ -268,4 +268,32 @@ class ConfigToolsTest {
 		assertEquals("Before updating the configuration format", points.getFirst().label());
 		assertTrue(module.isEnabled());
 	}
+
+	@Test
+	void profilesListTheirEnabledModulesAndKeepNotesThroughARename() {
+		ConfigurationManager config = newConfig();
+		config.load();
+		modules.setEnabled(module, true);
+		assertNull(config.createProfile("second"));
+		modules.setEnabled(module, false);
+
+		assertEquals(List.of(), config.enabledModules("default"), "the active profile is read live");
+		assertEquals(List.of("test_module"), config.enabledModules("second"), "another profile is read from its file");
+		assertNull(config.enabledModules("missing"));
+
+		config.setProfileNote("second", "  Bedwars  ");
+		assertEquals("Bedwars", config.profileNote("second"));
+		assertEquals("", config.profileNote("default"));
+		assertNull(config.renameProfile("second", "bedwars"));
+		assertEquals("Bedwars", config.profileNote("bedwars"), "the note follows the rename");
+		assertEquals("", config.profileNote("second"));
+		config.setProfileNote("bedwars", " ");
+		assertEquals("", config.profileNote("bedwars"), "a blank note removes it");
+
+		config.setProfileNote("bedwars", "kept");
+		config.saveNow();
+		ConfigurationManager reloaded = newConfig();
+		reloaded.load();
+		assertEquals("kept", reloaded.profileNote("bedwars"), "notes are saved with the client settings");
+	}
 }

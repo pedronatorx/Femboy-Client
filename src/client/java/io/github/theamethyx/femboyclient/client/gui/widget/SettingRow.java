@@ -155,31 +155,56 @@ public class SettingRow extends Container {
 		return !(setting instanceof BooleanSetting || setting instanceof KeySetting);
 	}
 
+	/** Whether help mode is on: the explanation is shown under the name instead of only on hover. */
+	private static boolean helpMode() {
+		var femboy = io.github.theamethyx.femboyclient.client.FemboyClient.get();
+		return femboy != null && femboy.options().helpMode.get();
+	}
+
+	/** The explanation with what values are allowed and the default, e.g. "... 1 to 64 blocks, default 8." */
+	public String helpText() {
+		StringBuilder text = new StringBuilder(setting.description());
+		if (setting instanceof NumberSetting number) {
+			String unit = number.unit().isEmpty() ? "" : " " + number.unit();
+			text.append(" Range ").append(number.format(number.min())).append(" to ").append(number.format(number.max())).append(unit)
+					.append(", default ").append(defaultText(setting)).append('.');
+		} else if (!(setting instanceof StringSetting)) {
+			text.append(" Default: ").append(defaultText(setting)).append('.');
+		}
+
+		return text.toString();
+	}
+
+	/** Height of the explanation under the name in help mode, measured in {@link #preferredHeight}. */
+	private int helpHeight;
+
 	@Override
 	public int preferredHeight(UiContext ui, int width) {
 		if (!setting.isVisible() || collapsed.getAsBoolean()) {
 			return 0;
 		}
 
-		return (stacked() ? 32 : 20) + (error != null ? 10 : 0);
+		helpHeight = helpMode() ? ui.wrappedHeightScaled(helpText(), width - 12, ui.small()) + 2 : 0;
+		return (stacked() ? 32 : 20) + helpHeight + (error != null ? 10 : 0);
 	}
 
 	@Override
 	protected void onLayout() {
 		int right = x + width - 4;
 		reset.setBounds(right - RESET, y + 4, RESET, RESET);
+		int controlY = y + 15 + helpHeight;
 
 		if (setting instanceof BooleanSetting) {
 			control.setBounds(right - RESET - 4 - ToggleSwitch.WIDTH, y + 5, ToggleSwitch.WIDTH, ToggleSwitch.HEIGHT);
 		} else if (setting instanceof KeySetting) {
 			control.setBounds(right - RESET - 4 - KEY_WIDTH, y + 3, KEY_WIDTH, 14);
 		} else if (setting instanceof NumberSetting) {
-			control.setBounds(x + 7, y + 18, width - 14, 12);
+			control.setBounds(x + 7, controlY + 3, width - 14, 12);
 			exact.setBounds(x + width - RESET - 10 - 58, y + 2, 58, 13);
 		} else if (setting instanceof ColorSetting) {
-			control.setBounds(x + 8, y + 17, width - 16, 10);
+			control.setBounds(x + 8, controlY + 2, width - 16, 10);
 		} else {
-			control.setBounds(x + 6, y + 15, width - 12, 14);
+			control.setBounds(x + 6, controlY, width - 12, 14);
 		}
 	}
 
@@ -190,7 +215,10 @@ public class SettingRow extends Container {
 		}
 
 		boolean hot = ui.hovered(x, y, width, height);
-		ui.roundRect(x, y, width, height, hot ? Theme.SURFACE_HOVER : Theme.SURFACE, 4);
+		// No card per setting: rows sit on the panel, and only the hovered one is tinted.
+		if (hot) {
+			ui.roundRect(x, y, width, height, Theme.withAlpha(Theme.SURFACE_HOVER, 0.7f), Theme.RADIUS_CONTROL);
+		}
 
 		int labelRight = x + width - 4 - RESET - 6;
 		if (setting instanceof BooleanSetting) {
@@ -219,9 +247,12 @@ public class SettingRow extends Container {
 			labelRight -= ui.textWidth(color.displayValue()) + 6;
 		}
 
+		boolean changed = !setting.isDefault();
 		ui.textClipped(setting.name(), x + 6, y + 5, labelRight - x - 6, Theme.TEXT);
-		if (hot && !valueHot) {
-			ui.tooltip(setting, setting.description());
+		if (helpHeight > 0) {
+			ui.wrappedScaled(helpText(), x + 6, y + 15, width - 12, ui.small(), Theme.TEXT_MUTED);
+		} else if (hot && !valueHot) {
+			ui.tooltip(setting, helpText());
 		}
 
 		if (error != null) {
@@ -229,7 +260,7 @@ public class SettingRow extends Container {
 		}
 
 		control.render(ui);
-		if (!setting.isDefault()) {
+		if (changed) {
 			reset.render(ui);
 		}
 	}
@@ -265,8 +296,35 @@ public class SettingRow extends Container {
 		return setting.isVisible() && !collapsed.getAsBoolean() && control.mouseScrolled(ui, mouseX, mouseY, amount);
 	}
 
-	/** Sections that start collapsed: fine-tuning most people never need to see. Their headers stay, one click opens them. */
-	public static final Set<String> COLLAPSED_BY_DEFAULT = Set.of("Performance", "Colors", "Health", "Style", "Keys", "Display");
+	/** Opens every fold this row sits in (its section, "More options", Advanced), so it can be seen and used. */
+	public void reveal() {
+		revealer.run();
+	}
+
+	private Runnable revealer = () -> {
+	};
+
+	SettingRow revealedBy(Runnable revealer) {
+		this.revealer = revealer;
+		return this;
+	}
+
+	// ----- grouping: sections, "More options" and Advanced -----------------------------------
+
+	/** Sections that start closed: details most people never need to see. Their headers stay; one click opens them. */
+	public static final Set<String> COLLAPSED_BY_DEFAULT = Set.of("Health", "Style", "Keys", "Display");
+
+	/**
+	 * Sections that hold only tuning (update rates, limits): listed last, inside one "Advanced" fold that starts closed. The
+	 * settings themselves are unchanged.
+	 */
+	public static final Set<String> ADVANCED_SECTIONS = Set.of("Performance", "Limits");
+
+	/** Title of the fold that holds the {@link #ADVANCED_SECTIONS}. */
+	public static final String ADVANCED = "Advanced";
+
+	/** Title given to the settings before a module's first named section. */
+	public static final String GENERAL = "General";
 
 	/** Builds rows for every setting of a group, with a heading wherever a new section starts. */
 	public static List<Widget> rowsFor(List<Setting<?>> all) {
@@ -274,56 +332,130 @@ public class SettingRow extends Container {
 	}
 
 	/**
-	 * Builds rows for every setting of a group, with a collapsible heading wherever a new section starts. {@code owner}
-	 * (a module id) keys the remembered open/closed state of each section.
+	 * Builds rows for a module's (or the options') settings:
+	 * <ul>
+	 * <li>settings before the first named section go under "General" (only when there are named sections);</li>
+	 * <li>each section gets a collapsible heading, and its {@link Setting#isAdvanced() advanced} settings fold away behind
+	 * "More options" at its end;</li>
+	 * <li>{@link #ADVANCED_SECTIONS} come last, inside one "Advanced" fold.</li>
+	 * </ul>
+	 * {@code owner} (a module id, or "options") keys the remembered open/closed state of every fold.
 	 */
 	public static List<Widget> rowsFor(String owner, List<Setting<?>> all) {
 		List<Setting<?>> settings = all.stream().filter(Setting::isListed).toList();
-		List<Widget> rows = new ArrayList<>();
-		String section = null;
-		SectionHeader header = null;
-		for (int i = 0; i < settings.size(); i++) {
-			Setting<?> setting = settings.get(i);
-			if (setting.section() != null && !setting.section().equals(section)) {
-				section = setting.section();
-				List<Setting<?>> members = new ArrayList<>();
-				for (int j = i; j < settings.size() && section.equals(settings.get(j).section()); j++) {
-					members.add(settings.get(j));
-				}
+		boolean module = !owner.isEmpty() && !owner.equals("options");
+		boolean anySection = settings.stream().anyMatch(setting -> setting.section() != null);
 
-				// Only module settings start with fine-tuning folded away; client options are always shown open.
-				boolean foldable = !owner.isEmpty() && !owner.equals("options");
-				header = new SectionHeader(owner + "/" + section, section, members, foldable && COLLAPSED_BY_DEFAULT.contains(section));
-				rows.add(header);
+		// Sections in order of first appearance; the unnamed start becomes "General".
+		java.util.LinkedHashMap<String, List<Setting<?>>> sections = new java.util.LinkedHashMap<>();
+		for (Setting<?> setting : settings) {
+			String section = setting.section() != null ? setting.section() : anySection ? GENERAL : "";
+			sections.computeIfAbsent(section, key -> new ArrayList<>()).add(setting);
+		}
+
+		List<Widget> rows = new ArrayList<>();
+		List<String> advancedSections = new ArrayList<>();
+		for (var entry : sections.entrySet()) {
+			if (module && ADVANCED_SECTIONS.contains(entry.getKey())) {
+				advancedSections.add(entry.getKey());
+				continue;
 			}
 
-			SectionHeader current = header;
-			BooleanSupplier hidden = current == null ? () -> false : current::collapsed;
-			rows.add(setting instanceof IdSetSetting ids ? new IdSetRow(ids).collapsedWhen(hidden) : new SettingRow(setting).collapsedWhen(hidden));
+			addSection(rows, owner, entry.getKey(), entry.getValue(), null, module && COLLAPSED_BY_DEFAULT.contains(entry.getKey()), module);
+		}
+
+		if (!advancedSections.isEmpty()) {
+			List<Setting<?>> members = new ArrayList<>();
+			advancedSections.forEach(section -> members.addAll(sections.get(section)));
+			SectionHeader advanced = new SectionHeader(owner + "/" + ADVANCED, ADVANCED, members, true, null);
+			advanced.caption = "Update rates, limits and other tuning";
+			rows.add(advanced);
+			for (String section : advancedSections) {
+				addSection(rows, owner, section, sections.get(section), advanced, false, module);
+			}
 		}
 
 		return rows;
 	}
 
+	private static void addSection(List<Widget> rows, String owner, String title, List<Setting<?>> members, SectionHeader parent, boolean closed,
+			boolean module) {
+		SectionHeader header = null;
+		if (!title.isEmpty()) {
+			header = new SectionHeader(owner + "/" + title, title, members, closed, parent);
+			rows.add(header);
+		}
+
+		SectionHeader section = header;
+		List<Setting<?>> everyday = module ? members.stream().filter(setting -> !setting.isAdvanced()).toList() : members;
+		List<Setting<?>> extra = module ? members.stream().filter(Setting::isAdvanced).toList() : List.of();
+		BooleanSupplier hidden = section == null ? () -> parent != null && parent.collapsed() : section::hidesContent;
+		for (Setting<?> setting : everyday) {
+			rows.add(row(setting, hidden, () -> {
+				if (section != null) section.open();
+			}));
+		}
+
+		if (!extra.isEmpty()) {
+			MoreOptions more = new MoreOptions(owner + "/" + title + "/more", extra, hidden);
+			rows.add(more);
+			BooleanSupplier hiddenExtra = () -> hidden.getAsBoolean() || !more.open();
+			for (Setting<?> setting : extra) {
+				rows.add(row(setting, hiddenExtra, () -> {
+					if (section != null) section.open();
+					more.setOpen(true);
+				}));
+			}
+		}
+	}
+
+	private static Widget row(Setting<?> setting, BooleanSupplier hidden, Runnable reveal) {
+		return setting instanceof IdSetSetting ids ? new IdSetRow(ids).collapsedWhen(hidden) : new SettingRow(setting).collapsedWhen(hidden).revealedBy(reveal);
+	}
+
+	/**
+	 * Marks every fold that holds {@code setting} as open, before its rows are built (the command palette uses this to
+	 * jump straight to a setting).
+	 */
+	public static void revealLater(String owner, Setting<?> setting) {
+		String section = setting.section() != null ? setting.section() : GENERAL;
+		io.github.theamethyx.femboyclient.client.gui.GuiState.openSections.put(owner + "/" + section, true);
+		if (ADVANCED_SECTIONS.contains(section)) {
+			io.github.theamethyx.femboyclient.client.gui.GuiState.openSections.put(owner + "/" + ADVANCED, true);
+		}
+
+		if (setting.isAdvanced()) {
+			io.github.theamethyx.femboyclient.client.gui.GuiState.openSections.put(owner + "/" + section + "/more", true);
+		}
+	}
+
 	/**
 	 * Heading above a section of settings, with a chevron: a click collapses or opens the section (remembered while the
-	 * game runs). Hidden while none of its settings is visible.
+	 * game runs). Hidden while none of its settings is visible, or while the fold it sits in is closed.
 	 */
 	public static final class SectionHeader extends Widget {
 		private final String key;
 		private final String title;
 		private final List<Setting<?>> members;
 		private final boolean closedByDefault;
+		private final SectionHeader parent;
+		private String caption;
 
-		SectionHeader(String key, String title, List<Setting<?>> members, boolean closedByDefault) {
+		SectionHeader(String key, String title, List<Setting<?>> members, boolean closedByDefault, SectionHeader parent) {
 			this.key = key;
 			this.title = title;
 			this.members = members;
 			this.closedByDefault = closedByDefault;
+			this.parent = parent;
 		}
 
 		public String title() {
 			return title;
+		}
+
+		/** The fold this heading sits in (Advanced), or {@code null}. */
+		public SectionHeader parent() {
+			return parent;
 		}
 
 		public boolean collapsed() {
@@ -335,38 +467,53 @@ public class SettingRow extends Container {
 			io.github.theamethyx.femboyclient.client.gui.GuiState.openSections.put(key, !collapsed);
 		}
 
-		private boolean anyVisible() {
-			return members.stream().anyMatch(Setting::isVisible);
+		/** Opens this section and the fold around it. */
+		public void open() {
+			setCollapsed(false);
+			if (parent != null) {
+				parent.open();
+			}
+		}
+
+		/** Whether the settings under this heading are hidden (it, or the fold around it, is closed). */
+		boolean hidesContent() {
+			return collapsed() || parent != null && parent.collapsed();
+		}
+
+		private boolean shown() {
+			return (parent == null || !parent.collapsed()) && members.stream().anyMatch(Setting::isVisible);
 		}
 
 		@Override
 		public int preferredHeight(UiContext ui, int width) {
-			return anyVisible() ? 16 : 0;
+			return shown() ? (parent == null ? 20 : 15) : 0;
 		}
 
 		@Override
 		public void render(UiContext ui) {
-			if (!anyVisible()) {
+			if (!shown()) {
 				return;
 			}
 
 			boolean hot = ui.hovered(x, y, width, height);
 			boolean closed = collapsed();
 			if (hot) {
-				ui.roundRect(x, y + 1, width, height - 2, Theme.withAlpha(Theme.SURFACE_HOVER, 0.6f), 4);
 				ui.pointer();
 			}
 
-			ui.icon(closed ? Icon.CHEVRON_RIGHT : Icon.CHEVRON_DOWN, x + 2, y + 4, 8, hot ? Theme.TEXT : Theme.ACCENT);
-			String label = title.toUpperCase(java.util.Locale.ROOT);
-			ui.text(label, x + 13, y + 5, hot ? Theme.TEXT : Theme.ACCENT);
-			int lineX = x + 18 + ui.textWidth(label);
-			if (closed) {
-				String count = members.size() + (members.size() == 1 ? " setting" : " settings");
-				ui.textRight(count, x + width - 3, y + 5, Theme.TEXT_MUTED);
-				ui.rect(lineX, y + 9, x + width - lineX - ui.textWidth(count) - 10, 1, Theme.BORDER);
-			} else {
-				ui.rect(lineX, y + 9, x + width - lineX - 2, 1, Theme.BORDER);
+			int indent = parent == null ? 0 : 8;
+			int textY = y + height - 12;
+			ui.icon(closed ? Icon.CHEVRON_RIGHT : Icon.CHEVRON_DOWN, x + 2 + indent, textY, 8, hot ? Theme.TEXT : Theme.TEXT_MUTED);
+			int titleColor = parent == null ? Theme.TEXT : Theme.TEXT_SECONDARY;
+			ui.text(title, x + 13 + indent, textY + 1, hot ? Theme.ACCENT_STRONG : titleColor);
+			int after = x + 19 + indent + ui.textWidth(title);
+			String note = closed ? members.size() + (members.size() == 1 ? " setting" : " settings") : caption;
+			if (note != null && closed) {
+				ui.textScaled(note, after, textY + 1 + (8 - 8 * ui.small()) / 2, ui.small(), Theme.TEXT_MUTED);
+			}
+
+			if (parent == null) {
+				ui.rect(x + 2, y + height - 2, width - 4, 1, Theme.BORDER);
 			}
 
 			if (hot) {
@@ -376,11 +523,69 @@ public class SettingRow extends Container {
 
 		@Override
 		public boolean mouseClicked(UiContext ui, double mouseX, double mouseY, int button) {
-			if (!anyVisible() || !contains(mouseX, mouseY) || button != 0) {
+			if (!shown() || !contains(mouseX, mouseY) || button != 0) {
 				return false;
 			}
 
 			setCollapsed(!collapsed());
+			return true;
+		}
+	}
+
+	/** "More options (n)": shows or hides a section's advanced settings, right where they belong. */
+	public static final class MoreOptions extends Widget {
+		private final String key;
+		private final List<Setting<?>> members;
+		private final BooleanSupplier hidden;
+
+		MoreOptions(String key, List<Setting<?>> members, BooleanSupplier hidden) {
+			this.key = key;
+			this.members = members;
+			this.hidden = hidden;
+		}
+
+		public boolean open() {
+			return Boolean.TRUE.equals(io.github.theamethyx.femboyclient.client.gui.GuiState.openSections.get(key));
+		}
+
+		public void setOpen(boolean open) {
+			io.github.theamethyx.femboyclient.client.gui.GuiState.openSections.put(key, open);
+		}
+
+		private boolean shown() {
+			return !hidden.getAsBoolean() && members.stream().anyMatch(Setting::isVisible);
+		}
+
+		@Override
+		public int preferredHeight(UiContext ui, int width) {
+			return shown() ? 14 : 0;
+		}
+
+		@Override
+		public void render(UiContext ui) {
+			if (!shown()) {
+				return;
+			}
+
+			boolean hot = ui.hovered(x, y, width, height);
+			String label = open() ? "Fewer options" : "More options (" + members.size() + ")";
+			int color = hot ? Theme.ACCENT_STRONG : Theme.TEXT_SECONDARY;
+			ui.icon(open() ? Icon.CHEVRON_DOWN : Icon.CHEVRON_RIGHT, x + 6, y + 3, 7, color);
+			ui.text(label, x + 16, y + 3, color);
+			if (hot) {
+				ui.pointer();
+				ui.tooltip(this, open() ? "Hide the less common settings of this section." : "Show " + members.size()
+						+ " less common setting(s) of this section: " + String.join(", ", members.stream().map(Setting::name).toList()) + ".");
+			}
+		}
+
+		@Override
+		public boolean mouseClicked(UiContext ui, double mouseX, double mouseY, int button) {
+			if (!shown() || !contains(mouseX, mouseY) || button != 0) {
+				return false;
+			}
+
+			setOpen(!open());
 			return true;
 		}
 	}

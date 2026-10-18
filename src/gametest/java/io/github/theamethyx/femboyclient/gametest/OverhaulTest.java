@@ -290,13 +290,14 @@ final class OverhaulTest {
 		context.takeScreenshot("gui-v2-entity-esp");
 
 		SettingRow maxRow = ui.find(SettingRow.class, row -> row.setting().id().equals("max_entities"));
-		var header = ui.find(SettingRow.SectionHeader.class, h -> h.title().equals("Performance"));
+		// Tuning sections (Performance, Limits) sit inside one Advanced fold that starts closed.
+		var header = ui.find(SettingRow.SectionHeader.class, h -> h.title().equals("Advanced"));
 		boolean startsClosed = header != null && context.computeOnClient(client -> header.collapsed() && maxRow.preferredHeight(
 				((ClientScreen) client.screen).uiContext(), 200) == 0);
 		ui.click(header);
 		context.waitTicks(2);
 		boolean opened = context.computeOnClient(client -> !header.collapsed() && maxRow.preferredHeight(((ClientScreen) client.screen).uiContext(), 200) > 0);
-		report.check("Fine-tuning sections start collapsed and open with a click (Entity ESP 'Performance')", startsClosed && opened);
+		report.check("Tuning starts folded inside Advanced and opens with a click (Entity ESP 'Maximum highlights')", startsClosed && opened);
 
 		context.runOnClient(client -> maxRow.editValue(((ClientScreen) client.screen).uiContext()));
 		ui.key(GLFW.GLFW_KEY_BACKSPACE);
@@ -334,7 +335,7 @@ final class OverhaulTest {
 
 		set(context, ChunkBordersModule.class, "radius", 3.0);
 		ClientGameTest.showPage(context, "Visuals");
-		Button resetButton = ui.find(Button.class, b -> b.label().equals("Reset Visuals"));
+		Button resetButton = ui.find(Button.class, b -> b.label().equals("Reset all Visuals modules"));
 		ui.click(resetButton);
 		double afterOne = context.computeOnClient(client -> (Double) femboy().modules().get(ChunkBordersModule.class).settings().get("radius").get());
 		String armedLabel = resetButton.label();

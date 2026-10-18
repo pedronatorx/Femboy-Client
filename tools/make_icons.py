@@ -190,6 +190,8 @@ def _(): return union(outline(rrect(5.5,5.5,14,14,1.2), rrect(7.1,7.1,12.4,12.4,
 def _(): return poly([(1.5,2.5),(14.5,2.5),(9.4,8.4),(9.4,13.6),(6.6,12.2),(6.6,8.4)])
 @icon("compass")
 def _(): return union(ring(8,8,6.4,W), poly([(8,3.2),(9.6,8),(8,8.6),(6.4,8)]), outline(poly([(8,12.8),(9.6,8),(6.4,8)]), poly([(8,11.2),(8.7,8.6),(7.3,8.6)])))
+@icon("more")  # three dots: more actions
+def _(): return union(circle(3,8,1.6), circle(8,8,1.6), circle(13,8,1.6))
 
 def render(path):
     cols = 8; rows = math.ceil(len(ICONS)/cols)

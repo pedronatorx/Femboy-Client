@@ -139,15 +139,29 @@ final class FoundationTest {
 		ClientGameTest.openMenu(context);
 		ClientGameTest.showPage(context, "Profiles");
 		context.takeScreenshot("profiles-page");
-		Button export = ui.find(Button.class, button -> button.label().equals("Export"));
-		if (export != null) {
-			ui.click(export);
+		// Export is in the active profile's "⋯" menu: click the button, then the menu item, like a player.
+		var card = ui.find(io.github.theamethyx.femboyclient.client.gui.page.ProfilesPage.ProfileCard.class,
+				c -> c.name().equals(femboy().config().activeProfile()));
+		Button more = card == null ? null : context.computeOnClient(client -> card.descendants(Button.class).stream()
+				.filter(b -> b.label().isEmpty()).findFirst().orElse(null));
+		io.github.theamethyx.femboyclient.client.gui.widget.PopupMenu menu = null;
+		if (more != null) {
+			ui.click(more);
+			context.waitTicks(1);
+			menu = context.computeOnClient(client -> ((io.github.theamethyx.femboyclient.client.gui.ClientScreen) client.screen).uiContext().overlay()
+					instanceof io.github.theamethyx.femboyclient.client.gui.widget.PopupMenu popup ? popup : null);
+		}
+
+		if (menu != null) {
+			context.takeScreenshot("profiles-menu");
+			int index = menu.items().stream().map(io.github.theamethyx.femboyclient.client.gui.widget.PopupMenu.Item::label).toList().indexOf("Export");
+			ui.clickVirtual(menu.x() + 20, menu.y() + 3 + index * 15 + 7);
 			context.waitTicks(2);
 		}
 
 		String clipboard = context.computeOnClient(client -> client.keyboardHandler.getClipboard());
-		report.check("Profiles page: Export copies the profile to the clipboard", export != null && clipboard.contains("\"femboyClientProfile\""),
-				export == null ? "no Export button" : clipboard.substring(0, Math.min(80, clipboard.length())));
+		report.check("Profiles page: the profile's ⋯ menu has Export, which copies the profile to the clipboard",
+				menu != null && clipboard.contains("\"femboyClientProfile\""), menu == null ? "no menu" : clipboard.substring(0, Math.min(80, clipboard.length())));
 		ClientGameTest.closeMenu(context, ui);
 
 		context.runOnClient(client -> {

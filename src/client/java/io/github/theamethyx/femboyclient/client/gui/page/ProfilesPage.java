@@ -5,43 +5,65 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.IntPredicate;
-import java.util.function.Predicate;
 
 import net.minecraft.client.Minecraft;
 
+import io.github.theamethyx.femboyclient.client.gui.GuiState;
 import io.github.theamethyx.femboyclient.client.gui.Icon;
 import io.github.theamethyx.femboyclient.client.gui.Theme;
 import io.github.theamethyx.femboyclient.client.gui.UiContext;
 import io.github.theamethyx.femboyclient.client.gui.widget.Button;
 import io.github.theamethyx.femboyclient.client.gui.widget.Container;
+import io.github.theamethyx.femboyclient.client.gui.widget.Dialog;
 import io.github.theamethyx.femboyclient.client.gui.widget.Dropdown;
+import io.github.theamethyx.femboyclient.client.gui.widget.PopupMenu;
 import io.github.theamethyx.femboyclient.client.gui.widget.ScrollList;
 import io.github.theamethyx.femboyclient.client.gui.widget.SettingRow;
-import io.github.theamethyx.femboyclient.client.gui.widget.TextField;
 import io.github.theamethyx.femboyclient.client.gui.widget.Widget;
 import io.github.theamethyx.femboyclient.client.profile.Presets;
 import io.github.theamethyx.femboyclient.core.config.ConfigurationManager;
 import io.github.theamethyx.femboyclient.core.config.ProfileRule;
+import io.github.theamethyx.femboyclient.core.module.Module;
 
 /**
- * Profiles: switch, create, duplicate, import, export, delete and reset them, and the rules that switch profiles
- * automatically from the held item.
+ * Profiles, kept simple:
+ * <ul>
+ * <li>a row of actions: New profile, Import, Back to the previous profile;</li>
+ * <li>one card per profile: its name, whether it is active (a check mark and the word "Active"), a short description
+ * (your note, or which modules it turns on), and Preview / Use; everything else (duplicate, rename, export, note, reset,
+ * delete) is in its "⋯" menu;</li>
+ * <li>the preview of a switch: exactly which modules, keys and settings would change;</li>
+ * <li>folded away until opened: what a profile stores, recently used profiles, ready-made presets and automatic
+ * switching.</li>
+ * </ul>
+ * Deleting and resetting ask first and say what will be lost. Backups (restore points) are in Settings › General.
  */
 public class ProfilesPage extends Page {
-	private static final long CONFIRM_WINDOW_MS = 4000;
 	private static final IntPredicate NAME_CHARS = cp -> Character.isLetterOrDigit(cp) || cp == '-' || cp == '_';
 
 	private final ScrollList content;
+	private final Button create;
+	private final Button importButton;
+	private final Button back;
 	private String feedback;
 	private int feedbackColor;
-	private String pendingConfirm;
-	private long pendingConfirmAt;
 	/** Profile compared with the active one (the preview), or null. */
 	private String compareWith;
 
 	public ProfilesPage(UiContext ui) {
 		super(ui);
-		content = add(new ScrollList(ui, Theme.GAP, 0));
+		content = add(new ScrollList(ui, Theme.SPACE_S, 0));
+		create = add(new Button("New profile", Button.Style.PRIMARY, this::promptCreate));
+		create.icon(Icon.PLUS);
+		create.tooltip("Create a profile as a copy of the current one, without switching to it.");
+		importButton = add(new Button("Import", Button.Style.SECONDARY, this::promptImport));
+		importButton.icon(Icon.FOLDER);
+		importButton.tooltip("Create a profile from text someone shared (copied with Export). Every value is checked first.");
+		back = add(new Button(() -> "Back to " + (femboy.config().previousProfile() == null ? "previous" : femboy.config().previousProfile()),
+				Button.Style.GHOST, this::revert));
+		back.icon(Icon.UNDO);
+		back.enabledWhen(() -> femboy.config().previousProfile() != null);
+		back.tooltip("Switch back to the profile you used before this one (the current one is saved first).");
 	}
 
 	@Override
@@ -51,12 +73,12 @@ public class ProfilesPage extends Page {
 
 	@Override
 	public String subtitle() {
-		return "Each profile remembers which modules are on, their keys and all settings.";
+		return "A profile keeps which modules are on, their settings and keys, the HUD layout and the look.";
 	}
 
 	@Override
 	public Icon icon() {
-		return Icon.FOLDER;
+		return Icon.LAYERS;
 	}
 
 	@Override
@@ -66,8 +88,25 @@ public class ProfilesPage extends Page {
 
 	@Override
 	protected void onLayout() {
-		content.setBounds(x, y, width, height);
+		int bx = x;
+		for (Button button : List.of(create, importButton, back)) {
+			int w = button.naturalWidth(ui) + 10;
+			button.setBounds(bx, y, w, 16);
+			bx += w + Theme.SPACE_S;
+		}
+
+		content.setBounds(x, y + 16 + Theme.SPACE_M, width, height - 16 - Theme.SPACE_M);
 		rebuild();
+	}
+
+	@Override
+	public void render(UiContext ui) {
+		create.render(ui);
+		importButton.render(ui);
+		back.render(ui);
+		ui.pushClip(content.x(), content.y(), content.width(), content.height());
+		content.render(ui);
+		ui.popClip();
 	}
 
 	private void report(String message, boolean ok) {
@@ -75,20 +114,157 @@ public class ProfilesPage extends Page {
 		feedbackColor = ok ? Theme.SUCCESS : Theme.ERROR;
 	}
 
-	/** Two clicks within a few seconds confirm a destructive action. */
-	private boolean confirm(String action) {
-		if (action.equals(pendingConfirm) && System.currentTimeMillis() - pendingConfirmAt < CONFIRM_WINDOW_MS) {
-			pendingConfirm = null;
-			return true;
-		}
+	// ----- actions ---------------------------------------------------------------------------
 
-		pendingConfirm = action;
-		pendingConfirmAt = System.currentTimeMillis();
-		return false;
+	private void promptCreate() {
+		Dialog.prompt("New profile", "A copy of the current profile ('" + femboy.config().activeProfile() + "'). You stay on the current one; "
+				+ "switch with Use. Names use letters, digits, - and _.", "Profile name", "", 32, "Create", name -> {
+			String problem = femboy.config().createProfile(name);
+			if (problem == null) {
+				report("Created profile '" + name + "'.", true);
+				rebuild();
+			}
+
+			return problem;
+		}).allow(NAME_CHARS).open(ui);
 	}
 
-	private boolean confirming(String action) {
-		return action.equals(pendingConfirm) && System.currentTimeMillis() - pendingConfirmAt < CONFIRM_WINDOW_MS;
+	private void promptImport() {
+		Dialog.prompt("Import a profile", "Copy a shared profile (the text from Export) first, then choose a name for it here. Values this "
+				+ "version does not accept are replaced by defaults and listed.", "Name for the imported profile", "", 32, "Import from clipboard", name -> {
+			String clipboard = Minecraft.getInstance().keyboardHandler.getClipboard();
+			ConfigurationManager.ImportResult result = femboy.config().importProfile(name, clipboard);
+			if (result.error() != null) {
+				return result.error();
+			}
+
+			report("Imported '" + name + "'." + (result.warnings().isEmpty() ? "" : " Replaced by defaults: " + String.join(" ", result.warnings())), true);
+			rebuild();
+			return null;
+		}).allow(NAME_CHARS).open(ui);
+	}
+
+	private void revert() {
+		String previous = femboy.config().previousProfile();
+		String problem = femboy.config().revertProfile();
+		report(problem == null ? "Back to profile '" + previous + "'." : problem, problem == null);
+		rebuild();
+	}
+
+	private void use(String name) {
+		String problem = femboy.config().switchProfile(name);
+		compareWith = null;
+		report(problem == null ? "Switched to profile '" + name + "'." : problem, problem == null);
+		rebuild();
+	}
+
+	/** The "⋯" menu of a profile (public for automated UI tests). */
+	public PopupMenu menuFor(String name) {
+		ConfigurationManager config = femboy.config();
+		boolean active = name.equals(config.activeProfile());
+		List<PopupMenu.Item> items = new ArrayList<>();
+		items.add(PopupMenu.Item.of(Icon.COPY, "Duplicate", "Create a copy named '" + copyName(name) + "'.", () -> duplicate(name)));
+		items.add(PopupMenu.Item.of(Icon.CODE, "Rename...", "Give this profile another name; rules and history follow.", () -> promptRename(name)));
+		items.add(PopupMenu.Item.of(Icon.SAVE, "Export", "Copy it to the clipboard to share, and save it in the exports folder.", () -> export(name)));
+		items.add(PopupMenu.Item.of(Icon.INFO, "Edit description...", "A few words about what this profile is for.", () -> promptNote(name)));
+		if (active) {
+			items.add(new PopupMenu.Item(Icon.RESET, "Reset to defaults...", "Turn every module off and restore every setting and key.", true, true,
+					() -> confirmReset(name)));
+		} else {
+			items.add(new PopupMenu.Item(Icon.TRASH, "Delete...", "Remove this profile (a backup copy is kept).", true, true, () -> confirmDelete(name)));
+		}
+
+		return new PopupMenu(items);
+	}
+
+	private String copyName(String name) {
+		List<String> existing = femboy.config().profiles().stream().map(String::toLowerCase).toList();
+		String base = name.length() > 26 ? name.substring(0, 26) : name;
+		String candidate = base + "-copy";
+		for (int i = 2; existing.contains(candidate.toLowerCase()); i++) {
+			candidate = base + "-copy" + i;
+		}
+
+		return candidate;
+	}
+
+	private void duplicate(String name) {
+		String target = copyName(name);
+		String problem = femboy.config().duplicateProfile(name, target);
+		report(problem == null ? "Copied '" + name + "' as '" + target + "'." : problem, problem == null);
+		rebuild();
+	}
+
+	private void promptRename(String name) {
+		Dialog.prompt("Rename '" + name + "'", "Automatic switching rules and the history follow the new name.", "New name", name, 32, "Rename",
+				newName -> {
+					String problem = femboy.config().renameProfile(name, newName);
+					if (problem == null) {
+						report("Renamed '" + name + "' to '" + newName + "'.", true);
+						rebuild();
+					}
+
+					return problem;
+				}).allow(NAME_CHARS).open(ui);
+	}
+
+	private void export(String name) {
+		String text = femboy.config().exportProfile(name);
+		if (text == null) {
+			report("Profile '" + name + "' could not be read.", false);
+			rebuild();
+			return;
+		}
+
+		Minecraft.getInstance().keyboardHandler.setClipboard(text);
+		Path file = femboy.config().exportProfileToFile(name);
+		report("Copied '" + name + "' to the clipboard" + (file == null ? " (saving the file failed; see Settings › Developer)."
+				: " and saved it as exports/" + file.getFileName() + "."), true);
+		rebuild();
+	}
+
+	private void promptNote(String name) {
+		Dialog.prompt("Description of '" + name + "'", "A few words shown under the profile's name, such as \"Bedwars on my server\". Leave it "
+				+ "empty to show which modules it turns on instead.", "What is this profile for?", femboy.config().profileNote(name), 60, "Save", note -> {
+			femboy.config().setProfileNote(name, note);
+			rebuild();
+			return null;
+		}).open(ui);
+	}
+
+	private void confirmReset(String name) {
+		Dialog.confirm("Reset '" + name + "'?", "Every module of this profile is turned off and every setting and key goes back to its default. "
+				+ "Other profiles do not change. A restore point is made first (Settings › General), so this can be undone.", "Reset profile", true, () -> {
+			String problem = femboy.config().createRestorePoint("Before resetting profile '" + name + "'");
+			femboy.config().resetActiveProfile();
+			report("Reset '" + name + "': every module is off with default settings." + (problem == null ? " A restore point was made first."
+					: " (No restore point: " + problem + ")"), true);
+			rebuild();
+			return null;
+		}).open(ui);
+	}
+
+	private void confirmDelete(String name) {
+		List<String> enabled = femboy.config().enabledModules(name);
+		String what = enabled == null || enabled.isEmpty() ? "The profile and all its settings disappear from the list."
+				: "The profile disappears from the list, with all its settings and the " + enabled.size() + (enabled.size() == 1 ? " module" : " modules")
+						+ " it turns on.";
+		Dialog.confirm("Delete '" + name + "'?", what + " A backup copy of the file stays in the profiles folder.", "Delete profile", true, () -> {
+			String problem = femboy.config().deleteProfile(name);
+			if (problem == null) {
+				femboy.config().setProfileNote(name, null);
+				report("Deleted profile '" + name + "'.", true);
+				rebuild();
+			}
+
+			return problem;
+		}).open(ui);
+	}
+
+	// ----- content ---------------------------------------------------------------------------
+
+	private boolean folded(String key) {
+		return !Boolean.TRUE.equals(GuiState.openSections.get("profiles/" + key));
 	}
 
 	private void rebuild() {
@@ -96,79 +272,229 @@ public class ProfilesPage extends Page {
 		List<Widget> rows = new ArrayList<>();
 		rows.add(new Feedback());
 
-		rows.add(new ConfigPage.SectionTitle("Your profiles", "Use switches profiles; the current one is saved first. "
-				+ "Modules that are off in the profile you switch to are turned off."));
 		for (String profile : config.profiles()) {
-			rows.add(new ProfileRow(profile));
+			rows.add(new ProfileCard(profile));
 		}
 
 		if (compareWith != null && config.profileExists(compareWith)) {
 			addComparison(rows, config);
 		}
 
+		rows.add(new Fold("about", "What does a profile store?", null));
+		if (!folded("about")) {
+			rows.add(new ModulesPage.Message("Which modules are on, every module setting and key, the HUD layout, the appearance (theme, colors, "
+					+ "animations) and the performance mode. Not stored per profile: the menu scale, tooltips and help mode, rules and the timeline. "
+					+ "Switching saves the current profile first; modules that are off in the profile you switch to are turned off. Backups of "
+					+ "everything (restore points) are in Settings › General."));
+		}
+
 		List<ConfigurationManager.HistoryEntry> history = config.history();
 		if (!history.isEmpty()) {
-			rows.add(new ConfigPage.SectionTitle("Recently used profiles", "Newest first. 'Back' switches to that profile again (the current one is saved)."));
-			for (int i = 0; i < Math.min(5, history.size()); i++) {
-				rows.add(new HistoryRow(history.get(i)));
+			rows.add(new Fold("history", "Recently used", String.valueOf(Math.min(5, history.size()))));
+			if (!folded("history")) {
+				for (int i = 0; i < Math.min(5, history.size()); i++) {
+					ConfigurationManager.HistoryEntry entry = history.get(i);
+					rows.add(new ModulesPage.Message(entry.profile() + "  ·  left " + io.github.theamethyx.femboyclient.client.smart.SessionTimeline.time(entry.timeMillis())));
+				}
 			}
 		}
 
-		rows.add(new NameAndButton("New name for '" + config.activeProfile() + "'", "Rename", Icon.CODE,
-				"Rename the active profile. Switching rules and the history follow the new name.", name -> {
-			String old = config.activeProfile();
-			String problem = config.renameProfile(old, name);
-			report(problem == null ? "Renamed '" + old + "' to '" + name + "'." : problem, problem == null);
-			return problem == null;
-		}));
+		rows.add(new Fold("presets", "Ready-made presets", String.valueOf(Presets.all().size())));
+		if (!folded("presets")) {
+			rows.add(new ModulesPage.Message("Starting points for common play styles. Install creates a normal profile you can change; Reset puts "
+					+ "the preset's settings back. Presets only turn on information and visual modules."));
+			for (Presets.Preset preset : Presets.all()) {
+				rows.add(new PresetRow(preset));
+			}
+		}
 
-		rows.add(new NameAndButton("New profile name", "Create", Icon.PLUS,
-				"Create a profile as a copy of the current one, without switching to it.", name -> {
-			String problem = config.createProfile(name);
-			report(problem == null ? "Created profile '" + name + "'." : problem, problem == null);
-			return problem == null;
-		}));
-		rows.add(new NameAndButton("Name for the imported profile", "Import", Icon.FOLDER,
-				"Create a profile from text copied with Export. Every value is checked; invalid ones are replaced by defaults.", name -> {
-			String clipboard = Minecraft.getInstance().keyboardHandler.getClipboard();
-			ConfigurationManager.ImportResult result = config.importProfile(name, clipboard);
-			if (result.error() != null) {
-				report("Import failed: " + result.error(), false);
+		rows.add(new Fold("rules", "Automatic switching", config.profileRules().isEmpty() ? null : String.valueOf(config.profileRules().size())));
+		if (!folded("rules")) {
+			rows.add(new ModulesPage.Message("Switch profiles by what you hold or where you are. Rules are checked from the top; the first match "
+					+ "wins. When none matches, the current profile stays."));
+			rows.addAll(SettingRow.rowsFor(List.of(femboy.options().autoProfile, femboy.options().profileDelay, femboy.options().profileMessages)));
+			String problem = femboy.profileSwitcher().lastProblem();
+			if (problem != null) {
+				rows.add(new ModulesPage.Message("Last automatic switch failed: " + problem));
+			}
+
+			List<ProfileRule> rules = config.profileRules();
+			for (int i = 0; i < rules.size(); i++) {
+				rows.add(new RuleRow(i));
+			}
+
+			if (rules.isEmpty()) {
+				rows.add(new ModulesPage.Message("No rules yet. Add one, then choose what you hold and which profile to use."));
+			}
+
+			rows.add(new AddRuleRow());
+		}
+
+		content.setChildren(rows);
+	}
+
+	/** A heading that opens and closes the rows under it. */
+	private final class Fold extends Widget {
+		private final String key;
+		private final String title;
+		private final String count;
+
+		Fold(String key, String title, String count) {
+			this.key = key;
+			this.title = title;
+			this.count = count;
+		}
+
+		@Override
+		public int preferredHeight(UiContext ui, int width) {
+			return 20;
+		}
+
+		@Override
+		public void render(UiContext ui) {
+			boolean hot = hovered(ui);
+			boolean open = !folded(key);
+			ui.icon(open ? Icon.CHEVRON_DOWN : Icon.CHEVRON_RIGHT, x + 2, y + 7, 8, hot ? Theme.TEXT : Theme.TEXT_MUTED);
+			ui.text(title, x + 13, y + 8, hot ? Theme.ACCENT_STRONG : Theme.TEXT);
+			if (count != null) {
+				ui.text(count, x + 19 + ui.textWidth(title), y + 8, Theme.TEXT_MUTED);
+			}
+
+			ui.rect(x + 2, y + height - 2, width - 4, 1, Theme.BORDER);
+			if (hot) {
+				ui.pointer();
+			}
+		}
+
+		@Override
+		public boolean mouseClicked(UiContext ui, double mouseX, double mouseY, int button) {
+			if (button != 0 || !contains(mouseX, mouseY)) {
 				return false;
 			}
 
-			report("Imported '" + name + "'." + (result.warnings().isEmpty() ? ""
-					: " Replaced by defaults: " + String.join(" ", result.warnings())), true);
+			GuiState.openSections.put("profiles/" + key, folded(key));
+			rebuild();
 			return true;
-		}));
-		rows.add(new ResetRow());
+		}
+	}
 
-		rows.add(new ConfigPage.SectionTitle("Ready-made presets", "Starting points for common PvP styles. Installing one creates a "
-				+ "normal profile you can change, copy and export; Reset puts the preset's settings back. Presets only turn on "
-				+ "information and visual modules."));
-		for (Presets.Preset preset : Presets.all()) {
-			rows.add(new PresetRow(preset));
+	/** One profile: name, active state, description, and its actions. */
+	public final class ProfileCard extends Container {
+		private final String name;
+		private final boolean active;
+		private final String description;
+		private final Button use;
+		private final Button preview;
+		private final Button more;
+
+		ProfileCard(String name) {
+			this.name = name;
+			this.active = name.equals(femboy.config().activeProfile());
+			this.description = describe(name);
+			use = add(new Button("Use", Button.Style.PRIMARY, () -> use(name)));
+			use.tooltip("Save the current profile, then switch to '" + name + "'.");
+			preview = add(new Button(() -> name.equals(compareWith) ? "Hide preview" : "Preview", Button.Style.GHOST, () -> {
+				compareWith = name.equals(compareWith) ? null : name;
+				rebuild();
+			}));
+			preview.tooltip("See exactly which modules, keys and settings would change if you switched to it.");
+			more = add(new Button("", Button.Style.GHOST, () -> menuFor(name).openAt(ui, this.more())).icon(Icon.MORE));
+			more.tooltip("More: duplicate, rename, export, description, " + (active ? "reset" : "delete") + ".");
 		}
 
-		rows.add(new ConfigPage.SectionTitle("Automatic switching", "Rules are checked from the top; the first one that matches "
-				+ "chooses the profile. When none matches, the current profile stays."));
-		rows.addAll(SettingRow.rowsFor(List.of(femboy.options().autoProfile, femboy.options().profileDelay, femboy.options().profileMessages)));
-		String problem = femboy.profileSwitcher().lastProblem();
-		if (problem != null) {
-			rows.add(new ModulesPage.Message("Last automatic switch failed: " + problem));
+		private Button more() {
+			return more;
 		}
 
-		List<ProfileRule> rules = config.profileRules();
-		for (int i = 0; i < rules.size(); i++) {
-			rows.add(new RuleRow(i));
+		public String name() {
+			return name;
 		}
 
-		if (rules.isEmpty()) {
-			rows.add(new ModulesPage.Message("No rules yet. Add one, then choose what you hold and which profile to use."));
+		@Override
+		public int preferredHeight(UiContext ui, int width) {
+			return 32;
 		}
 
-		rows.add(new AddRuleRow());
-		content.setChildren(rows);
+		@Override
+		protected void onLayout() {
+			int right = x + width - 6;
+			more.setBounds(right - 16, y + 8, 16, 16);
+			right -= 16 + Theme.SPACE_S;
+			if (!active) {
+				int useWidth = use.naturalWidth(ui) + 12;
+				use.setBounds(right - useWidth, y + 8, useWidth, 16);
+				right -= useWidth + Theme.SPACE_S;
+				int previewWidth = Math.max(50, preview.naturalWidth(ui) + 8);
+				preview.setBounds(right - previewWidth, y + 8, previewWidth, 16);
+			}
+		}
+
+		@Override
+		public void render(UiContext ui) {
+			onLayout();
+			ui.roundRect(x, y, width, height, active ? Theme.SURFACE_ACTIVE : Theme.SURFACE, Theme.RADIUS_PANEL);
+			int textRight = (active ? more.x() : preview.x()) - 8;
+			int left = x + 10;
+			if (active) {
+				ui.roundRect(x, y + 6, 2, height - 12, Theme.ACCENT, 1);
+				ui.icon(Icon.CHECK, left, y + 6, 9, Theme.ACCENT_STRONG);
+				left += 13;
+			}
+
+			ui.textClipped(name, left, y + 6, textRight - left - (active ? 46 : 0), Theme.TEXT);
+			if (active) {
+				int nameWidth = Math.min(ui.textWidth(name), textRight - left - 46);
+				ui.roundRect(left + nameWidth + 6, y + 5, 38, 10, Theme.withAlpha(Theme.ACCENT, 0.2f), Theme.RADIUS_CONTROL);
+				ui.text("Active", left + nameWidth + 9, y + 6, Theme.ACCENT_STRONG);
+			}
+
+			ui.textScaled(ui.ellipsize(description, Math.round((textRight - x - 10) / ui.small())), x + 10, y + 19, ui.small(), Theme.TEXT_MUTED);
+			if (ui.hovered(x, y, textRight - x, height)) {
+				ui.tooltip(this, name + (active ? " (active)" : "") + "\n" + description);
+			}
+
+			more.render(ui);
+			if (!active) {
+				use.render(ui);
+				preview.render(ui);
+			}
+		}
+
+		@Override
+		public boolean mouseClicked(UiContext ui, double mouseX, double mouseY, int button) {
+			if (more.mouseClicked(ui, mouseX, mouseY, button)) {
+				return true;
+			}
+
+			return !active && (use.mouseClicked(ui, mouseX, mouseY, button) || preview.mouseClicked(ui, mouseX, mouseY, button));
+		}
+	}
+
+	/** The user's note, or which modules the profile turns on. */
+	private String describe(String name) {
+		String note = femboy.config().profileNote(name);
+		if (!note.isEmpty()) {
+			return note;
+		}
+
+		List<String> enabled = femboy.config().enabledModules(name);
+		if (enabled == null) {
+			return "Could not be read.";
+		}
+
+		if (enabled.isEmpty()) {
+			return "No modules on.";
+		}
+
+		List<String> names = new ArrayList<>();
+		for (String id : enabled) {
+			Module module = femboy.modules().get(id);
+			if (module != null) {
+				names.add(module.name());
+			}
+		}
+
+		return enabled.size() + (enabled.size() == 1 ? " module on: " : " modules on: ") + String.join(", ", names);
 	}
 
 	/** The preview: what switching to {@link #compareWith} would change, with buttons to apply or close. */
@@ -231,12 +557,7 @@ public class ProfilesPage extends Page {
 
 	private final class PreviewActions extends Container {
 		PreviewActions(String target) {
-			add(new Button("Switch to " + target, Button.Style.PRIMARY, () -> {
-				String problem = femboy.config().switchProfile(target);
-				compareWith = null;
-				report(problem == null ? "Switched to profile '" + target + "'." : problem, problem == null);
-				rebuild();
-			}).icon(Icon.CHECK));
+			add(new Button("Switch to " + target, Button.Style.PRIMARY, () -> use(target)).icon(Icon.CHECK));
 			add(new Button("Close preview", Button.Style.SECONDARY, () -> {
 				compareWith = null;
 				rebuild();
@@ -253,38 +574,6 @@ public class ProfilesPage extends Page {
 			int half = (width - Theme.GAP) / 2;
 			children.get(0).setBounds(x, y, half, 16);
 			children.get(1).setBounds(x + half + Theme.GAP, y, width - half - Theme.GAP, 16);
-		}
-	}
-
-	private final class HistoryRow extends Container {
-		private final ConfigurationManager.HistoryEntry entry;
-
-		HistoryRow(ConfigurationManager.HistoryEntry entry) {
-			this.entry = entry;
-			add(new Button("Back", Button.Style.SECONDARY, () -> {
-				String problem = femboy.config().switchProfile(entry.profile());
-				report(problem == null ? "Back to profile '" + entry.profile() + "'." : problem, problem == null);
-				rebuild();
-			}).icon(Icon.UNDO)).tooltip("Switch to '" + entry.profile() + "' again.");
-		}
-
-		@Override
-		public int preferredHeight(UiContext ui, int width) {
-			return 18;
-		}
-
-		@Override
-		protected void onLayout() {
-			children.get(0).setBounds(x + width - 54, y + 1, 52, 16);
-		}
-
-		@Override
-		public void render(UiContext ui) {
-			ui.roundRect(x, y, width, height, Theme.SURFACE);
-			ui.icon(Icon.CLOCK, x + 6, y + 5, 8, Theme.TEXT_MUTED);
-			ui.textClipped(entry.profile(), x + 19, y + 5, width - 140, Theme.TEXT_SECONDARY);
-			ui.textRight("left " + io.github.theamethyx.femboyclient.client.smart.SessionTimeline.time(entry.timeMillis()), x + width - 60, y + 5, Theme.TEXT_MUTED);
-			super.render(ui);
 		}
 	}
 
@@ -312,195 +601,6 @@ public class ProfilesPage extends Page {
 		}
 	}
 
-	private final class ProfileRow extends Container {
-		private final String name;
-		private final boolean active;
-		private final Button use;
-		private final Button duplicate;
-		private final Button export;
-		private final Button delete;
-		private final Button preview;
-
-		ProfileRow(String name) {
-			this.name = name;
-			this.active = name.equals(femboy.config().activeProfile());
-			use = add(new Button("Use", Button.Style.SECONDARY, () -> {
-				String problem = femboy.config().switchProfile(name);
-				report(problem == null ? "Switched to profile '" + name + "'." : problem, problem == null);
-				rebuild();
-			}));
-			use.tooltip("Save the current profile, then load '" + name + "'.");
-			duplicate = add(new Button("Copy", Button.Style.GHOST, this::duplicate));
-			duplicate.tooltip("Create a copy of this profile named '" + copyName() + "'.");
-			export = add(new Button("Export", Button.Style.GHOST, this::export));
-			export.tooltip("Copy this profile to the clipboard to share it, and save it in the exports folder.");
-			delete = add(new Button(() -> confirming("delete:" + name) ? "Confirm" : "", Button.Style.DANGER, () -> {
-				if (!confirm("delete:" + name)) {
-					return;
-				}
-
-				String problem = femboy.config().deleteProfile(name);
-				report(problem == null ? "Deleted profile '" + name + "'." : problem, problem == null);
-				rebuild();
-			}).icon(Icon.TRASH));
-			delete.tooltip("Delete this profile. Click twice to confirm. A backup copy stays in the profiles folder.");
-			preview = add(new Button("Preview", Button.Style.GHOST, () -> {
-				compareWith = name.equals(compareWith) ? null : name;
-				rebuild();
-			}));
-			preview.tooltip("Compare with the active profile: exactly which modules, keys and settings would change. You can switch from there.");
-		}
-
-		private String copyName() {
-			List<String> existing = femboy.config().profiles().stream().map(String::toLowerCase).toList();
-			String base = name.length() > 26 ? name.substring(0, 26) : name;
-			String candidate = base + "-copy";
-			for (int i = 2; existing.contains(candidate.toLowerCase()); i++) {
-				candidate = base + "-copy" + i;
-			}
-
-			return candidate;
-		}
-
-		private void duplicate() {
-			String target = copyName();
-			String problem = femboy.config().duplicateProfile(name, target);
-			report(problem == null ? "Copied '" + name + "' as '" + target + "'." : problem, problem == null);
-			rebuild();
-		}
-
-		private void export() {
-			String text = femboy.config().exportProfile(name);
-			if (text == null) {
-				report("Profile '" + name + "' could not be read.", false);
-				return;
-			}
-
-			Minecraft.getInstance().keyboardHandler.setClipboard(text);
-			Path file = femboy.config().exportProfileToFile(name);
-			report("Copied '" + name + "' to the clipboard" + (file == null ? " (saving the file failed; see Diagnostics)."
-					: " and saved it as exports/" + file.getFileName() + "."), true);
-			rebuild();
-		}
-
-		@Override
-		public int preferredHeight(UiContext ui, int width) {
-			return 20;
-		}
-
-		@Override
-		protected void onLayout() {
-			int right = x + width - 3;
-			if (!active) {
-				int deleteWidth = confirming("delete:" + name) ? 50 : 18;
-				delete.setBounds(right - deleteWidth, y + 3, deleteWidth, 14);
-				right -= deleteWidth + Theme.GAP;
-			}
-
-			int exportWidth = Math.max(44, export.naturalWidth(ui) + 4);
-			export.setBounds(right - exportWidth, y + 3, exportWidth, 14);
-			right -= exportWidth + Theme.GAP;
-			duplicate.setBounds(right - 34, y + 3, 34, 14);
-			right -= 34 + Theme.GAP;
-			if (!active) {
-				int previewWidth = Math.max(50, preview.naturalWidth(ui) + 4);
-				preview.setBounds(right - previewWidth, y + 3, previewWidth, 14);
-				right -= previewWidth + Theme.GAP;
-			}
-
-			use.setBounds(right - 30, y + 3, 30, 14);
-		}
-
-		@Override
-		public void render(UiContext ui) {
-			onLayout();
-			ui.roundRect(x, y, width, height, active ? Theme.SURFACE_ACTIVE : Theme.SURFACE);
-			if (active) {
-				ui.rect(x, y + 3, 2, height - 6, Theme.ACCENT);
-				ui.icon(Icon.CHECK, x + 7, y + 6, 8, Theme.ACCENT);
-			} else {
-				ui.icon(Icon.FOLDER, x + 7, y + 6, 8, Theme.TEXT_MUTED);
-			}
-
-			ui.textClipped(name, x + 20, y + 6, Math.max(20, use.x() - x - 70), active ? Theme.TEXT : Theme.TEXT_SECONDARY);
-			if (active) {
-				ui.textRight("Active", use.x() - 6, y + 6, Theme.ACCENT_STRONG);
-				duplicate.render(ui);
-				export.render(ui);
-			} else {
-				super.render(ui);
-			}
-		}
-
-		@Override
-		public boolean mouseClicked(UiContext ui, double mouseX, double mouseY, int button) {
-			if (active) {
-				return duplicate.mouseClicked(ui, mouseX, mouseY, button) || export.mouseClicked(ui, mouseX, mouseY, button);
-			}
-
-			return super.mouseClicked(ui, mouseX, mouseY, button);
-		}
-	}
-
-	private final class NameAndButton extends Container {
-		private final TextField field;
-		private final Button button;
-
-		NameAndButton(String placeholder, String label, Icon icon, String tooltip, Predicate<String> action) {
-			field = add(new TextField(placeholder, 32).allow(NAME_CHARS));
-			Runnable submit = () -> {
-				if (action.test(field.text().trim())) {
-					field.setText("");
-				}
-
-				rebuild();
-			};
-			field.onSubmit(text -> submit.run());
-			button = add(new Button(label, Button.Style.PRIMARY, submit).icon(icon));
-			button.enabledWhen(() -> !field.text().isBlank());
-			button.tooltip(tooltip);
-		}
-
-		@Override
-		public int preferredHeight(UiContext ui, int width) {
-			return 15;
-		}
-
-		@Override
-		protected void onLayout() {
-			int buttonWidth = 58;
-			field.setBounds(x, y, width - buttonWidth - Theme.GAP, 15);
-			button.setBounds(x + width - buttonWidth, y, buttonWidth, 15);
-		}
-	}
-
-	private final class ResetRow extends Container {
-		private final Button reset;
-
-		ResetRow() {
-			reset = add(new Button(() -> confirming("reset") ? "Click again to reset '" + femboy.config().activeProfile() + "'"
-					: "Reset the current profile", Button.Style.DANGER, () -> {
-				if (confirm("reset")) {
-					femboy.config().resetActiveProfile();
-					report("Reset '" + femboy.config().activeProfile() + "': every module is off with default settings.", true);
-					rebuild();
-				}
-			}).icon(Icon.RESET));
-			reset.tooltip("Turn every module off and restore all settings and keys of the current profile to their defaults. "
-					+ "Other profiles are not changed. Click twice to confirm.");
-		}
-
-		@Override
-		public int preferredHeight(UiContext ui, int width) {
-			return 16;
-		}
-
-		@Override
-		protected void onLayout() {
-			reset.setBounds(x, y, width, 16);
-		}
-	}
-
 	private final class PresetRow extends Container {
 		private final Presets.Preset preset;
 		private final Button install;
@@ -509,9 +609,8 @@ public class ProfilesPage extends Page {
 
 		PresetRow(Presets.Preset preset) {
 			this.preset = preset;
-			install = add(new Button(() -> !exists() ? "Install" : confirming("preset:" + preset.profile()) ? "Confirm" : "Reset",
-					Button.Style.SECONDARY, this::install));
-			install.tooltip(() -> exists() ? "Put this preset's original settings back into '" + preset.profile() + "'. Click twice to confirm."
+			install = add(new Button(() -> !exists() ? "Install" : "Reset", Button.Style.SECONDARY, this::install));
+			install.tooltip(() -> exists() ? "Put this preset's original settings back into '" + preset.profile() + "' (asks first)."
 					: "Create the profile '" + preset.profile() + "' from this preset (without switching to it).");
 			use = add(new Button("Use", Button.Style.PRIMARY, () -> {
 				String problem = femboy.config().switchProfile(preset.profile());
@@ -545,10 +644,15 @@ public class ProfilesPage extends Page {
 			if (!exists()) {
 				problem = femboy.config().createProfileFrom(preset.profile(), preset.modules());
 				report(problem == null ? "Installed '" + preset.title() + "' as profile '" + preset.profile() + "'." : problem, problem == null);
-			} else if (confirm("preset:" + preset.profile())) {
-				problem = femboy.config().overwriteProfile(preset.profile(), preset.modules());
-				report(problem == null ? "Reset '" + preset.profile() + "' to the " + preset.title() + " preset." : problem, problem == null);
 			} else {
+				Dialog.confirm("Reset '" + preset.profile() + "'?", "Its modules, settings and keys are replaced by the " + preset.title()
+						+ " preset's. Your changes to this profile are lost; a restore point is made first, so this can be undone.", "Reset to preset",
+						true, () -> {
+					String result = femboy.config().overwriteProfile(preset.profile(), preset.modules());
+					report(result == null ? "Reset '" + preset.profile() + "' to the " + preset.title() + " preset." : result, result == null);
+					rebuild();
+					return result;
+				}).open(ui);
 				return;
 			}
 
@@ -572,8 +676,8 @@ public class ProfilesPage extends Page {
 		public void render(UiContext ui) {
 			onLayout();
 			boolean active = preset.profile().equals(femboy.config().activeProfile());
-			ui.roundRect(x, y, width, height, active ? Theme.SURFACE_ACTIVE : Theme.SURFACE);
-			ui.icon(Icon.STAR, x + 6, y + 7, 8, exists() ? Theme.ACCENT : Theme.TEXT_MUTED);
+			ui.roundRect(x, y, width, height, active ? Theme.SURFACE_ACTIVE : Theme.withAlpha(Theme.SURFACE, 0.6f), Theme.RADIUS_CONTROL);
+			ui.icon(exists() ? Icon.CHECK : Icon.STAR, x + 6, y + 7, 8, exists() ? Theme.ACCENT : Theme.TEXT_MUTED);
 			ui.textClipped(preset.title(), x + 18, y + 7, install.x() - x - 24, Theme.TEXT);
 			ui.wrapped(preset.description(), x + 6, y + 20, width - 12, Theme.TEXT_MUTED);
 			super.render(ui);
