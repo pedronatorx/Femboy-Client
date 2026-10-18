@@ -1,6 +1,20 @@
-# Verification report: Femboy Client 1.1.0
+# Verification report: Femboy Client 1.2.0
 
 Date: 2026-10-18. Sections up to "Servers and stability" were written for 0.4.0 and still pass; later additions are in the sections after it, ending with 0.9.0.
+
+## 1.2.0 (2026-10-18): module ecosystem expansion
+
+Commands: `./gradlew build`; `rm -rf build/run/clientGameTest/config/femboyclient && ./scripts/run-client-tests.sh` (in-game, Xvfb, Mesa llvmpipe); `FEMBOY_ONLY=natural ./scripts/run-client-tests.sh` runs only the natural-world part (used while developing Ore Simulation); benchmark `./scripts/run-benchmark.sh` for 1.2.0 and 1.1.0 (temporary worktree of the 1.1.0 commit), one after the other.
+
+- `./gradlew build`: BUILD SUCCESSFUL. Unit tests: 143, 0 failures (no new unit tests; the new code needs the game and is covered in-game).
+- In-game suite: **Result: PASSED (342 checks)** on the final code, and on the run before the last two small changes (empty slots no longer dimmed by Inventory Search; the Minimap skips redraws while standing still). New checks:
+  - Ore Simulation (natural world, seed 8675309): predicts from the seed with no failed feature; every chunk of the area compared; **near spawn 7,194 predictions, 96.1% precision, 99.0% recall** (coal 97.5/97.3, iron 96.8/100, copper 99.9/99.8, gold 87.2/96.9, redstone 94.3/99.9, lapis 96.1/100, diamond 88.0/96.8 %); **in a control area generated fresh far from spawn, 9,233 of 9,233 predictions right and 9,233 of 9,234 real ores predicted**; the module marks loaded predictions verified and draws them; a running simulation can be cancelled; the server command is registered and off by default; on the dedicated test server (a private address) the module is unavailable and says why.
+  - Look At names a block, its mod, harvest and break time, and a creature's health; Cooldowns shows an ender pearl's seconds left and drops it when done; the Minimap draws and redraws; Inventory Search adds its box, typing (even E) keeps the inventory open, and it matches diamonds, a shulker box containing diamonds, and not dirt; the menu opens over the title screen the way Mod Menu's Configure does and closing it returns there; 82 modules are registered.
+- Ore Simulation accuracy, how it got there: the first version emulated only bedrock and deepslate and missed whole veins of four features (diamond, buried diamond, lower redstone, lower coal at 19–51%). Comparing the private terrain with the real chunks block by block showed the terrain matched; running vanilla's own `applyBiomeDecoration` on the same private chunks gave exactly the same predictions as the simulator; printing one chunk's predicted and real veins showed whole veins missing. The cause was the simulator's write check refusing feature origins below the world, which vanilla accepts; fixing it, then using vanilla's full surface builder instead of three emulated rules, took the fresh-area result to 100%. Near spawn the remaining differences are where the world has a mineshaft and other features before the ore step, which are not simulated.
+- One run crashed in Fabric's client-test network synchronizer during a `waitTicks` ("Detected interfacing with packets at a lower level", no Femboy Client code in the stack), the same harness instability recorded for 1.1.0; the three runs after it of the same code did not crash.
+- Benchmark: see `docs/benchmarks/README.md` (1.2.0 against 1.1.0). The shared modules are within run-to-run variation; the Minimap costs about 0.2 ms per tick when on.
+- Screenshots: `docs/screenshots/0109_hud-minimap.png`, `0110_inventory-search.png`, `0112_world-ore-simulation.png`.
+- **Not tested:** Mod Menu actually installed (only the screen it opens, from the title screen); Sodium, Iris or other rendering mods together with Femboy Client; the server command's comparison on a dedicated server with the config enabled (registration and the default-off switch were tested); the Minimap after a resource-pack reload; Ore Simulation in the Nether or the End (the code handles any noise-generator dimension; only the Overworld was measured); a real GPU.
 
 ## 1.1.0 (2026-10-18): interface redesign
 

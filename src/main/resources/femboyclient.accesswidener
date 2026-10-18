@@ -1,0 +1,5 @@
+accessWidener v2 named
+# Ore Simulation runs vanilla's own ore features in vanilla's order, which needs the generator's feature index per step
+# and the fluid picker the noise generator fills aquifers with.
+accessible field net/minecraft/world/level/chunk/ChunkGenerator featuresPerStep Ljava/util/function/Supplier;
+accessible field net/minecraft/world/level/levelgen/NoiseBasedChunkGenerator globalFluidPicker Ljava/util/function/Supplier;

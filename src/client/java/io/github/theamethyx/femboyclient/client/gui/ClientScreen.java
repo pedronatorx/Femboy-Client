@@ -69,9 +69,26 @@ public class ClientScreen extends Screen {
 	private int current;
 
 	private boolean paletteOnOpen;
+	private net.minecraft.client.gui.screens.Screen parent;
 
 	public ClientScreen() {
 		super(Component.literal("Femboy Client"));
+	}
+
+	/** The menu opened from another screen (Mod Menu's list, say); closing it goes back there. */
+	public static ClientScreen withParent(net.minecraft.client.gui.screens.Screen parent) {
+		ClientScreen screen = new ClientScreen();
+		screen.parent = parent;
+		return screen;
+	}
+
+	@Override
+	public void onClose() {
+		if (parent != null) {
+			minecraft.setScreen(parent);
+		} else {
+			super.onClose();
+		}
 	}
 
 	/** The menu with the command palette already open (the palette's own key). */

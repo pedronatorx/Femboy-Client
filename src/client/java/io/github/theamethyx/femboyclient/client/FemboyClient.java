@@ -115,6 +115,7 @@ public final class FemboyClient implements ClientModInitializer {
 		io.github.theamethyx.femboyclient.client.modules.AutoReconnectModule.registerEvents();
 		io.github.theamethyx.femboyclient.client.modules.InventorySorterModule.registerEvents();
 		io.github.theamethyx.femboyclient.client.modules.ChestOrganizerModule.registerEvents();
+		io.github.theamethyx.femboyclient.client.modules.InventorySearchModule.registerEvents();
 		io.github.theamethyx.femboyclient.client.modules.ShulkerPreviewModule.registerTooltip();
 		io.github.theamethyx.femboyclient.client.modules.MentionAlertsModule.registerEvents();
 		WorldRenderEvents.START_MAIN.register(context -> performance.markFrame(System.nanoTime()));

@@ -30,6 +30,7 @@ import io.github.theamethyx.femboyclient.client.modules.TrackersModule;
 import io.github.theamethyx.femboyclient.client.modules.FreeCameraModule;
 import io.github.theamethyx.femboyclient.client.modules.GeodeAnalyzerModule;
 import io.github.theamethyx.femboyclient.client.modules.PlayerAlertModule;
+import io.github.theamethyx.femboyclient.client.modules.OreSimulationModule;
 import io.github.theamethyx.femboyclient.client.modules.StructureFinderModule;
 import io.github.theamethyx.femboyclient.client.modules.PlayerFinderModule;
 import io.github.theamethyx.femboyclient.client.modules.StorageEspModule;
@@ -97,6 +98,9 @@ final class MultiplayerTest {
 			String structures = context.computeOnClient(client -> femboy().modules().availability(femboy().modules().get(StructureFinderModule.class)).reason());
 			report.check("Structure Finder is unavailable on a server and says why (no world seed)", structures.equals(StructureFinderModule.NEEDS_SEED),
 					structures);
+			String ores = context.computeOnClient(client -> femboy().modules().availability(femboy().modules().get(OreSimulationModule.class)).reason());
+			report.check("Ore Simulation is unavailable on a server, even one in your own network, and says why", ores.equals(OreSimulationModule.NEEDS_SINGLEPLAYER),
+					ores);
 
 			// Last, because it leaves the server: the test connection is then already closed by the client.
 			autoLeave(context, server, base, report);

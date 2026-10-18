@@ -37,7 +37,9 @@ final class BenchmarkTest {
 	static final List<String> MODULES = List.of("entity_esp", "storage_esp", "block_esp|ore_esp", "trackers", "entity_outlines", "hitboxes",
 			"light_level", "chunk_borders", "player_finder", "trajectories", "block_highlight", "coordinates_hud", "performance_hud",
 			"module_list_hud", "keystrokes", "movement_info", "combat_info", "target_hud", "health_armor", "effects", "item_counters",
-			"explosion_info", "weapon_info", "player_alert", "waypoints", "block_counter", "elytra_info", "death_coordinates");
+			"explosion_info", "weapon_info", "player_alert", "waypoints", "block_counter", "elytra_info", "death_coordinates",
+			// Added in 1.2.0; older builds report them as "not in this build".
+			"minimap", "look_info", "cooldowns");
 	static final int WARMUP_TICKS = 100;
 	static final int ROUND_TICKS = 300;
 	static final int ROUNDS = 3;

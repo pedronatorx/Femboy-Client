@@ -2,6 +2,20 @@
 
 ## Limitations
 
+- **Ore Simulation.**
+  - Singleplayer only, and only for dimensions with the normal noise generator (not flat, void or custom generators).
+  - Not simulated: features before the ore step (lakes, geodes, dungeons, fossils), structures (mineshafts, trial chambers...) and the terrain they adapt, and the order in which the world generated neighbouring chunks. Ores near those can be missing, moved or extra; that is why predictions stay *estimated* until compared.
+  - Modded ore features run only if they use vanilla's ore feature classes; others are skipped and counted as failed.
+  - Comparison reads the chunks your client has loaded; mined ores count as *not there*.
+  - A 5×5-chunk area takes about 2–8 s on one background thread (measured 2.3–7.5 s on the test machine under memory pressure).
+  - SeedcrackerX is not integrated; the panel only says whether it is installed.
+- **Server command** `/femboyclient oresim compare` reports totals only and needs operator permission plus the config switch; it was tested in the integrated server (registration and the default-off switch), not on a dedicated server.
+- **Minimap.** Shows only loaded chunks and keeps nothing on disk (no world map). The cave layer looks from just above your head to 32 blocks below. A resource-pack reload while it is on was not tested.
+- **Look At** uses only what the client knows: no container contents, no server-side data. Break time is for your state at that moment (in the air, under water, Haste or Mining Fatigue), as the game computes it.
+- **Cooldowns** shows seconds for cooldowns that started while the client was running; one already running when you joined shows a percentage until it ends.
+- **Inventory Search** does not apply to the creative inventory (it has its own search). Its box is placed left of the container, or above it when there is no room.
+- **Mod Menu integration** was checked by opening the menu from the title screen the way Mod Menu does; it was not run with Mod Menu installed.
+- **Sodium, Iris and other rendering mods** were not tested with Femboy Client. World overlays use a level-renderer mixin and may not draw with them.
 - **Server rules.** Visual, Assist and most Automation-tier modules run on every server; Sandbox modules run only in test environments. Many servers forbid ESP, free cameras and similar clients, and their anti-cheat may notice them. Femboy Client does nothing to hide itself.
 - **Player Finder and Player Alert only know about players within your range.** The server sends a player's position only while they are within its entity tracking range (roughly your render distance; servers can set it lower). Anyone further away is "Position unknown".
   - "Last seen" positions are where someone was when they left your range, not where they are.

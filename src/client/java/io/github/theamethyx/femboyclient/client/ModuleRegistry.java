@@ -2,8 +2,11 @@ package io.github.theamethyx.femboyclient.client;
 
 import io.github.theamethyx.femboyclient.client.modules.AimAssistModule;
 import io.github.theamethyx.femboyclient.client.modules.CompassModule;
+import io.github.theamethyx.femboyclient.client.modules.CooldownsModule;
+import io.github.theamethyx.femboyclient.client.modules.LookInfoModule;
 import io.github.theamethyx.femboyclient.client.modules.ExperienceInfoModule;
 import io.github.theamethyx.femboyclient.client.modules.MentionAlertsModule;
+import io.github.theamethyx.femboyclient.client.modules.MinimapModule;
 import io.github.theamethyx.femboyclient.client.modules.SessionStatsModule;
 import io.github.theamethyx.femboyclient.client.modules.ShapePlannerModule;
 import io.github.theamethyx.femboyclient.client.modules.AimTrainerModule;
@@ -42,6 +45,7 @@ import io.github.theamethyx.femboyclient.client.modules.GeodeAnalyzerModule;
 import io.github.theamethyx.femboyclient.client.modules.HealthArmorModule;
 import io.github.theamethyx.femboyclient.client.modules.HitboxesModule;
 import io.github.theamethyx.femboyclient.client.modules.HotbarProfilesModule;
+import io.github.theamethyx.femboyclient.client.modules.InventorySearchModule;
 import io.github.theamethyx.femboyclient.client.modules.InventorySorterModule;
 import io.github.theamethyx.femboyclient.client.modules.ItemCountersModule;
 import io.github.theamethyx.femboyclient.client.modules.ItemSwapModule;
@@ -55,6 +59,7 @@ import io.github.theamethyx.femboyclient.client.modules.MovementInfoModule;
 import io.github.theamethyx.femboyclient.client.modules.NoFallModule;
 import io.github.theamethyx.femboyclient.client.modules.NoSlowModule;
 import io.github.theamethyx.femboyclient.client.modules.NotificationsModule;
+import io.github.theamethyx.femboyclient.client.modules.OreSimulationModule;
 import io.github.theamethyx.femboyclient.client.modules.PerformanceHudModule;
 import io.github.theamethyx.femboyclient.client.modules.PlayerAlertModule;
 import io.github.theamethyx.femboyclient.client.modules.PlayerFinderModule;
@@ -94,6 +99,7 @@ public final class ModuleRegistry {
 		modules.register(new TargetHudModule());
 		modules.register(new WeaponInfoModule());
 		modules.register(new ExplosionInfoModule());
+		modules.register(new CooldownsModule());
 		modules.register(new AimTrainerModule());
 
 		// Automation (test environments only)
@@ -147,6 +153,7 @@ public final class ModuleRegistry {
 		modules.register(new AutoArmorModule());
 		modules.register(new AutoRefillModule());
 		modules.register(new InventorySorterModule());
+		modules.register(new InventorySearchModule());
 		modules.register(new ShulkerPreviewModule());
 		modules.register(new ItemSwapModule());
 		modules.register(new HotbarProfilesModule());
@@ -163,6 +170,7 @@ public final class ModuleRegistry {
 		modules.register(new BlockCounterModule());
 		modules.register(new DeathCoordinatesModule());
 		modules.register(new StructureFinderModule());
+		modules.register(new OreSimulationModule());
 		modules.register(new SchematicViewerModule());
 		modules.register(new MaterialListModule());
 
@@ -175,6 +183,8 @@ public final class ModuleRegistry {
 		modules.register(new BetterChatModule());
 		modules.register(new MentionAlertsModule());
 		modules.register(new CompassModule());
+		modules.register(new MinimapModule());
+		modules.register(new LookInfoModule());
 		modules.register(new SessionStatsModule());
 		modules.register(new ExperienceInfoModule());
 		modules.register(new AutoReconnectModule());

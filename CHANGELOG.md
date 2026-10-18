@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.2.0 - 2026-10-18
+
+New world, HUD and inventory tools written for Femboy Client, an optional Mod Menu integration, and an audit of the requested "modpack" features with the licenses of the mods they were inspired by ([docs/FEATURE_AUDIT.md](docs/FEATURE_AUDIT.md)). No code or assets from other mods are included. Saved settings and profiles load unchanged; the new modules start off.
+
+### Added
+- **Ore Simulation** (World, singleplayer only): predicts ores around you from your world's seed with vanilla's own terrain noise, surface rules, carvers and ore features, in vanilla's seed and feature order, without touching the world. Highlights, labels and target lines like Block ESP. Every prediction says whether it is an *estimate*, *verified* (the real block was compared after its chunk loaded) or *not there*; the panel shows totals, precision and recall. Ore filters, radius, follow mode, a cache of simulated areas, progress, **Cancel**, and **Export CSV** (`config/femboyclient/oresim`). In the in-game test it matched freshly generated chunks almost exactly and 96% of predictions near spawn (see VERIFICATION.md). It cannot be used on servers: there is no way to give it another world's seed.
+- **Server test integration:** `/femboyclient oresim compare [radius] [export]` compares the simulation with a server's own loaded chunks. Operators only, and off until `"ore_simulation_command": true` in the server's `config/femboyclient-server.json`. Only totals are reported.
+- **Minimap** (Visuals › HUD): the loaded area in vanilla map colors with height shading and water depth, a cave layer under a roof (caves, the Nether), other players, your waypoints and last death (kept at the edge when far), optional rotation, coordinates. Redrawn a few rows per tick into a second image and swapped in, so it never tears.
+- **Look At** (Visuals › HUD): the block or creature under the crosshair, which mod adds it, crop growth, redstone power, whether your held tool harvests it and how long breaking takes, a creature's health, armor, owner and villager job.
+- **Cooldowns** (Combat): item cooldowns (ender pearls, chorus fruit, wind charges, a disabled shield, goat horns...) with the seconds left.
+- **Inventory Search** (Inventory): a search box next to every container screen; matching items are outlined and the rest dimmed. Matches names, ids, enchantments and the contents of shulker boxes and bundles. Typing (even E) does not close the inventory.
+- **Mod Menu** (optional, not bundled): Femboy Client's *Configure* button in Mod Menu opens the client menu; closing it returns to Mod Menu.
+
+### Changed
+- The client has a common (server-side) entrypoint for the command above and an access widener for the two generator fields the simulation reads. Nothing else runs on servers.
+- `ClientScreen` can be opened from another screen and returns to it when closed.
+
+### Fixed during development
+- Ore features whose height range starts below the world (diamonds, lower redstone and coal) were refused by the simulation's write check and shifted every later vein of the same feature; vanilla accepts those origins. With the fix, diamond and redstone predictions in fresh chunks went from about 60% to above 99%.
+
 ## 1.1.0 - 2026-10-18
 
 A redesign of the whole interface for clarity: fewer things on screen at once, one way to do each thing, and explanations where they are needed. No module or setting was removed, and saved settings and profiles load unchanged.

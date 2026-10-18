@@ -73,6 +73,20 @@ The redesign changed the menu, not the modules, so this run checks that playing 
 
 Within run-to-run variation: no slowdown from the redesign. The menu itself is not part of this benchmark (it is closed while playing).
 
+## 1.2.0 against 1.1.0 (same scene, same session, Balanced)
+
+1.2.0 adds modules but changes none of the measured ones. Both builds were measured one after the other (`1.2.0.txt` holds both runs). 1.2.0's "all on" rounds also turn on its three new HUD modules (Minimap, Look At, Cooldowns), so its totals include them.
+
+| | 1.1.0 | 1.2.0 |
+|---|---|---|
+| All modules off: client drawing per frame | 0.011 ms | 0.010 ms |
+| Module tick work per tick (all on) | 0.17 to 0.21 ms | 0.20 to 0.24 ms (three more modules) |
+| Client drawing per frame (all on) | 2.79 to 2.87 ms | 2.95 to 3.05 ms (three more modules) |
+| Entity ESP / Trackers / Block ESP / Storage ESP, per tick | 765 / 539 / 276 / 255 µs | 778 / 563 / 285 / 278 µs |
+| New: Minimap / Look At / Cooldowns, per tick | n/a | 213 / 2.4 / 4.5 µs |
+
+The modules both versions share are within run-to-run variation (earlier runs of the same 1.2.0 code measured Entity ESP at 817 and 834 µs). The Minimap costs about as much as Keystrokes in this software-rendered harness; most of it is drawing, and it no longer redraws its terrain while you stand still (298 µs per tick before that change). Ore Simulation is not in the benchmark: it runs on its own background thread when you start it, about 2 to 8 s for a 5×5-chunk area on this machine.
+
 ## Not measured
 
 - Frame rate on a real GPU (the NVIDIA card was not used; see above).

@@ -79,10 +79,19 @@ public class ClientGameTest implements FabricClientGameTest {
 			return;
 		}
 
+		if ("natural".equals(System.getenv("FEMBOY_ONLY"))) {
+			// For working on world-generation features: only the naturally generated world.
+			context.runOnClient(client -> FemboyClient.get().options().animations.set(false));
+			NaturalWorldTest.run(context, report);
+			report.finish();
+			return;
+		}
+
 		report.check("Femboy Client entrypoint ran", context.computeOnClient(client -> FemboyClient.get() != null && FemboyClient.get().modules() != null));
 		int moduleCount = context.computeOnClient(client -> FemboyClient.get().modules().all().size());
-		report.check("All 77 modules registered", moduleCount == 77, String.valueOf(moduleCount));
+		report.check("All 82 modules registered", moduleCount == 82, String.valueOf(moduleCount));
 		FoundationTest.firstLaunch(context, report);
+		modMenuEntry(context, report);
 		// Deterministic screenshots: no easing between frames.
 		context.runOnClient(client -> FemboyClient.get().options().animations.set(false));
 
@@ -124,6 +133,7 @@ public class ClientGameTest implements FabricClientGameTest {
 			OverhaulTest.run(context, singleplayer, ui, report);
 			ProductTest.run(context, singleplayer, ui, report);
 			UxTest.run(context, singleplayer, ui, report);
+			ExpansionTest.run(context, singleplayer, report);
 
 			int errors = context.computeOnClient(client -> FemboyClient.get().diagnostics().errorCount());
 			report.check("No module errors were logged during the run", errors == 0, errors == 0 ? ""
@@ -137,6 +147,19 @@ public class ClientGameTest implements FabricClientGameTest {
 	}
 
 	// ----- helpers ---------------------------------------------------------------------------
+
+	/** What Mod Menu's "Configure" button does, without a world loaded: the menu opens and closing it goes back. */
+	private static void modMenuEntry(ClientGameTestContext context, TestReport report) {
+		Class<?> before = context.computeOnClient(client -> client.screen == null ? null : client.screen.getClass());
+		context.runOnClient(client -> client.setScreen(ClientScreen.withParent(client.screen)));
+		context.waitForScreen(ClientScreen.class);
+		context.waitTicks(10);
+		context.runOnClient(client -> client.screen.onClose());
+		context.waitTicks(2);
+		Class<?> after = context.computeOnClient(client -> client.screen == null ? null : client.screen.getClass());
+		report.check("The menu opens without a world (Mod Menu's Configure) and closing it returns to the previous screen",
+				before != null && before.equals(after), before + " -> " + after);
+	}
 
 	static FemboyClient femboy() {
 		return FemboyClient.get();

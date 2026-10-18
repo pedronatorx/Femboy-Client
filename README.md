@@ -1,8 +1,8 @@
 # Femboy Client
 
-A client-side Fabric mod for **Minecraft Java Edition 1.21.11**: a themeable menu with 77 combat, automation, movement, visual, inventory, tracking, world and utility modules, a command palette, ESP with target lines from your crosshair, three performance modes, a Performance Center, a HUD editor with layouts, profiles with previews, history and automatic switching, 24 ready-made presets, rules, a session timeline, and restore points.
+A client-side Fabric mod for **Minecraft Java Edition 1.21.11**: a themeable menu with 82 combat, automation, movement, visual, inventory, tracking, world and utility modules (including a minimap, a "Look At" panel and a seed-based ore simulation for your own worlds), a command palette, ESP with target lines from your crosshair, three performance modes, a Performance Center, a HUD editor with layouts, profiles with previews, history and automatic switching, 24 ready-made presets, rules, a session timeline, and restore points.
 
-Everything is **off on first start**; nothing runs until you turn it on or install a preset. Every module shows a **tier** badge: *Visual* and *Assist* modules (information, ESP, HUD) and *Automation* modules that only manage your own items (Auto Attribute Swap's spear reach and weapon rules, Auto Tool, Inventory Sorter, Chest Organizer, Item Swap, Hotbar Profiles, Sprint) work on every server. **Sandbox** modules (combat automation including AutoCrystal, AutoAnchor and Auto Pot, movement changes including Anti Hunger, Auto Armor, Auto Refill, Auto Offhand, and the three modules that read every loaded block: Block ESP, Block Counter and Geode Analyzer) work only in a **test environment**: singleplayer, or a server you reach at a private address (your own PC, your LAN, or a VPN such as Tailscale or ZeroTier). There are no prompts or allowlists; elsewhere they simply stay off and their description says why. Femboy Client contains nothing that hides it from anti-cheat systems, and some servers' rules forbid clients like this, so check before you use it there.
+Everything is **off on first start**; nothing runs until you turn it on or install a preset. Every module shows a **tier** badge: *Visual* and *Assist* modules (information, ESP, HUD) and *Automation* modules that only manage your own items (Auto Attribute Swap's spear reach and weapon rules, Auto Tool, Inventory Sorter, Chest Organizer, Item Swap, Hotbar Profiles, Sprint) work on every server. **Sandbox** modules (combat automation including AutoCrystal, AutoAnchor and Auto Pot, movement changes including Anti Hunger, Auto Armor, Auto Refill, Auto Offhand, and the three modules that read every loaded block: Block ESP, Block Counter and Geode Analyzer) work only in a **test environment**: singleplayer, or a server you reach at a private address (your own PC, your LAN, or a VPN such as Tailscale or ZeroTier). Ore Simulation works only in singleplayer. There are no prompts or allowlists; elsewhere they simply stay off and their description says why. Femboy Client contains nothing that hides it from anti-cheat systems, and some servers' rules forbid clients like this, so check before you use it there.
 
 ![Home page](docs/screenshots/0009_gui-1280x720-0-home.png)
 
@@ -213,6 +213,24 @@ Under the hood the ESP modules share one list of loaded entities (built once per
 
 **Where they work:** Entity ESP, Storage ESP and Trackers use only what the server sends for nearby rendering (entities and block entities) and work everywhere. Block ESP, Block Counter and Geode Analyzer read every block of the loaded chunks, which shows what other blocks hide, so they run only in singleplayer and on servers in your own network.
 
+## Ore Simulation and seed analysis
+
+**Ore Simulation** (World) predicts where your singleplayer world's generator put ores around you, from the seed, and shows the predictions like Block ESP (outlines, labels, target lines). It runs the game's own code on private copies of the chunks: terrain noise (stone, noise caves, aquifers, ore veins), the surface rules (bedrock, deepslate, dirt, sand...), the carvers (caves and canyons) and every ore feature with the same decoration and feature seeds, in the same order, as the real world. It never reads or changes the world while predicting.
+
+- **Estimated, verified, not there:** each prediction starts as an estimate. When its chunk is loaded, the real block is compared: the same ore makes it *verified*, anything else *not there* (hidden by default). The panel shows the totals with precision (share of checked predictions that were right) and recall (share of real ores that were predicted).
+- **Accuracy measured in the test world** (seed 8675309): freshly generated chunks matched almost exactly; around spawn about 96% of predictions were right and 99% of real ores were predicted. Lakes, geodes, dungeons and structures are not simulated, so ores next to them can differ.
+- **Controls:** ores to show, radius (1–6 chunks), follow mode (simulate again when you leave the area), how many are drawn, how often predictions are compared, areas kept in memory; **Simulate now**, **Cancel**, **Export CSV** (`config/femboyclient/oresim/`) and **Clear cache**.
+- **Where it works:** singleplayer only. Servers never send their seed and the module has no way to enter one, so it cannot be used on other people's servers or against anti-xray.
+- **Your own test server:** operators can run `/femboyclient oresim compare [radius] [export]` on the server itself after setting `"ore_simulation_command": true` in the server's `config/femboyclient-server.json` (the file is created with `false` on first use). It compares the simulation with the server's loaded chunks and reports totals (optionally a CSV on the server); nothing is sent to other players.
+- **Seed analysis:** the panel says where the seed comes from. Recovering an unknown seed is not part of Femboy Client; if the separate mod SeedcrackerX is installed, the panel mentions it but does not read or control it.
+
+## Other mods
+
+Femboy Client bundles no other mods. Features inspired by Xaero's Minimap, Jade, MiniHUD and others are written from scratch; [docs/FEATURE_AUDIT.md](docs/FEATURE_AUDIT.md) lists what exists, what is partial or planned, and the license of each mod that was checked.
+
+- **Mod Menu** (optional): with Mod Menu installed, its *Configure* button for Femboy Client opens the client menu.
+- **Sodium, Iris** and other rendering mods were **not tested** together with Femboy Client; world overlays may not draw with them.
+
 ## Profiles and presets
 
 A **profile** stores which modules are on, every setting and every key. Changes save automatically to the active profile.
@@ -399,6 +417,7 @@ Mixins (each documented in its source file), among them:
 ## Documentation
 
 - [docs/VERIFICATION.md](docs/VERIFICATION.md): what was verified, how, and what wasn't.
+- [docs/FEATURE_AUDIT.md](docs/FEATURE_AUDIT.md): every requested feature classified (implemented, partial, optional, planned, unsupported) and the licenses of the mods that were checked.
 - [KNOWN_ISSUES.md](KNOWN_ISSUES.md): known limitations and unverified assumptions.
 - [CHANGELOG.md](CHANGELOG.md)
 

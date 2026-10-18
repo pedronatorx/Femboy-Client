@@ -10,9 +10,16 @@
 	"license": "All-Rights-Reserved",
 	"icon": "assets/femboyclient/icon.png",
 	"environment": "*",
+	"accessWidener": "femboyclient.accesswidener",
 	"entrypoints": {
+		"main": [
+			"io.github.theamethyx.femboyclient.FemboyCommon"
+		],
 		"client": [
 			"io.github.theamethyx.femboyclient.client.FemboyClient"
+		],
+		"modmenu": [
+			"io.github.theamethyx.femboyclient.client.compat.ModMenuIntegration"
 		]
 	},
 	"depends": {
@@ -20,6 +27,9 @@
 		"minecraft": "~1.21.11",
 		"java": ">=21",
 		"fabric-api": "*"
+	},
+	"suggests": {
+		"modmenu": "*"
 	},
 	"mixins": [
 		{

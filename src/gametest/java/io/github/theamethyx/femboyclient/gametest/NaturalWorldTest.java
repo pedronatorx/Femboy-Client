@@ -49,6 +49,7 @@ final class NaturalWorldTest {
 			world.getClientWorld().waitForChunksRender();
 			context.waitTicks(20);
 			ExtraModulesTest.structureFinder(context, report);
+			OreSimulationTest.run(context, world, report);
 
 			List<GeodeObservation> before = scan(context);
 			List<GeodeObservation> natural = before.stream().filter(g -> g.scenarioId() == null).toList();
