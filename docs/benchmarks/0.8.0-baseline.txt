@@ -1,0 +1,49 @@
+Femboy Client benchmark
+Build: 0.8.0
+Java: 21.0.12.1, 16 CPUs, max heap 2048 MB
+Scene: 100 husks, 40 cows, 20 items, 121 chests, 4802 diamond ores; 28 modules listed
+Each round: 300 ticks while turning 1.5 degrees per tick; 100 ticks of warm-up first.
+
+all modules off:
+  client cost per tick: modules tick 0.013 ms (0.0 KB), HUD 0.076 ms (3.8 KB), world 0.000 ms (0.0 KB)
+  1458 frames in 300 ticks; client drawing per frame 0.016 ms; frame time average 10.11 ms, worst 26.16 ms (last 240 frames, GPU and harness dependent)
+all on, round 1:
+  client cost per tick: modules tick 2.192 ms (3130.5 KB), HUD 3.405 ms (1933.9 KB), world 9.915 ms (4650.3 KB)
+  810 frames in 300 ticks; client drawing per frame 4.933 ms; frame time average 17.99 ms, worst 31.29 ms (last 240 frames, GPU and harness dependent)
+all on, round 2:
+  client cost per tick: modules tick 2.140 ms (3130.3 KB), HUD 3.222 ms (1877.0 KB), world 9.505 ms (4509.0 KB)
+  789 frames in 300 ticks; client drawing per frame 4.839 ms; frame time average 23.45 ms, worst 41.57 ms (last 240 frames, GPU and harness dependent)
+all on, round 3:
+  client cost per tick: modules tick 2.099 ms (3129.9 KB), HUD 1.980 ms (1069.2 KB), world 6.136 ms (2565.5 KB)
+  449 frames in 300 ticks; client drawing per frame 5.422 ms; frame time average 33.44 ms, worst 41.19 ms (last 240 frames, GPU and harness dependent)
+
+Per module, median of the 3 rounds (time and allocation per game tick, all phases together):
+  module                    us/tick      KB/tick
+  ore_esp                    1894.5      1787.32
+  entity_esp                 1097.7       667.16
+  block_counter               867.1      2938.01
+  storage_esp                 853.0       966.89
+  trackers                    546.9       367.53
+  light_level                 398.2      1604.66
+  hitboxes                    285.4       225.73
+  keystrokes                  220.0        50.26
+  module_list_hud              84.7         6.27
+  waypoints                    80.2         4.37
+  movement_info                66.3         4.61
+  explosion_info               53.2         3.81
+  coordinates_hud              45.1         7.44
+  performance_hud              43.5        14.05
+  health_armor                 37.5         4.73
+  item_counters                31.7         1.28
+  combat_info                  29.9         1.07
+  trajectories                 14.3         0.64
+  player_finder                12.7         1.14
+  effects                      12.2         0.64
+  chunk_borders                 8.7         4.38
+  weapon_info                   8.5         0.41
+  player_alert                  8.3         0.94
+  target_hud                    7.0         0.41
+  elytra_info                   6.7         0.41
+  block_highlight               5.7         0.58
+  death_coordinates             4.3         0.44
+  entity_outlines               0.0         0.11

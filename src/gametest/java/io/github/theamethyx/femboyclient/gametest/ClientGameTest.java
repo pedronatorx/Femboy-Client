@@ -64,13 +64,19 @@ public class ClientGameTest implements FabricClientGameTest {
 	static final BlockPos PLAYER = new BlockPos(0, -60, 0);
 	/** Center of the geode fixture's stone cube; the cube spans chunks x -1..1, z 0..2. */
 	static final BlockPos GEODE_CENTER = new BlockPos(0, -41, 30);
-	static final List<String> NAVIGATION = List.of("Home", "Combat", "Automation", "Movement", "Visuals", "Inventory", "Trackers", "World", "Utilities", "Developer", "Profiles",
-			"Settings");
+	static final List<String> NAVIGATION = List.of("Home", "Combat", "Automation", "Movement", "Visuals", "Inventory", "World", "Profiles", "Settings");
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
 		TestReport report = new TestReport(context);
 		UiDriver ui = new UiDriver(context);
+		if ("1".equals(System.getenv("FEMBOY_BENCHMARK"))) {
+			// scripts/run-benchmark.sh: only the performance measurement, no functional checks.
+			context.runOnClient(client -> FemboyClient.get().options().animations.set(false));
+			BenchmarkTest.run(context, report);
+			report.finish();
+			return;
+		}
 
 		report.check("Femboy Client entrypoint ran", context.computeOnClient(client -> FemboyClient.get() != null && FemboyClient.get().modules() != null));
 		int moduleCount = context.computeOnClient(client -> FemboyClient.get().modules().all().size());
@@ -114,6 +120,7 @@ public class ClientGameTest implements FabricClientGameTest {
 			AdvancedFeaturesTest.fullbright(context, singleplayer, report);
 			AdvancedFeaturesTest.freeCamera(context, ui, singleplayer, report);
 			AdvancedFeaturesTest.javaRunner(context, ui, report);
+			OverhaulTest.run(context, singleplayer, ui, report);
 
 			int errors = context.computeOnClient(client -> FemboyClient.get().diagnostics().errorCount());
 			report.check("No module errors were logged during the run", errors == 0, errors == 0 ? ""
@@ -263,14 +270,18 @@ public class ClientGameTest implements FabricClientGameTest {
 		openMenu(context);
 		showPage(context, "Home");
 		context.takeScreenshot("home-grid");
-		TextField search = ui.find(TextField.class, field -> true);
+		TextField search = context.computeOnClient(client -> ((ClientScreen) client.screen).searchField());
 		ui.click(search);
 		ui.type("geode");
 		context.waitTicks(2);
 		List<String> listed = context.computeOnClient(client -> ((ClientScreen) client.screen).currentPage().descendants(ModuleTile.class)
 				.stream().map(tile -> tile.module().id()).toList());
-		report.check("Home search 'geode' lists the Geode Analyzer", listed.contains("geode_analyzer"), listed.toString());
+		report.check("Header search 'geode' lists the Geode Analyzer on Home", listed.contains("geode_analyzer"), listed.toString());
 		context.takeScreenshot("home-search-geode");
+		ui.key(GLFW.GLFW_KEY_ESCAPE);
+		context.waitTicks(1);
+		boolean menuStillOpen = context.computeOnClient(client -> client.screen instanceof ClientScreen);
+		report.check("Escape in the search field only leaves the field", menuStillOpen);
 
 		ModuleTile tile = ui.find(ModuleTile.class, t -> t.module().id().equals("geode_analyzer"));
 		ui.rightClick(tile);
@@ -301,6 +312,13 @@ public class ClientGameTest implements FabricClientGameTest {
 		ui.clickVirtual(again.x() + 30, again.y() + again.height() / 2.0);
 		boolean toggledOff = context.computeOnClient(client -> !femboy().modules().get("geode_analyzer").isEnabled());
 		report.check("Left-clicking a module on Home turns it on, and again off", toggledOn && toggledOff);
+		// Clear the search again, so later pages and screenshots show every module.
+		context.runOnClient(client -> {
+			ClientScreen screen = (ClientScreen) client.screen;
+			screen.searchField().setText("");
+			io.github.theamethyx.femboyclient.client.gui.GuiState.search = "";
+			((HomePage) screen.currentPage()).setQuery("");
+		});
 
 		openModule(context, GeodeAnalyzerModule.class);
 		String page = currentTitle(context);
@@ -317,7 +335,8 @@ public class ClientGameTest implements FabricClientGameTest {
 		List<String> visuals = context.computeOnClient(client -> ((ClientScreen) client.screen).currentPage().descendants(ModuleRow.class)
 				.stream().map(r -> r.module().id()).toList());
 		boolean allVisuals = context.computeOnClient(client -> ((ClientScreen) client.screen).currentPage().descendants(ModuleRow.class)
-				.stream().allMatch(r -> r.module().category() == io.github.theamethyx.femboyclient.core.module.ModuleCategory.VISUALS));
+				.stream().allMatch(r -> r.module().category() == io.github.theamethyx.femboyclient.core.module.ModuleCategory.VISUALS
+						|| r.module().category() == io.github.theamethyx.femboyclient.core.module.ModuleCategory.HUD));
 		// Geode Analyzer mentions chunks too, but it lives on World, so it must not appear here.
 		report.check("A category page searches only its own modules", visuals.contains("chunk_borders") && allVisuals
 				&& !visuals.contains("geode_analyzer"), visuals.toString());
@@ -794,6 +813,7 @@ public class ClientGameTest implements FabricClientGameTest {
 		ui.click(ui.find(Button.class, b -> b.label().equals("Reset")));
 		boolean moduleReset = context.computeOnClient(client -> femboy().modules().get(EntityEspModule.class).settings().allDefault());
 		report.check("The module Reset button restores all of a module's settings", moduleReset);
+		ui.openSection("Colors");
 		SettingRow hostile = ui.find(SettingRow.class, row -> row.setting().id().equals("color_hostile"));
 		ui.click(hostile);
 		ColorPicker picker = (ColorPicker) hostile.control();

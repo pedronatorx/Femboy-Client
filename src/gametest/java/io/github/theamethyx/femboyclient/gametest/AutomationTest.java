@@ -115,11 +115,15 @@ final class AutomationTest {
 		context.runOnClient(client -> io.github.theamethyx.femboyclient.client.ClientEnvironment.simulatePublicServer = false);
 		context.waitTicks(2);
 		long runningAgain = context.computeOnClient(client -> femboy().modules().all().stream().filter(m -> m.testEnvironmentOnly() && m.isRunning()).count());
+		// Switching every one on lets conflicting ones (both steering your view or your motion) turn each other off.
+		long enabled = context.computeOnClient(client -> femboy().modules().all().stream().filter(m -> m.testEnvironmentOnly() && m.isEnabled()).count());
 		context.runOnClient(client -> femboy().modules().all().stream().filter(Module::testEnvironmentOnly).forEach(m -> femboy().modules().setEnabled(m, false)));
 		server.runCommand("effect give @a instant_health 1 5");
 		report.check("Sandbox modules switched on while on a (simulated) public server stay off and do nothing; they start in a test environment",
-				sandbox.size() >= 8 && running.isEmpty() && health == 20 && reason.equals(Module.TEST_ENVIRONMENT_ONLY) && runningAgain == sandbox.size(),
-				"sandbox " + sandbox + "; running on public " + running + "; husk health " + health + "; reason '" + reason + "'; running in test env " + runningAgain);
+				sandbox.size() >= 8 && running.isEmpty() && health == 20 && reason.equals(Module.TEST_ENVIRONMENT_ONLY) && runningAgain == enabled
+						&& enabled >= sandbox.size() - 3,
+				"sandbox " + sandbox + "; running on public " + running + "; husk health " + health + "; reason '" + reason + "'; running in test env "
+						+ runningAgain + " of " + enabled + " left on after conflicts");
 	}
 
 	private static void killAura(ClientGameTestContext context, TestSingleplayerContext singleplayer, TestReport report) {

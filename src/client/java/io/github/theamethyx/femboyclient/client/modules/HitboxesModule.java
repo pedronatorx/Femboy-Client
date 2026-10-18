@@ -76,17 +76,24 @@ public final class HitboxesModule extends Module implements ClientHooks.WorldRen
 		}
 
 		float pt = render.partialTick();
-		double max = range.get() * range.get();
 		int box = color.withAlpha(opacity.get().floatValue() / 100f);
 		float w = width.get().floatValue();
-		for (Entity entity : client.level.entitiesForRendering()) {
-			if (entity == self && client.options.getCameraType().isFirstPerson() || entity.isRemoved() || entity.distanceToSqr(self) > max || !shown(entity)) {
+		// The shared index (built once per tick, nearest first) instead of every loaded entity every frame.
+		java.util.List<Entity> near = io.github.theamethyx.femboyclient.client.world.EntityIndex.within(range.get());
+		boolean withSelf = !client.options.getCameraType().isFirstPerson() && players.get();
+		for (int i = withSelf ? -1 : 0; i < near.size(); i++) {
+			Entity entity = i < 0 ? self : near.get(i);
+			if (entity.isRemoved() || i >= 0 && !shown(entity)) {
 				continue;
 			}
 
 			Vec3 lerped = entity.getPosition(pt);
 			Vec3 offset = lerped.subtract(entity.position());
 			AABB bounds = entity.getBoundingBox().move(offset);
+			if (!io.github.theamethyx.femboyclient.client.render.FrameProjection.inView(bounds.inflate(entity.getEyeHeight() > 0 ? 2 : 0))) {
+				continue;
+			}
+
 			render.boxOutline(bounds, box, w, throughWalls.get());
 			if (eyes.get() && entity instanceof LivingEntity) {
 				double eyeY = lerped.y + entity.getEyeHeight();

@@ -10,6 +10,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
 import java.util.function.LongSupplier;
 import java.util.regex.Pattern;
 
@@ -34,10 +38,15 @@ import io.github.theamethyx.femboyclient.core.setting.ModuleSettings;
  *   *.corrupt-&lt;time&gt;       unreadable files moved aside, never deleted
  * </pre>
  *
- * Changes are saved shortly after they happen ({@link #tick()}) and on shutdown.
+ * Changes are saved shortly after they happen ({@link #tick()}) and on shutdown. Automatic saves serialize the state
+ * on the calling (client) thread and write the files on the {@code writer} executor, so the game never waits for the
+ * disk; writes run one at a time in order, and {@link #saveNow()} waits for them.
+ *
+ * <p>A profile also stores a few client options ({@link #setProfileOptions}): the look and the performance mode. They
+ * are applied when the profile is loaded, so switching profiles switches them too.
  */
 public final class ConfigurationManager {
-	public static final int SCHEMA_VERSION = 1;
+	public static final int SCHEMA_VERSION = 2;
 	public static final String DEFAULT_PROFILE = "default";
 	public static final long AUTOSAVE_DELAY_MILLIS = 1500;
 	private static final Pattern PROFILE_NAME = Pattern.compile("[A-Za-z0-9_-]{1,32}");
@@ -57,13 +66,27 @@ public final class ConfigurationManager {
 	private boolean dirty;
 	private boolean applying;
 	private long dirtySince;
+	private final Executor writer;
+	/** The last write handed to {@link #writer}; later writes and {@link #saveNow()} run after it. */
+	private CompletableFuture<Void> lastWrite = CompletableFuture.completedFuture(null);
+	/** Failures from background writes, reported on the client thread at the next tick. */
+	private final ConcurrentLinkedQueue<String> writeFailures = new ConcurrentLinkedQueue<>();
+	private Set<String> profileOptionIds = Set.of();
 
+	/** Writes files synchronously on the calling thread (used by tests and tools). */
 	public ConfigurationManager(Path root, ModuleManager modules, ModuleSettings globalSettings, DiagnosticLogger diagnostics, LongSupplier clock) {
+		this(root, modules, globalSettings, diagnostics, clock, Runnable::run);
+	}
+
+	/** {@code writer} runs file writes for automatic saves; it must run tasks one at a time, in order. */
+	public ConfigurationManager(Path root, ModuleManager modules, ModuleSettings globalSettings, DiagnosticLogger diagnostics, LongSupplier clock,
+			Executor writer) {
 		this.root = Objects.requireNonNull(root);
 		this.modules = Objects.requireNonNull(modules);
 		this.globalSettings = Objects.requireNonNull(globalSettings);
 		this.diagnostics = Objects.requireNonNull(diagnostics);
 		this.clock = Objects.requireNonNull(clock);
+		this.writer = Objects.requireNonNull(writer);
 
 		modules.addListener(module -> markDirty());
 		globalSettings.all().forEach(setting -> setting.onChange(value -> markDirty()));
@@ -131,7 +154,50 @@ public final class ConfigurationManager {
 
 		checkSchema(profile, "Profile '" + name + "'", report);
 		JsonObject moduleJson = profile.get("modules") instanceof JsonObject object ? object : new JsonObject();
+		migrate(moduleJson, "Profile '" + name + "'");
 		modules.loadModules(moduleJson).forEach(warning -> report.add("Profile '" + name + "': " + warning));
+		if (profile.get("options") instanceof JsonObject options) {
+			applyProfileOptions(options, name, report);
+		}
+	}
+
+	private void migrate(JsonObject moduleJson, String what) {
+		ConfigMigrations.migrateModules(moduleJson).forEach(note -> diagnostics.info(SOURCE, what + ": " + note));
+	}
+
+	// ----- per-profile client options --------------------------------------------------------
+
+	/**
+	 * Which global settings (by id) are stored in each profile as well: when a profile is loaded, its stored values
+	 * replace the current ones. Settings not listed stay client-wide.
+	 */
+	public void setProfileOptions(Set<String> ids) {
+		profileOptionIds = Set.copyOf(ids);
+	}
+
+	private void applyProfileOptions(JsonObject options, String profile, List<String> report) {
+		for (String id : profileOptionIds) {
+			var setting = globalSettings.get(id);
+			JsonElement value = options.get(id);
+			if (setting != null && value != null) {
+				String problem = setting.load(value);
+				if (problem != null) {
+					report.add("Profile '" + profile + "': option '" + setting.name() + "': " + problem);
+				}
+			}
+		}
+	}
+
+	private JsonObject profileOptionsJson() {
+		JsonObject json = new JsonObject();
+		for (String id : profileOptionIds) {
+			var setting = globalSettings.get(id);
+			if (setting != null) {
+				json.add(id, setting.toJson());
+			}
+		}
+
+		return json;
 	}
 
 	// ----- saving ----------------------------------------------------------------------------
@@ -148,10 +214,55 @@ public final class ConfigurationManager {
 		dirty = true;
 	}
 
-	/** Saves pending changes once they have been stable for {@link #AUTOSAVE_DELAY_MILLIS}. */
+	/**
+	 * Saves pending changes once they have been stable for {@link #AUTOSAVE_DELAY_MILLIS}. The state is captured now; the
+	 * files are written on the writer executor.
+	 */
 	public void tick() {
+		String failure;
+		while ((failure = writeFailures.poll()) != null) {
+			diagnostics.error(SOURCE, failure, null);
+			// Retry after another delay instead of every tick.
+			markDirtyAgain();
+		}
+
 		if (dirty && clock.getAsLong() - dirtySince >= AUTOSAVE_DELAY_MILLIS) {
-			saveNow();
+			saveInBackground();
+		}
+	}
+
+	private void markDirtyAgain() {
+		dirty = true;
+		dirtySince = clock.getAsLong();
+	}
+
+	private void saveInBackground() {
+		Path profileFile = profileFile(activeProfile);
+		String profileName = activeProfile;
+		JsonObject profile = profileJson();
+		JsonObject global = globalJson();
+		dirty = false;
+		lastWrite = lastWrite.thenRunAsync(() -> {
+			try {
+				JsonFiles.writeAtomically(profileFile, profile);
+			} catch (IOException e) {
+				writeFailures.add("Could not save profile '" + profileName + "' (" + e.getMessage() + "). Changes are kept in memory and saving will be retried.");
+			}
+
+			try {
+				JsonFiles.writeAtomically(globalFile(), global);
+			} catch (IOException e) {
+				writeFailures.add("Could not save global settings (" + e.getMessage() + "). Changes are kept in memory and saving will be retried.");
+			}
+		}, writer);
+	}
+
+	/** Waits until background writes handed out so far are on disk. */
+	public void flushWrites() {
+		try {
+			lastWrite.join();
+		} catch (RuntimeException e) {
+			diagnostics.error(SOURCE, "A background save failed: " + e.getMessage(), e);
 		}
 	}
 
@@ -159,8 +270,9 @@ public final class ConfigurationManager {
 		return dirty;
 	}
 
-	/** @return {@code true} if both files were written */
+	/** Writes both files now, after any pending background write. @return {@code true} if both files were written */
 	public boolean saveNow() {
+		flushWrites();
 		boolean ok = true;
 
 		try {
@@ -191,6 +303,10 @@ public final class ConfigurationManager {
 		JsonObject json = new JsonObject();
 		json.addProperty("schemaVersion", SCHEMA_VERSION);
 		json.add("modules", modules.saveModules());
+		if (!profileOptionIds.isEmpty()) {
+			json.add("options", profileOptionsJson());
+		}
+
 		return json;
 	}
 
@@ -254,6 +370,7 @@ public final class ConfigurationManager {
 			return problem;
 		}
 
+		flushWrites();
 		try {
 			JsonFiles.writeAtomically(profileFile(name), profileJson());
 		} catch (IOException e) {
@@ -302,6 +419,7 @@ public final class ConfigurationManager {
 			return "Profile '" + name + "' does not exist.";
 		}
 
+		flushWrites();
 		try {
 			Files.move(file, file.resolveSibling(name + ".json.deleted-" + timestamp()), StandardCopyOption.REPLACE_EXISTING);
 		} catch (IOException e) {
@@ -392,6 +510,7 @@ public final class ConfigurationManager {
 
 		List<String> warnings = new ArrayList<>();
 		checkSchema(json, "The imported profile", warnings);
+		ConfigMigrations.migrateModules(modulesJson);
 		JsonObject clean = modules.sanitizeModules(modulesJson, warnings);
 		String problem = writeNewProfile(name, clean, "Imported profile '" + name + "'" + (warnings.isEmpty() ? "." : " (" + warnings.size() + " value(s) dropped)."));
 		return new ImportResult(problem, problem == null ? List.copyOf(warnings) : List.of());
@@ -403,6 +522,7 @@ public final class ConfigurationManager {
 	 * @return {@code null} on success, otherwise a readable reason
 	 */
 	public String createProfileFrom(String name, JsonObject modulesJson) {
+		ConfigMigrations.migrateModules(modulesJson);
 		List<String> warnings = new ArrayList<>();
 		JsonObject clean = modules.sanitizeModules(modulesJson, warnings);
 		warnings.forEach(warning -> diagnostics.warn(SOURCE, "Profile '" + name + "': " + warning));
@@ -420,12 +540,14 @@ public final class ConfigurationManager {
 			return "Use 1-32 letters, digits, '-' or '_'.";
 		}
 
+		ConfigMigrations.migrateModules(modulesJson);
 		List<String> warnings = new ArrayList<>();
 		JsonObject clean = modules.sanitizeModules(modulesJson, warnings);
 		warnings.forEach(warning -> diagnostics.warn(SOURCE, "Profile '" + name + "': " + warning));
 		JsonObject json = new JsonObject();
 		json.addProperty("schemaVersion", SCHEMA_VERSION);
 		json.add("modules", clean);
+		flushWrites();
 		try {
 			JsonFiles.writeAtomically(profileFile(name), json);
 		} catch (IOException e) {
@@ -467,6 +589,7 @@ public final class ConfigurationManager {
 		JsonObject json = new JsonObject();
 		json.addProperty("schemaVersion", SCHEMA_VERSION);
 		json.add("modules", modulesJson);
+		flushWrites();
 		try {
 			JsonFiles.writeAtomically(profileFile(name), json);
 		} catch (IOException e) {
@@ -488,7 +611,9 @@ public final class ConfigurationManager {
 		}
 
 		try {
-			return JsonFiles.readObject(profileFile(name)).get("modules") instanceof JsonObject object ? object : new JsonObject();
+			JsonObject modulesJson = JsonFiles.readObject(profileFile(name)).get("modules") instanceof JsonObject object ? object : new JsonObject();
+			ConfigMigrations.migrateModules(modulesJson);
+			return modulesJson;
 		} catch (IOException e) {
 			diagnostics.warn(SOURCE, "Could not read profile '" + name + "': " + e.getMessage());
 			return null;

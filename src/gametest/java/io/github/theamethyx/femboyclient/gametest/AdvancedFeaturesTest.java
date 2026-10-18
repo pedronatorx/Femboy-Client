@@ -394,6 +394,7 @@ final class AdvancedFeaturesTest {
 		// Configurable keys: rebind "up" through the GUI and use it.
 		ClientGameTest.openMenu(context);
 		ClientGameTest.openModule(context, FreeCameraModule.class);
+		ui.openSection("Keys");
 		SettingRow upRow = ui.find(SettingRow.class, row -> row.setting().id().equals("key_up"));
 		ui.click(upRow.control());
 		ui.key(GLFW.GLFW_KEY_R);
@@ -473,7 +474,7 @@ final class AdvancedFeaturesTest {
 
 	static void javaRunner(ClientGameTestContext context, UiDriver ui, TestReport report) {
 		ClientGameTest.openMenu(context);
-		ClientGameTest.showPage(context, "Developer");
+		ClientGameTest.showPage(context, "World");
 		ClientGameTest.openModule(context, JavaRunnerModule.class);
 		ClientGameTest.enable(context, JavaRunnerModule.class, true);
 		context.waitTicks(2);
@@ -599,7 +600,7 @@ final class AdvancedFeaturesTest {
 		ClientGameTest.openModule(context, EntityEspModule.class);
 		List<String> sections = context.computeOnClient(client -> ((io.github.theamethyx.femboyclient.client.gui.ClientScreen) client.screen).currentPage()
 				.descendants(SettingRow.SectionHeader.class).stream().map(SettingRow.SectionHeader::title).toList());
-		report.check("Entity ESP settings are grouped into sections", sections.equals(List.of("Targets", "Boxes", "Colors", "Labels", "Health", "Tracers", "Performance")),
+		report.check("Entity ESP settings are grouped into sections", sections.equals(List.of("Targets", "Boxes", "Colors", "Labels", "Health", "Target lines", "Performance")),
 				sections.toString());
 		context.takeScreenshot("visuals-entity-esp-sections");
 		ClientGameTest.openModule(context, FreeCameraModule.class);

@@ -69,6 +69,11 @@ public final class AutoCrystalModule extends Module implements ClientHooks.HudBl
 		return true;
 	}
 
+	@Override
+	public String lowImpactLimitation() {
+		return "it places and breaks crystals several times a second.";
+	}
+
 	public int placed() {
 		return placed;
 	}
@@ -108,12 +113,12 @@ public final class AutoCrystalModule extends Module implements ClientHooks.HudBl
 		}
 
 		if (breakCrystals.get() && breakCooldown == 0 && breakBest(client, player)) {
-			breakCooldown = breakDelay.intValue();
+			breakCooldown = io.github.theamethyx.femboyclient.client.Performance.actionDelayTicks(breakDelay.intValue());
 			return;
 		}
 
 		if (place.get() && placeCooldown == 0 && placeBest(player, client.level)) {
-			placeCooldown = placeDelay.intValue();
+			placeCooldown = io.github.theamethyx.femboyclient.client.Performance.actionDelayTicks(placeDelay.intValue());
 		}
 	}
 
@@ -160,8 +165,13 @@ public final class AutoCrystalModule extends Module implements ClientHooks.HudBl
 
 		int radius = (int) Math.ceil(player.blockInteractionRange());
 		BlockPos origin = player.blockPosition();
+		// An explosion of power 6 does nothing beyond 12 blocks, so spots farther than that from the target are skipped
+		// before the expensive part (the exposure raycasts of the damage estimate).
+		double reachOfBlast = POWER * 2 + 1;
+		Vec3 targetCenter = target.getBoundingBox().getCenter();
 		for (BlockPos pos : BlockPos.betweenClosed(origin.offset(-radius, -radius, -radius), origin.offset(radius, radius, radius))) {
-			if (!Placement.inReach(player, pos, Direction.UP) || !ExplosionInfoModule.canPlaceCrystal(level, pos)) {
+			if (targetCenter.distanceToSqr(pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5) > reachOfBlast * reachOfBlast
+					|| !Placement.inReach(player, pos, Direction.UP) || !ExplosionInfoModule.canPlaceCrystal(level, pos)) {
 				continue;
 			}
 

@@ -31,12 +31,17 @@ public class ToggleSwitch extends Widget {
 		float t = position.update(on ? 1 : 0, ui.frameSeconds(), ui.animate());
 		float h = hover.update(hovered(ui) ? 1 : 0, ui.frameSeconds(), ui.animate());
 
-		int track = Theme.lerp(Theme.lerp(0xFF2C2C36, 0xFF34343F, h), Theme.lerp(Theme.ACCENT_DIM, Theme.ACCENT, 0.55f + h * 0.25f), t);
-		ui.roundRect(x, y, width, height, track);
+		// A pill: grey when off, the accent gradient fading in when on.
+		int off = Theme.lerp(Theme.SURFACE_ACTIVE, Theme.BORDER_STRONG, h * 0.6f);
+		ui.roundRect(x, y, width, height, off, height / 2);
+		if (t > 0.01f) {
+			float glow = 0.85f + 0.15f * h;
+			ui.gradientRect(x, y, width, height, Theme.withAlpha(Theme.ACCENT, t * glow), Theme.withAlpha(Theme.ACCENT_2, t * glow), height / 2);
+		}
 
 		int knobSize = height - 4;
 		int knobX = x + 2 + Math.round((width - knobSize - 4) * t);
-		ui.roundRect(knobX, y + 2, knobSize, knobSize, Theme.lerp(0xFF9A9AA8, 0xFFFFFFFF, t));
+		ui.roundRect(knobX, y + 2, knobSize, knobSize, Theme.lerp(0xFFB4B2C8, 0xFFFFFFFF, Math.max(t, h * 0.5f)), knobSize / 2);
 
 		if (hovered(ui)) {
 			ui.pointer();

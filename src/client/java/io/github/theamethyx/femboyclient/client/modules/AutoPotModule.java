@@ -84,7 +84,8 @@ public final class AutoPotModule extends Module implements ClientHooks.HudBlock 
 
 	@Override
 	protected void onDisable() {
-		if (step == Step.THROW || step == Step.RESTORE) {
+		// Turned off mid-throw (also while only aiming): give the view and the slot back.
+		if (step != Step.IDLE) {
 			restoreView(Minecraft.getInstance().player);
 		}
 
@@ -131,7 +132,7 @@ public final class AutoPotModule extends Module implements ClientHooks.HudBlock 
 					throwsMade++;
 				}
 
-				readyAt = System.currentTimeMillis() + delay.get().longValue();
+				readyAt = System.currentTimeMillis() + io.github.theamethyx.femboyclient.client.Performance.actionDelayMillis(delay.get().longValue());
 				step = Step.RESTORE;
 			}
 			case RESTORE -> {

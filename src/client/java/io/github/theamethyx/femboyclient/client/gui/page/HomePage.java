@@ -17,21 +17,19 @@ import io.github.theamethyx.femboyclient.client.gui.UiContext;
 import io.github.theamethyx.femboyclient.client.gui.widget.Container;
 import io.github.theamethyx.femboyclient.client.gui.widget.ModuleSettingsPanel;
 import io.github.theamethyx.femboyclient.client.gui.widget.ModuleTile;
-import io.github.theamethyx.femboyclient.client.gui.widget.TextField;
 import io.github.theamethyx.femboyclient.core.module.Module;
 import io.github.theamethyx.femboyclient.core.module.ModuleCategory;
 
 /**
  * Every module at a glance: one card per category, laid out in columns. Left-click a module to turn it on or off,
- * right-click it to open its settings in a panel that slides in from the right. Category chips and the search field
- * narrow the grid; the strip at the bottom lists what is on.
+ * right-click it to open its settings in a panel that slides in from the right. Category chips and the search field in
+ * the header narrow the grid; the strip at the bottom lists what is on.
  */
 public class HomePage extends Page {
 	private static final int CHIPS = 15;
 	private static final int STRIP = 16;
 	private static final int MIN_COLUMN = 138;
 
-	private final TextField search;
 	private final List<CategoryCard> cards = new ArrayList<>();
 	private final ModuleSettingsPanel panel;
 	private final Anim panelOpen = new Anim(0, 16);
@@ -39,9 +37,18 @@ public class HomePage extends Page {
 	private final Anim appear = new Anim(0, 10);
 	private final Anim chipLine = new Anim(0, 18);
 	private final List<ModuleCategory> categories = new ArrayList<>();
+
+	/** A chip: one sidebar section, which may hold several categories (Visuals includes the HUD panels, for example). */
+	private record Group(String label, List<ModuleCategory> members) {
+	}
+
+	private static final List<Group> GROUPS = List.of(new Group("Combat", List.of(ModuleCategory.COMBAT)),
+			new Group("Automation", List.of(ModuleCategory.AUTOMATION)), new Group("Movement", List.of(ModuleCategory.MOVEMENT)),
+			new Group("Visuals", List.of(ModuleCategory.VISUALS, ModuleCategory.HUD)), new Group("Inventory", List.of(ModuleCategory.INVENTORY)),
+			new Group("World", List.of(ModuleCategory.WORLD, ModuleCategory.TRACKERS, ModuleCategory.DEVELOPER)));
+	private Group group;
 	private float scrollTarget;
 	private int contentHeight;
-	private ModuleCategory category;
 	private String query = "";
 	private int laidOutFor = -1;
 
@@ -53,11 +60,7 @@ public class HomePage extends Page {
 			}
 		}
 
-		search = add(new TextField("Search modules...", 40).icon(Icon.SEARCH).onChange(text -> {
-			query = text;
-			rebuild();
-		}));
-		search.tooltip("Type to find a module by name, description or setting name.");
+		query = GuiState.search;
 		panel = add(new ModuleSettingsPanel(ui, femboy.modules(), this::closeSettings));
 	}
 
@@ -68,7 +71,21 @@ public class HomePage extends Page {
 
 	@Override
 	public String subtitle() {
-		return "Left-click a module to turn it on or off, right-click it for its settings.";
+		return query.isBlank() ? "Left-click a module to turn it on or off, right-click it for its settings."
+				: "Modules matching \"" + query + "\". Left-click: on/off, right-click: settings.";
+	}
+
+	/** Filters the grid (the header's search field calls this). */
+	public void setQuery(String text) {
+		if (!text.equals(query)) {
+			query = text;
+			scrollTarget = 0;
+			rebuild();
+		}
+	}
+
+	public String query() {
+		return query;
 	}
 
 	@Override
@@ -103,7 +120,6 @@ public class HomePage extends Page {
 
 	@Override
 	public void onShow() {
-		search.setText(query);
 		appear.snap(0);
 		if (GuiState.homeSettings != null) {
 			Module module = femboy.modules().get(GuiState.homeSettings);
@@ -119,16 +135,23 @@ public class HomePage extends Page {
 		children.removeAll(cards);
 		cards.clear();
 		Map<ModuleCategory, List<Module>> grouped = new LinkedHashMap<>();
-		for (Module module : femboy.modules().search(query, category)) {
+		for (Module module : femboy.modules().search(query, null)) {
+			if (group != null && !group.members().contains(module.category())) {
+				continue;
+			}
+
 			grouped.computeIfAbsent(module.category(), c -> new ArrayList<>()).add(module);
 		}
 
-		for (ModuleCategory c : categories) {
-			List<Module> modules = grouped.get(c);
-			if (modules != null) {
-				CategoryCard card = new CategoryCard(c, modules);
-				cards.add(card);
-				children.add(0, card);
+		// Cards in sidebar order: a section's categories next to each other (Visuals, then the HUD panels).
+		for (Group g : GROUPS) {
+			for (ModuleCategory c : g.members()) {
+				List<Module> modules = grouped.get(c);
+				if (modules != null && categories.contains(c)) {
+					CategoryCard card = new CategoryCard(c, modules);
+					cards.add(card);
+					children.add(0, card);
+				}
 			}
 		}
 
@@ -154,8 +177,6 @@ public class HomePage extends Page {
 	}
 
 	private void layoutAll() {
-		int searchWidth = Math.min(150, width / 3);
-		search.setBounds(x + width - searchWidth, y, searchWidth, CHIPS);
 		float open = panelOpen.get();
 		int panelW = panelWidth();
 		panel.setBounds(x + width - Math.round(panelW * open), gridTop(), panelW, height - (gridTop() - y));
@@ -196,7 +217,7 @@ public class HomePage extends Page {
 
 	@Override
 	public void render(UiContext ui) {
-		float open = panelOpen.update(settingsOpen() ? 1 : 0, ui.frameSeconds(), ui.animate());
+		float open = panelOpen.update(settingsOpen() ? 1 : 0, ui.frameSeconds(), ui.motion());
 		scrollTarget = Math.max(0, Math.min(maxScroll(), scrollTarget));
 		float offset = scroll.update(scrollTarget, ui.frameSeconds(), ui.animate());
 		int gridWidth = width - Math.round((panelWidth() + Theme.PAD) * open);
@@ -205,14 +226,15 @@ public class HomePage extends Page {
 		}
 
 		renderChips(ui);
-		search.render(ui);
 
-		// Cards rise into place when the page opens.
+		// Cards rise into place when the page opens (only fade with reduced motion).
 		float rise = appear.update(1, ui.frameSeconds(), ui.animate());
 		ui.pushClip(x, gridTop(), gridWidth, gridHeight());
 		var pose = ui.graphics().pose();
 		pose.pushMatrix();
-		pose.translate(0, Math.round((1 - rise) * 10));
+		if (ui.motion()) {
+			pose.translate(0, Math.round((1 - rise) * 10));
+		}
 		for (CategoryCard card : cards) {
 			if (card.y() + card.height() >= gridTop() && card.y() <= gridTop() + gridHeight()) {
 				card.render(ui);
@@ -221,6 +243,10 @@ public class HomePage extends Page {
 
 		pose.popMatrix();
 		ui.popClip();
+		if (rise < 1) {
+			ui.rect(x, gridTop(), gridWidth, gridHeight(), Theme.withAlpha(Theme.PANEL, (1 - rise) * 0.8f));
+		}
+
 		if (cards.isEmpty()) {
 			ui.textCentered("No modules match \"" + query + "\".", x + gridWidth / 2, gridTop() + 20, Theme.TEXT_MUTED);
 		}
@@ -243,9 +269,9 @@ public class HomePage extends Page {
 		List<int[]> boxes = new ArrayList<>();
 		int cx = x;
 		int cy = y;
-		int limit = search.x() - Theme.PAD;
-		for (int i = 0; i <= categories.size(); i++) {
-			String label = i == 0 ? "All" : categories.get(i - 1).label();
+		int limit = x + width;
+		for (int i = 0; i <= GROUPS.size(); i++) {
+			String label = i == 0 ? "All" : GROUPS.get(i - 1).label();
 			int w = ui.textWidth(label) + 12;
 			if (cx + w > limit && cx > x) {
 				cx = x;
@@ -267,29 +293,29 @@ public class HomePage extends Page {
 
 	private void renderChips(UiContext ui) {
 		List<int[]> boxes = chipBoxes();
-		int selectedIndex = category == null ? 0 : categories.indexOf(category) + 1;
+		int selectedIndex = group == null ? 0 : GROUPS.indexOf(group) + 1;
 		// The highlight glides from the previous chip to the selected one.
-		float line = chipLine.update(selectedIndex, ui.frameSeconds(), ui.animate());
+		float line = chipLine.update(selectedIndex, ui.frameSeconds(), ui.motion());
 		int from = Math.max(0, Math.min(boxes.size() - 1, (int) Math.floor(line)));
 		int to = Math.min(boxes.size() - 1, from + 1);
 		float t = line - from;
 		int[] a = boxes.get(from);
 		int[] b = boxes.get(to);
 		if (a[1] == b[1]) {
-			ui.roundRect(Math.round(a[0] + (b[0] - a[0]) * t), a[1], Math.round(a[2] + (b[2] - a[2]) * t), CHIPS, Theme.ACCENT, 3);
+			ui.gradientRect(Math.round(a[0] + (b[0] - a[0]) * t), a[1], Math.round(a[2] + (b[2] - a[2]) * t), CHIPS, Theme.ACCENT, Theme.ACCENT_2, 7);
 		} else {
 			// Across a row break the highlight jumps instead of sliding through the gap.
 			int[] at = t < 0.5f ? a : b;
-			ui.roundRect(at[0], at[1], at[2], CHIPS, Theme.ACCENT, 3);
+			ui.gradientRect(at[0], at[1], at[2], CHIPS, Theme.ACCENT, Theme.ACCENT_2, 7);
 		}
 
 		for (int i = 0; i < boxes.size(); i++) {
 			int[] box = boxes.get(i);
-			String label = i == 0 ? "All" : categories.get(i - 1).label();
+			String label = i == 0 ? "All" : GROUPS.get(i - 1).label();
 			boolean selected = i == selectedIndex;
 			boolean hot = ui.hovered(box[0], box[1], box[2], CHIPS);
 			if (!selected) {
-				ui.roundRect(box[0], box[1], box[2], CHIPS, hot ? Theme.SURFACE_HOVER : Theme.SURFACE, 3);
+				ui.roundRect(box[0], box[1], box[2], CHIPS, hot ? Theme.SURFACE_HOVER : Theme.SURFACE, 7);
 				if (hot) {
 					ui.pointer();
 				}
@@ -313,7 +339,7 @@ public class HomePage extends Page {
 
 	private void renderStrip(UiContext ui, int gridWidth) {
 		int sy = y + height - STRIP;
-		ui.roundRect(x, sy, gridWidth, STRIP, Theme.SURFACE, 3);
+		ui.roundRect(x, sy, gridWidth, STRIP, Theme.SURFACE, 6);
 		List<String> on = femboy.modules().all().stream().filter(Module::isEnabled).map(Module::name).toList();
 		ui.icon(Icon.PERFORMANCE, x + 5, sy + 4, 8, on.isEmpty() ? Theme.TEXT_MUTED : Theme.ACCENT);
 		String text = on.isEmpty() ? "No modules enabled" : on.size() + " enabled: " + String.join(", ", on);
@@ -331,13 +357,9 @@ public class HomePage extends Page {
 
 		int chip = chipAt(mouseX, mouseY);
 		if (chip >= 0) {
-			category = chip == 0 ? null : categories.get(chip - 1);
+			group = chip == 0 ? null : GROUPS.get(chip - 1);
 			scrollTarget = 0;
 			rebuild();
-			return true;
-		}
-
-		if (search.mouseClicked(ui, mouseX, mouseY, button)) {
 			return true;
 		}
 
@@ -400,13 +422,14 @@ public class HomePage extends Page {
 
 		@Override
 		public void render(UiContext ui) {
-			ui.roundRect(x, y, width, height, Theme.SIDEBAR, 4);
-			ui.outline(x, y, width, height, Theme.BORDER);
-			ui.icon(Icon.byName(category.icon()), x + 7, y + 6, 10, Theme.ACCENT);
-			ui.textScaled(category.label(), x + 21, y + 6, 1.1f, Theme.TEXT);
+			ui.roundRect(x, y, width, height, Theme.SIDEBAR, 7);
+			ui.outline(x, y, width, height, Theme.BORDER, 7);
+			ui.gradientRect(x + 6, y + 5, 13, 13, Theme.ACCENT, Theme.ACCENT_2, 4);
+			ui.icon(Icon.byName(category.icon()), x + 8, y + 7, 9, 0xFFFFFFFF);
+			ui.textScaled(category.label(), x + 24, y + 7, 1.1f, Theme.TEXT);
 			String count = String.valueOf(femboy.modules().byCategory(category).size());
 			int countWidth = ui.textWidth(count) + 8;
-			ui.roundRect(x + width - countWidth - 6, y + 5, countWidth, 11, Theme.SURFACE_ACTIVE, 3);
+			ui.roundRect(x + width - countWidth - 6, y + 5, countWidth, 11, Theme.SURFACE_ACTIVE, 5);
 			ui.text(count, x + width - countWidth - 2, y + 7, Theme.TEXT_SECONDARY);
 			super.render(ui);
 		}

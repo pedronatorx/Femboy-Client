@@ -26,7 +26,41 @@ public final class GlobalOptions {
 		}
 	}
 
+	/** How much work the client does for its features; see {@link io.github.theamethyx.femboyclient.client.Performance}. */
+	public enum PerformanceMode implements EnumSetting.Labeled {
+		PERFORMANCE("Performance"), BALANCED("Balanced"), LOW_IMPACT("Low impact");
+
+		private final String label;
+
+		PerformanceMode(String label) {
+			this.label = label;
+		}
+
+		@Override
+		public String label() {
+			return label;
+		}
+	}
+
+	/** Global settings that each profile stores as well, so switching profiles switches them (look and performance). */
+	public static final java.util.Set<String> PROFILE_OPTIONS = java.util.Set.of("theme", "custom_accent", "accent", "animations", "reduce_motion",
+			"performance_mode");
+
 	public final ModuleSettings settings = new ModuleSettings();
+
+	{
+		settings.section("Performance");
+	}
+
+	public final EnumSetting<PerformanceMode> performanceMode = settings.add(new EnumSetting<>("performance_mode", "Performance mode",
+			"Performance: fewer updates and shorter lists for the highest frame rate, no menu animations. Balanced: your settings as "
+					+ "they are. Low impact: slow update rates, longer pauses between automatic actions, and modules that repeat "
+					+ "actions many times a second pause (they say so). Stored in each profile.", PerformanceMode.BALANCED));
+
+	{
+		settings.section("Menu");
+	}
+
 
 	public final EnumSetting<MenuScale> menuScale = settings.add(new EnumSetting<>("menu_scale", "Menu scale",
 			"Size of this menu. 'Auto' uses the largest sharp size at or below Minecraft's GUI scale that leaves enough room "
@@ -48,9 +82,15 @@ public final class GlobalOptions {
 
 	public final BooleanSetting animations = settings.add(new BooleanSetting("animations", "Animations",
 			"Smoothly animate panels, toggles and sliders. Turn off for an instant, static interface.", true));
+	public final BooleanSetting reduceMotion = settings.add(new BooleanSetting("reduce_motion", "Reduce motion",
+			"Keep only short fades: panels and highlights no longer slide or grow.", false)).visibleWhen(animations::get);
 
 	public final BooleanSetting tooltips = settings.add(new BooleanSetting("tooltips", "Tooltips",
 			"Show an explanation when hovering over modules and settings.", true));
+
+	{
+		settings.section("Messages and profiles");
+	}
 
 	public final BooleanSetting toggleMessages = settings.add(new BooleanSetting("toggle_messages", "Key bind messages",
 			"Show a short message above the hotbar when a key bind turns a module on or off.", true));

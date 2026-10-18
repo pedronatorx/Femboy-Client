@@ -2,6 +2,7 @@ package io.github.theamethyx.femboyclient.client.hud;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -13,7 +14,9 @@ import net.minecraft.resources.Identifier;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 
+import io.github.theamethyx.femboyclient.client.ClientTicks;
 import io.github.theamethyx.femboyclient.client.FemboyClient;
+import io.github.theamethyx.femboyclient.client.Performance;
 import io.github.theamethyx.femboyclient.client.gui.Theme;
 import io.github.theamethyx.femboyclient.client.gui.UiContext;
 import io.github.theamethyx.femboyclient.client.gui.ClientScreen;
@@ -24,6 +27,10 @@ import io.github.theamethyx.femboyclient.core.module.ModuleManager;
 /**
  * Draws the HUD contributions of all running modules in one Fabric HUD layer (placed below the
  * chat). Text blocks are stacked per screen corner so modules never overlap each other.
+ *
+ * <p>Text blocks only change with game state, which changes once per tick, so their lines are built once per tick
+ * (every {@link Performance#hudInterval()} ticks) and reused for the frames in between, and at once when a module or
+ * its settings change. Overlays and widgets still draw every frame: they follow the camera or animate.
  */
 public final class HudManager {
 	private static final int MARGIN = 4;
@@ -34,6 +41,11 @@ public final class HudManager {
 	private final HudLayout layout;
 	private final List<Placed> placed = new ArrayList<>();
 	private UiContext ui;
+	/** Text blocks of the last rebuild, by module; a module without an entry showed nothing. */
+	private final Map<Module, Block> blocks = new IdentityHashMap<>();
+	private long builtTick = Long.MIN_VALUE;
+	private boolean dirty = true;
+	private int rebuilds;
 
 	/** Where a block was drawn in the last frame (GUI coordinates), for the HUD editor and tests. */
 	public record Placed(String moduleId, String name, int x, int y, int width, int height, boolean custom) {
@@ -42,6 +54,26 @@ public final class HudManager {
 	public HudManager(ModuleManager modules, HudLayout layout) {
 		this.modules = modules;
 		this.layout = layout;
+		modules.addListener(module -> dirty = true);
+	}
+
+	/** How often the text blocks were rebuilt (for tests). */
+	public int rebuilds() {
+		return rebuilds;
+	}
+
+	private void rebuildBlocks() {
+		blocks.clear();
+		rebuilds++;
+		for (Module module : modules.all()) {
+			if (module.isRunning() && module instanceof ClientHooks.HudBlock block) {
+				List<HudLine> lines = new ArrayList<>();
+				if (modules.runGuarded(module, ModuleManager.Phase.RENDER_HUD, () -> block.buildHud(lines)) && !lines.isEmpty()) {
+					blocks.put(module, new Block(module.id(), module.name(), List.copyOf(lines), block.panelStyle(), block.hudAnchor().right(),
+							Block.measure(ui, lines, block.panelStyle())));
+				}
+			}
+		}
 	}
 
 	public HudLayout layout() {
@@ -62,8 +94,21 @@ public final class HudManager {
 			return;
 		}
 
+		var performance = FemboyClient.get().performance();
+		long bytes = performance.allocatedBytes();
+		long start = System.nanoTime();
+		try {
+			renderAll(client, graphics, deltaTracker);
+		} finally {
+			performance.record("client/hud", System.nanoTime() - start, performance.allocatedBytes() - bytes);
+		}
+	}
+
+	private void renderAll(Minecraft client, GuiGraphics graphics, DeltaTracker deltaTracker) {
 		if (ui == null) {
 			ui = new UiContext(client.font);
+			// Drawn every frame while playing: plain shapes batch better than textured corners.
+			ui.setCheapShapes(true);
 		}
 
 		int width = graphics.guiWidth();
@@ -71,6 +116,12 @@ public final class HudManager {
 		ui.setScreenSize(width, height);
 		ui.beginFrame(graphics, -1000, -1000, 0, false);
 		float partialTick = deltaTracker.getGameTimeDeltaPartialTick(false);
+
+		if (dirty || ClientTicks.count() - builtTick >= Performance.hudInterval()) {
+			dirty = false;
+			builtTick = ClientTicks.count();
+			rebuildBlocks();
+		}
 
 		Map<HudAnchor, List<Item>> byCorner = new EnumMap<>(HudAnchor.class);
 		List<Item> custom = new ArrayList<>();
@@ -84,15 +135,12 @@ public final class HudManager {
 				modules.runGuarded(module, ModuleManager.Phase.RENDER_HUD, () -> overlay.renderOverlay(ui, width, height, partialTick));
 			}
 
-			if (module instanceof ClientHooks.HudBlock block) {
-				List<HudLine> lines = new ArrayList<>();
-				if (modules.runGuarded(module, ModuleManager.Phase.RENDER_HUD, () -> block.buildHud(lines)) && !lines.isEmpty()) {
-					Block entry = new Block(module.id(), module.name(), lines, block.panelStyle(), block.hudAnchor().right());
-					if (layout.get(module.id()) != null) {
-						custom.add(entry);
-					} else {
-						byCorner.computeIfAbsent(block.hudAnchor(), anchor -> new ArrayList<>()).add(entry);
-					}
+			Block text = blocks.get(module);
+			if (text != null && module instanceof ClientHooks.HudBlock block) {
+				if (layout.get(module.id()) != null) {
+					custom.add(text);
+				} else {
+					byCorner.computeIfAbsent(block.hudAnchor(), anchor -> new ArrayList<>()).add(text);
 				}
 			}
 
@@ -234,20 +282,25 @@ public final class HudManager {
 		}
 	}
 
-	private record Block(String moduleId, String name, List<HudLine> lines, boolean panel, boolean alignRight) implements Item {
+	private record Block(String moduleId, String name, List<HudLine> lines, boolean panel, boolean alignRight, int measuredWidth) implements Item {
 		int pad() {
 			return panel ? 4 : 0;
 		}
 
-		@Override
-		public int width(UiContext ui) {
+		/** Width of the widest line plus padding, measured once when the block is built. */
+		static int measure(UiContext ui, List<HudLine> lines, boolean panel) {
 			int widest = 0;
 			for (HudLine line : lines) {
 				int w = ui.textWidth(line.value()) + (line.label().isEmpty() ? 0 : ui.textWidth(line.label()) + 6) + (line.accent() != 0 ? 4 : 0);
 				widest = Math.max(widest, w);
 			}
 
-			return widest + pad() * 2;
+			return widest + (panel ? 8 : 0);
+		}
+
+		@Override
+		public int width(UiContext ui) {
+			return measuredWidth;
 		}
 
 		int height() {

@@ -78,9 +78,19 @@ class ResourceFilesTest {
 	void texturesArePngsWithTheExpectedSize() throws IOException {
 		int[] icon = pngSize("src/main/resources/assets/femboyclient/icon.png");
 		assertArrayEquals(new int[] {128, 128}, icon);
-		// The icon atlas holds 8 x 5 cells of 16 px; Icon.java uses the same layout.
-		int[] atlas = pngSize("src/client/resources/assets/femboyclient/textures/gui/icons.png");
-		assertArrayEquals(new int[] {128, 80}, atlas);
+		// The icon atlas holds 8 x 6 cells of 32 px; Icon.java uses the same layout.
+		String gui = "src/client/resources/assets/femboyclient/textures/gui/";
+		assertArrayEquals(new int[] {256, 192}, pngSize(gui + "icons.png"));
+		// The smooth-shape textures UiContext draws with (tools/make_gui_art.py).
+		assertArrayEquals(new int[] {64, 64}, pngSize(gui + "round.png"));
+		assertArrayEquals(new int[] {64, 64}, pngSize(gui + "shadow.png"));
+		assertArrayEquals(new int[] {128, 128}, pngSize(gui + "glow.png"));
+		assertArrayEquals(new int[] {64, 4}, pngSize(gui + "ramp.png"));
+		assertArrayEquals(new int[] {128, 128}, pngSize(gui + "logo.png"));
+		for (String name : new String[] {"icons", "round", "shadow", "glow", "ramp", "logo"}) {
+			JsonObject meta = json(gui + name + ".png.mcmeta");
+			assertTrue(meta.getAsJsonObject("texture").get("blur").getAsBoolean(), name + " is filtered smoothly");
+		}
 	}
 
 	private static int[] pngSize(String path) throws IOException {

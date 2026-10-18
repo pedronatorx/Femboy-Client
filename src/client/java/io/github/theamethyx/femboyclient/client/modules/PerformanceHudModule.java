@@ -44,6 +44,20 @@ public final class PerformanceHudModule extends Module implements ClientHooks.Hu
 		return anchor.get();
 	}
 
+	private PerformanceMonitor.FrameStats stats;
+	private long statsAt;
+
+	/** Frame statistics sort the frame history, so they are refreshed four times a second, not for every HUD rebuild. */
+	private PerformanceMonitor.FrameStats frameStats() {
+		long now = System.currentTimeMillis();
+		if (stats == null || now - statsAt >= 250) {
+			stats = FemboyClient.get().performance().frameStats();
+			statsAt = now;
+		}
+
+		return stats;
+	}
+
 	private int grade(double value, double good, double bad, boolean higherIsBetter) {
 		if (!colors.get()) {
 			return Theme.TEXT;
@@ -61,7 +75,7 @@ public final class PerformanceHudModule extends Module implements ClientHooks.Hu
 		lines.add(HudLine.of("FPS", String.valueOf(fps), grade(fps, 60, 30, true)));
 
 		if (frameTime.get()) {
-			PerformanceMonitor.FrameStats stats = FemboyClient.get().performance().frameStats();
+			PerformanceMonitor.FrameStats stats = frameStats();
 			if (stats.samples() > 0) {
 				lines.add(HudLine.of("Frame", String.format(Locale.ROOT, "%.1f ms (max %.0f)", stats.averageFrameMs(), stats.worstFrameMs()),
 						grade(stats.averageFrameMs(), 16.7, 33.4, false)));

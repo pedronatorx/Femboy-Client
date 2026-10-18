@@ -108,7 +108,7 @@ public class ModuleSettingsPanel extends Container {
 				if (module.settings().isEmpty()) {
 					rows.add(new Note("This module has no settings.", Theme.TEXT_MUTED));
 				} else {
-					rows.addAll(SettingRow.rowsFor(module.settings().all()));
+					rows.addAll(SettingRow.rowsFor(module.id(), module.settings().all()));
 				}
 
 				if (module instanceof ClientHooks.CustomControls custom) {
@@ -130,6 +130,26 @@ public class ModuleSettingsPanel extends Container {
 				rows.add(new Note("Tier: " + tier.label() + ". " + tier.meaning(), tierColor(tier)));
 				ModuleRow.StatusView status = ModuleRow.status(module, modules);
 				rows.add(new Note("Status: " + status.text(), status.color()));
+				String limitation = module.lowImpactLimitation();
+				if (limitation != null) {
+					rows.add(new Note("Low-Impact mode: paused there, because " + limitation, Theme.WARNING));
+				}
+
+				rows.add(new Note("Performance mode: " + io.github.theamethyx.femboyclient.client.Performance.summary(), Theme.TEXT_SECONDARY));
+				for (Module.Requirement requirement : module.requirements()) {
+					Module other = modules.get(requirement.moduleId());
+					if (other != null) {
+						rows.add(new Note("Uses " + other.name() + " for " + requirement.purpose() + (other.isRunning() ? " (on)." : " (off: turn it on for this)."),
+								other.isRunning() ? Theme.SUCCESS : Theme.WARNING));
+					}
+				}
+
+				for (Module other : modules.all()) {
+					if (modules.conflict(module, other)) {
+						rows.add(new Note("Cannot run together with " + other.name() + ": turning one on turns the other off.", Theme.TEXT_SECONDARY));
+					}
+				}
+
 				rows.add(new Note("Category: " + module.category().label() + "   Id: " + module.id(), Theme.TEXT_SECONDARY));
 				rows.add(new Note(module.settings().all().size() + " settings. Changes are saved to the active profile right away.", Theme.TEXT_MUTED));
 			}
@@ -149,12 +169,12 @@ public class ModuleSettingsPanel extends Container {
 			return;
 		}
 
-		ui.shadow(x, y, width, height, 4, 1);
-		ui.roundRect(x, y, width, height, Theme.PANEL, 4);
-		ui.outline(x, y, width, height, Theme.BORDER);
+		ui.shadow(x, y, width, height, 6, 1.2f);
+		ui.roundRect(x, y, width, height, Theme.PANEL, 7);
+		ui.outline(x, y, width, height, Theme.BORDER, 7);
 
 		// Header: icon, name, badges, description.
-		ui.roundRect(x + 8, y + 7, 20, 20, Theme.withAlpha(Theme.ACCENT, 0.3f), 4);
+		ui.gradientRect(x + 8, y + 7, 20, 20, Theme.ACCENT, Theme.ACCENT_2, 6);
 		ui.icon(Icon.byName(module.category().icon()), x + 13, y + 12, 10, 0xFFFFFFFF);
 		ui.textScaled(ui.ellipsize(module.name(), Math.round((width - 90) / 1.25f)), x + 33, y + 6, 1.25f, Theme.TEXT);
 		Module.Tier tier = module.tier();
@@ -181,9 +201,10 @@ public class ModuleSettingsPanel extends Container {
 		// Tabs with a sliding underline.
 		int tabsY = y + headerHeight();
 		int tabWidth = (width - 12) / TABS.length;
-		ui.roundRect(x + 6, tabsY, width - 12, TAB_HEIGHT, Theme.SURFACE, 3);
-		float line = tabLine.update(tab, ui.frameSeconds(), ui.animate());
-		ui.roundRect(x + 6 + Math.round(line * tabWidth), tabsY, tabWidth, TAB_HEIGHT, Theme.withAlpha(Theme.ACCENT, 0.85f), 3);
+		ui.roundRect(x + 6, tabsY, width - 12, TAB_HEIGHT, Theme.SURFACE, 6);
+		float line = tabLine.update(tab, ui.frameSeconds(), ui.motion());
+		ui.gradientRect(x + 6 + Math.round(line * tabWidth), tabsY, tabWidth, TAB_HEIGHT, Theme.withAlpha(Theme.ACCENT, 0.9f),
+				Theme.withAlpha(Theme.ACCENT_2, 0.75f), 6);
 		for (int i = 0; i < TABS.length; i++) {
 			int tx = x + 6 + i * tabWidth;
 			boolean hot = ui.hovered(tx, tabsY, tabWidth, TAB_HEIGHT);

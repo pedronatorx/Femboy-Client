@@ -40,6 +40,11 @@ public final class DeathCoordinatesModule extends Module implements ClientHooks.
 	}
 
 	@Override
+	public List<Requirement> requirements() {
+		return List.of(new Requirement("waypoints", "markers for the death waypoints"));
+	}
+
+	@Override
 	protected void onTick() {
 		LocalPlayer player = Minecraft.getInstance().player;
 		boolean dead = player.isDeadOrDying();

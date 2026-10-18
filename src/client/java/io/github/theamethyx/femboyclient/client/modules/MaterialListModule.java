@@ -46,6 +46,11 @@ public final class MaterialListModule extends Module implements ClientHooks.HudB
 	}
 
 	@Override
+	public List<Requirement> requirements() {
+		return List.of(new Requirement("schematic_viewer", "the loaded schematic and what is still missing"));
+	}
+
+	@Override
 	public Tier tier() {
 		return Tier.ASSIST;
 	}

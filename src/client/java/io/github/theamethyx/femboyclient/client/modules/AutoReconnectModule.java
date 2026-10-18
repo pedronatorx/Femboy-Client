@@ -28,6 +28,9 @@ public final class AutoReconnectModule extends Module {
 
 	private static ServerData lastServer;
 	private int tries;
+	/** The disconnect screen the countdown belongs to; a resize re-runs init and must not start a second countdown. */
+	private Screen attachedTo;
+	private long reconnectAt;
 
 	public AutoReconnectModule() {
 		super("auto_reconnect", "Auto Reconnect", "Rejoins the last server after a countdown when you get disconnected.", ModuleCategory.HUD, false, NO_KEY);
@@ -66,20 +69,32 @@ public final class AutoReconnectModule extends Module {
 
 	private void attach(Minecraft client, Screen screen, int width, int height) {
 		boolean automatic = tries < attempts.intValue();
-		long reconnectAt = System.currentTimeMillis() + delay.intValue() * 1000L;
 		Button button = Button.builder(Component.literal("Reconnect"), b -> reconnect(client)).bounds(width / 2 - 100, height - 30, 200, 20).build();
 		Screens.getButtons(screen).add(button);
+		if (attachedTo != screen) {
+			attachedTo = screen;
+			reconnectAt = System.currentTimeMillis() + delay.intValue() * 1000L;
+		}
+
+		// Re-initialized (window resized): the running countdown continues instead of starting over. Whichever listener
+		// reconnects first changes the screen, so the other one cannot reconnect a second time.
 		ScreenEvents.afterTick(screen).register(s -> {
-			long left = (reconnectAt - System.currentTimeMillis() + 999) / 1000;
-			if (!automatic) {
-				button.setMessage(Component.literal("Reconnect (stopped after " + attempts.intValue() + " tries)"));
-			} else if (left > 0) {
-				button.setMessage(Component.literal("Reconnecting in " + left + " s"));
-			} else if (client.screen == s) {
+			updateLabel(button, automatic);
+			if (automatic && reconnectAt - System.currentTimeMillis() <= 0 && client.screen == s) {
 				tries++;
+				attachedTo = null;
 				reconnect(client);
 			}
 		});
+	}
+
+	private void updateLabel(Button button, boolean automatic) {
+		long left = (reconnectAt - System.currentTimeMillis() + 999) / 1000;
+		if (!automatic) {
+			button.setMessage(Component.literal("Reconnect (stopped after " + attempts.intValue() + " tries)"));
+		} else if (left > 0) {
+			button.setMessage(Component.literal("Reconnecting in " + left + " s"));
+		}
 	}
 
 	private static void reconnect(Minecraft client) {

@@ -26,6 +26,12 @@ class ModuleManagerTest {
 
 	static final class MutableEnvironment implements EnvironmentPolicy {
 		boolean inWorld = true;
+		boolean lowImpact;
+
+		@Override
+		public boolean lowImpactMode() {
+			return lowImpact;
+		}
 
 		@Override
 		public boolean inWorld() {
@@ -294,5 +300,107 @@ class ModuleManagerTest {
 		assertEquals(5, warnings.size(), warnings::toString);
 		assertEquals(2.0, module.size.get(), "nothing applied");
 		assertFalse(module.flag.get(), "nothing applied");
+	}
+
+	// ----- 0.9.0: conflicts, world changes, Low-Impact mode, lookups, category reset ----------------
+
+	static final class ConflictingModule extends RecordingModule {
+		private final java.util.Set<String> conflicts;
+		String limitation;
+		int worldChanges;
+
+		ConflictingModule(String id, java.util.Set<String> conflicts) {
+			super(id, id, Module.NO_KEY);
+			this.conflicts = conflicts;
+		}
+
+		@Override
+		public java.util.Set<String> conflicts() {
+			return conflicts;
+		}
+
+		@Override
+		public String lowImpactLimitation() {
+			return limitation;
+		}
+
+		@Override
+		protected void onWorldChange() {
+			worldChanges++;
+		}
+	}
+
+	@Test
+	void enablingAModuleTurnsOffOnesThatConflictWithIt() {
+		ConflictingModule aura = manager.register(new ConflictingModule("aura", java.util.Set.of("aim")));
+		ConflictingModule aim = manager.register(new ConflictingModule("aim", java.util.Set.of()));
+		List<String> resolved = new ArrayList<>();
+		manager.addConflictListener((enabled, off) -> resolved.add(enabled.id() + " turned off " + off.id()));
+
+		manager.setEnabled(aim, true);
+		manager.setEnabled(aura, true);
+
+		assertTrue(aura.isRunning());
+		assertFalse(aim.isEnabled(), "declared on one side, applied both ways");
+		assertTrue(aim.events.contains("disable"), "the other module ran its cleanup");
+		assertEquals(List.of("aura turned off aim"), resolved);
+
+		manager.setEnabled(aim, true);
+		assertFalse(aura.isEnabled(), "and the other way round");
+	}
+
+	@Test
+	void worldChangesReachOnlyRunningModules() {
+		ConflictingModule running = manager.register(new ConflictingModule("running", java.util.Set.of()));
+		ConflictingModule off = manager.register(new ConflictingModule("off", java.util.Set.of()));
+		manager.setEnabled(running, true);
+
+		manager.worldChanged();
+
+		assertEquals(1, running.worldChanges);
+		assertEquals(0, off.worldChanges);
+	}
+
+	@Test
+	void lowImpactModePausesModulesThatSaySoAndExplainsWhy() {
+		ConflictingModule rapid = manager.register(new ConflictingModule("rapid", java.util.Set.of()));
+		rapid.limitation = "it attacks for you several times a second.";
+		ConflictingModule calm = manager.register(new ConflictingModule("calm", java.util.Set.of()));
+		manager.setEnabled(rapid, true);
+		manager.setEnabled(calm, true);
+		assertTrue(rapid.isRunning());
+
+		environment.lowImpact = true;
+		manager.tick();
+
+		assertFalse(rapid.isRunning(), "paused");
+		assertTrue(rapid.isEnabled(), "still your choice: it resumes when the mode changes");
+		assertTrue(manager.availability(rapid).reason().contains("Low-Impact"), manager.availability(rapid).reason());
+		assertTrue(calm.isRunning());
+
+		environment.lowImpact = false;
+		manager.tick();
+		assertTrue(rapid.isRunning());
+	}
+
+	@Test
+	void lookupByClassIsCachedAndAllIsShared() {
+		RecordingModule a = manager.register(new RecordingModule("a", "Alpha", Module.NO_KEY));
+		assertEquals(a, manager.get(RecordingModule.class));
+		assertEquals(a, manager.get(RecordingModule.class));
+		assertEquals(null, manager.get(ConflictingModule.class), "a miss is answered too");
+		assertTrue(manager.all() == manager.all(), "no copy per call");
+	}
+
+	@Test
+	void resettingACategoryResetsOnlyThatCategory() {
+		RecordingModule hud = manager.register(new RecordingModule("hud", "HUD", Module.NO_KEY));
+		hud.size.set(5.0);
+		manager.setEnabled(hud, true);
+
+		manager.resetCategory(ModuleCategory.HUD);
+		assertEquals(2.0, hud.size.get());
+		assertFalse(hud.isEnabled());
+		manager.resetCategory(ModuleCategory.COMBAT); // no modules there: nothing happens
 	}
 }

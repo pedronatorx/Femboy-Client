@@ -55,6 +55,12 @@ public final class FlightModule extends Module {
 	}
 
 	@Override
+	public java.util.Set<String> conflicts() {
+		// All three set your motion every tick; together the last one wins and the others only fight it.
+		return java.util.Set.of("elytra_flight", "speed");
+	}
+
+	@Override
 	protected void onTick() {
 		LocalPlayer player = Minecraft.getInstance().player;
 		Abilities abilities = player.getAbilities();

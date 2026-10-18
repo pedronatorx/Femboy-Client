@@ -88,6 +88,18 @@ public final class AutoToolModule extends Module {
 	}
 
 	@Override
+	protected void onDisable() {
+		// Turned off while mining: go back now instead of jumping back on a later, unrelated tick.
+		Minecraft client = Minecraft.getInstance();
+		if (originalSlot >= 0 && switchBack.get() && client.player != null) {
+			client.player.getInventory().setSelectedSlot(originalSlot);
+		}
+
+		originalSlot = -1;
+		idleTicks = 0;
+	}
+
+	@Override
 	protected void onTick() {
 		Minecraft client = Minecraft.getInstance();
 		if (originalSlot >= 0 && !client.options.keyAttack.isDown() && ++idleTicks > 4) {

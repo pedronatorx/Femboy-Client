@@ -26,6 +26,11 @@ public final class SprintModule extends Module {
 		LocalPlayer player = client.player;
 		boolean canSprint = client.options.keyUp.isDown() && !player.isShiftKeyDown() && !player.isUsingItem() && !player.horizontalCollision
 				&& (player.getFoodData().getFoodLevel() > 6 || player.getAbilities().mayfly) && !player.isInWater();
+		WTapModule reset = io.github.theamethyx.femboyclient.client.FemboyClient.get().modules().get(WTapModule.class);
+		if (reset != null && reset.isRunning() && reset.pausing()) {
+			return; // Sprint Reset is pausing sprint after a hit; sprinting again now would cancel it
+		}
+
 		if (canSprint && !player.isSprinting()) {
 			player.setSprinting(true);
 		}

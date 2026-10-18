@@ -73,6 +73,11 @@ public final class AutoStunSlamModule extends Module implements ClientHooks.HudB
 		return true;
 	}
 
+	@Override
+	public String lowImpactLimitation() {
+		return "it makes two attacks and two slot switches per hit.";
+	}
+
 	public String lastResult() {
 		return lastResult;
 	}

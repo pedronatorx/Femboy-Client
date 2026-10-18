@@ -33,6 +33,14 @@ public class IdSetRow extends Container {
 	private final Button reset;
 	private String filter = "";
 
+	private java.util.function.BooleanSupplier collapsed = () -> false;
+
+	/** Hides the row while its section is collapsed. */
+	IdSetRow collapsedWhen(java.util.function.BooleanSupplier condition) {
+		this.collapsed = condition;
+		return this;
+	}
+
 	public IdSetRow(IdSetSetting setting) {
 		this.setting = setting;
 		search = add(new TextField("Filter", 32).icon(Icon.SEARCH).onChange(text -> filter = text.trim().toLowerCase(Locale.ROOT)));
@@ -95,6 +103,10 @@ public class IdSetRow extends Container {
 
 	@Override
 	public int preferredHeight(UiContext ui, int width) {
+		if (collapsed.getAsBoolean()) {
+			return 0;
+		}
+
 		if (!setting.isVisible()) {
 			return 0;
 		}
@@ -130,6 +142,10 @@ public class IdSetRow extends Container {
 
 	@Override
 	public void render(UiContext ui) {
+		if (collapsed.getAsBoolean()) {
+			return;
+		}
+
 		if (!setting.isVisible()) {
 			return;
 		}
@@ -216,6 +232,10 @@ public class IdSetRow extends Container {
 
 	@Override
 	public boolean mouseClicked(UiContext ui, double mouseX, double mouseY, int button) {
+		if (collapsed.getAsBoolean()) {
+			return false;
+		}
+
 		if (!setting.isVisible() || button != 0 || !contains(mouseX, mouseY)) {
 			return false;
 		}

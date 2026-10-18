@@ -19,10 +19,50 @@ public final class PerformanceMonitor {
 	private int frameCursor;
 	private int frameCount;
 	private long lastFrameStart = -1;
+	private volatile boolean measureAllocations;
+
+	/** HotSpot's per-thread allocation counter, or {@code null} when this JVM has none. */
+	private static final com.sun.management.ThreadMXBean THREADS = threads();
+
+	private static com.sun.management.ThreadMXBean threads() {
+		try {
+			if (java.lang.management.ManagementFactory.getThreadMXBean() instanceof com.sun.management.ThreadMXBean bean
+					&& bean.isThreadAllocatedMemorySupported()) {
+				bean.setThreadAllocatedMemoryEnabled(true);
+				return bean;
+			}
+		} catch (RuntimeException | LinkageError ignored) {
+			// Not HotSpot, or the counter is disabled: allocations are simply not measured.
+		}
+
+		return null;
+	}
+
+	/**
+	 * Turns allocation measurement on or off. It costs a counter read per measured call, so it is off unless a
+	 * benchmark or the Diagnostics page asks for it.
+	 */
+	public void setMeasureAllocations(boolean on) {
+		measureAllocations = on && THREADS != null;
+	}
+
+	public boolean measuresAllocations() {
+		return measureAllocations;
+	}
+
+	/** Bytes the calling thread has allocated so far, or 0 while allocations are not measured. */
+	public long allocatedBytes() {
+		return measureAllocations ? THREADS.getCurrentThreadAllocatedBytes() : 0;
+	}
 
 	/** Records the duration of one call. {@code key} is usually {@code "<module>/<phase>"}. */
 	public void record(String key, long nanos) {
-		timings.computeIfAbsent(key, Timing::new).add(nanos);
+		record(key, nanos, 0);
+	}
+
+	/** Records the duration of one call and the bytes it allocated (0 when not measured). */
+	public void record(String key, long nanos, long bytes) {
+		timings.computeIfAbsent(key, Timing::new).add(nanos, Math.max(0, bytes));
 	}
 
 	/** Called once at the start of every rendered frame. */
@@ -103,14 +143,18 @@ public final class PerformanceMonitor {
 		private long calls;
 		private long lastNanos;
 		private long maxNanos;
+		private long totalNanos;
+		private long totalBytes;
 		private double averageNanos;
 
 		Timing(String key) {
 			this.key = key;
 		}
 
-		synchronized void add(long nanos) {
+		synchronized void add(long nanos, long bytes) {
 			calls++;
+			totalNanos += nanos;
+			totalBytes += bytes;
 			lastNanos = nanos;
 			maxNanos = Math.max(maxNanos, nanos);
 			averageNanos = calls == 1 ? nanos : averageNanos + SMOOTHING * (nanos - averageNanos);
@@ -135,6 +179,16 @@ public final class PerformanceMonitor {
 
 		public synchronized double maxMicros() {
 			return maxNanos / 1e3;
+		}
+
+		/** Sum of all recorded durations since the last reset. */
+		public synchronized long totalNanos() {
+			return totalNanos;
+		}
+
+		/** Sum of the bytes allocated by all recorded calls (0 unless allocations were measured). */
+		public synchronized long totalBytes() {
+			return totalBytes;
 		}
 	}
 }

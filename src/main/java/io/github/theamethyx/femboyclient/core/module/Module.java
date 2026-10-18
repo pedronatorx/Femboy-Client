@@ -21,6 +21,8 @@ import io.github.theamethyx.femboyclient.core.setting.ModuleSettings;
  *       <em>and</em> currently available (see {@link #availability(EnvironmentPolicy)});</li>
  *   <li>{@link #onTick()} every client tick while running; render hooks are provided by
  *       client-side interfaces;</li>
+ *   <li>{@link #onWorldChange()} while running, when the client switches to another world or dimension, so
+ *       cached positions from the old one are dropped;</li>
  *   <li>{@link #onDisable()} when it stops running (turned off, world unloaded, error);</li>
  *   <li>{@link #saveExtra(JsonObject)} / {@link #loadExtra(JsonObject, List)} for data beyond
  *       plain settings.</li>
@@ -45,6 +47,8 @@ public abstract class Module {
 	private String lastError;
 	private long lastErrorMillis;
 	private int errorCount;
+	/** "id/phase" keys for the performance monitor, built once instead of on every call. */
+	final String[] timingKeys;
 
 	protected Module(String id, String name, String description, ModuleCategory category, boolean enabledByDefault, int defaultKey) {
 		if (!ID_PATTERN.matcher(id).matches()) {
@@ -59,6 +63,11 @@ public abstract class Module {
 		this.defaultKey = defaultKey;
 		this.enabled = enabledByDefault;
 		this.key = defaultKey;
+		ModuleManager.Phase[] phases = ModuleManager.Phase.values();
+		this.timingKeys = new String[phases.length];
+		for (ModuleManager.Phase phase : phases) {
+			timingKeys[phase.ordinal()] = id + "/" + phase.name().toLowerCase(java.util.Locale.ROOT);
+		}
 	}
 
 	protected Module(String id, String name, String description, ModuleCategory category) {
@@ -77,6 +86,13 @@ public abstract class Module {
 	}
 
 	protected void onTick() {
+	}
+
+	/**
+	 * Called while running when the client switches to another world or dimension (the module keeps running). Drop
+	 * anything that describes the old world here: cached positions, scan results, targets.
+	 */
+	protected void onWorldChange() {
 	}
 
 	/** Writes data that is not a plain setting (e.g. a waypoint list). */
@@ -137,6 +153,33 @@ public abstract class Module {
 		return true;
 	}
 
+	/**
+	 * Why this module does not run in Low-Impact mode, or {@code null} when it runs there (possibly at a slower rate).
+	 * Modules that repeat actions many times a second return a reason; the GUI shows it instead of pretending the module
+	 * runs.
+	 */
+	public String lowImpactLimitation() {
+		return null;
+	}
+
+	/**
+	 * Ids of modules that cannot run together with this one because both control the same thing (for example your view
+	 * or your motion). Turning this module on turns those off, with a message. The relation is checked both ways, so
+	 * declaring it on one side is enough.
+	 */
+	public java.util.Set<String> conflicts() {
+		return java.util.Set.of();
+	}
+
+	/** Another module this one uses, and what for. Shown in the module's info; nothing is switched on automatically. */
+	public record Requirement(String moduleId, String purpose) {
+	}
+
+	/** Modules this one uses for some of its features (for example Trackers' last-seen positions need Player Finder). */
+	public List<Requirement> requirements() {
+		return List.of();
+	}
+
 	public Availability availability(EnvironmentPolicy environment) {
 		if (requiresWorld() && !environment.inWorld()) {
 			return Availability.unavailable("Waiting for a world to load.");
@@ -144,6 +187,11 @@ public abstract class Module {
 
 		if (testEnvironmentOnly() && !environment.testEnvironment()) {
 			return Availability.unavailable(TEST_ENVIRONMENT_ONLY);
+		}
+
+		String limitation = environment.lowImpactMode() ? lowImpactLimitation() : null;
+		if (limitation != null) {
+			return Availability.unavailable("Paused in Low-Impact mode: " + limitation);
 		}
 
 		return Availability.AVAILABLE;

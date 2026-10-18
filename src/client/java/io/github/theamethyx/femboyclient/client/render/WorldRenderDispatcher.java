@@ -47,6 +47,9 @@ public final class WorldRenderDispatcher {
 			return;
 		}
 
+		var performance = io.github.theamethyx.femboyclient.client.FemboyClient.get().performance();
+		long bytes = performance.allocatedBytes();
+		long start = System.nanoTime();
 		rendering.beginFrame(context, client.getDeltaTracker().getGameTimeDeltaPartialTick(false));
 		try {
 			for (Module module : modules.all()) {
@@ -64,6 +67,8 @@ public final class WorldRenderDispatcher {
 					diagnostics.error("Rendering", "Drawing world overlays failed; overlays may be missing", e);
 				}
 			}
+
+			performance.record("client/world", System.nanoTime() - start, performance.allocatedBytes() - bytes);
 		}
 	}
 

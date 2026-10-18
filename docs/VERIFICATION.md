@@ -1,6 +1,6 @@
-# Verification report: Femboy Client 0.8.0
+# Verification report: Femboy Client 0.9.0
 
-Date: 2026-10-17. Sections up to "Servers and stability" were written for 0.4.0 and still pass; later additions are in the sections after it, ending with 0.8.0.
+Date: 2026-10-18. Sections up to "Servers and stability" were written for 0.4.0 and still pass; later additions are in the sections after it, ending with 0.9.0.
 
 ## Status values
 
@@ -274,6 +274,33 @@ Where possible, each module was checked against what the game really did in the 
 | Player Alert auto leave | Verified in the running Minecraft client | A second player 6 blocks away: the client disconnected to the server list and auto leave turned itself off |
 | Moving Aim Trainer targets, Hotbar Profiles on profile switch, schematic rotation/layer | Implemented, not tested | Compiled; no in-game check |
 
+## Performance, ESP target lines and menu redesign (0.9.0)
+
+| Feature | Status | Evidence |
+|---|---|---|
+| Ore ESP renamed Block ESP, settings migrated | Automated tests passed | `ConfigMigrationTest`: a schema-1 profile with `ore_esp` loads into `block_esp` (on, radius 7, only exposed), is saved without the old id, `.bak` kept; imported old profiles are migrated too |
+| Block ESP follows block changes | Verified in the running Minecraft client | Breaking and placing an ore updated the list within 3 ticks with 0 additional chunk reads and 2 single-block updates |
+| Block ESP target lines and visibility modes | Verified in the running Minecraft client | All targets: 2 lines; only visible: 1 (the buried ore has none); only on screen: 0 facing away, 2 facing the ores; screenshot `block-esp-target-lines` |
+| Block ESP only in test environments | Verified in the running Minecraft client | With a simulated public server it stopped and gave the test-environment reason; the sandbox check in AutomationTest now includes Block ESP, Block Counter and Geode Analyzer |
+| Entity ESP lines per group | Verified in the running Minecraft client | Husk and item tracked; 1 line with "Lines to items" off, 2 with it on; screenshot `entity-esp-target-lines` |
+| Storage ESP lines and immediate rescan | Verified in the running Minecraft client | Line to a chest; the broken chest disappeared 4 ticks later (scan interval 20 ticks) |
+| Trackers target lines | Verified in the running Minecraft client | At least one line drawn to a waypoint |
+| Lines start at the crosshair | Verified in the running Minecraft client | The line origin projects to the middle of the screen within 0.75 GUI pixels |
+| Performance modes | Verified in the running Minecraft client | Low impact paused KillAura with the reason "Paused in Low-Impact mode..."; Balanced resumed it; an interval of 2 ticks became 6 (low impact) and 4 (performance); performance mode turns menu animations off |
+| Performance mode per profile | Automated tests passed | `ConfigMigrationTest`: the mode set in one profile comes back when switching back to it, the other profile keeps its own |
+| Module conflicts | Verified in the running Minecraft client, automated tests passed | Turning Aim Assist on turned KillAura off with the message "KillAura turned off"; `ModuleManagerTest` checks both directions |
+| Shared entity index, HUD built per tick | Verified in the running Minecraft client | With Entity ESP, Trackers and Hitboxes on, the entity list was built at most once per tick; HUD text rebuilt at most once per tick |
+| Background config saving | Automated tests passed | `ConfigMigrationTest`: an automatic save hands the write to the writer and writes nothing on the calling thread; the writer writes the captured state |
+| Repeated log messages counted | Automated tests passed | `DiagnosticLoggerTest`: 50 identical errors give one entry and "repeated 49 more time(s)" |
+| World change, Low-Impact pause, category reset, cached lookups | Automated tests passed | `ModuleManagerTest` |
+| Menu: nine sidebar sections, header search, profile selector, notifications | Verified in the running Minecraft client | Sidebar check; "geode" in the header search lists the Geode Analyzer on Home and Escape only leaves the field; the profile chip opens the profile list; the bell opens the notification list and marks messages read; screenshots `gui-v2-home`, `gui-v2-profile-menu`, `gui-v2-notifications` |
+| Collapsible sections, typed values, page reset | Verified in the running Minecraft client | Entity ESP "Performance" starts folded and opens with a click; "96" typed for Maximum highlights; Reset Visuals asks for a second click, then restores Chunk Borders' radius |
+| Reduce motion | Verified in the running Minecraft client | The menu works with reduced motion on; screenshot `gui-v2-home` |
+| Smooth shapes, shadows, glows, icons | Verified in the running Minecraft client | Screenshots of every page at 854x480 and 1280x720 inspected |
+| Performance before and after | Measured | [docs/benchmarks](benchmarks/README.md): module tick work 2.10-2.19 ms to 0.18-0.23 ms per tick, allocations 3,130 KB to 37 KB per tick, client drawing per frame 4.84-5.42 ms to 3.07-3.62 ms (llvmpipe) |
+| Texture fallback (plain shapes when the art is missing) | Implemented, not tested | Compiled; no test removes the textures |
+| Lines while view bobbing in a real walk, third person, free camera | Implemented, not tested | The projection check was done standing still |
+
 ## Not verified
 
 - **Visible window on the NVIDIA GPU:** all rendering was checked with Mesa llvmpipe under Xvfb. Real keyboard shortcuts in the code editor were not tried in a visible window.
@@ -281,4 +308,4 @@ Where possible, each module was checked against what the game really did in the 
 - **Other server software:** Paper, proxies and anti-xray servers.
 - **Not built:** hidden (server-only) rotations or other stealth features, on purpose.
 - **Test harness:** one of three runs after the last change stopped when the Fabric test harness's network synchronizer failed while connecting to the dedicated server ("Network synchronizer in invalid state"). All checks run before that passed; the other two runs passed completely.
-- **Performance at scale:** very many entities or storage blocks, or a 16-chunk radius in a busy world.
+- **Performance at scale:** the benchmark covers 160 entities, 121 chests and 4,802 ores in singleplayer; busy servers, many players and the largest radii were not measured. Frame rates were measured only with software rendering.

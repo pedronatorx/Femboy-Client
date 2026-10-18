@@ -60,16 +60,26 @@ public class ModuleTile extends Container {
 		float on = active.update(module.isEnabled() ? 1 : 0, ui.frameSeconds(), ui.animate());
 
 		int base = Theme.lerp(Theme.SURFACE, Theme.SURFACE_HOVER, h);
-		ui.roundRect(x, y, width, height, isSelected ? Theme.SURFACE_ACTIVE : Theme.lerp(base, Theme.ACCENT_DIM, on * 0.3f), 3);
+		ui.roundRect(x, y, width, height, isSelected ? Theme.SURFACE_ACTIVE : base, 5);
+		if (on > 0.01f && !isSelected) {
+			// A soft accent wash from the left when the module is on.
+			ui.gradientRect(x, y, width, height, Theme.withAlpha(Theme.ACCENT, 0.22f * on), Theme.withAlpha(Theme.ACCENT_2, 0.02f * on), 5);
+		}
+
 		if (isSelected || on > 0.01f) {
 			// Accent bar on the left grows in when the module is on.
-			int barHeight = Math.round((height - 8) * (isSelected ? 1 : on));
-			ui.rect(x, y + (height - barHeight) / 2, 2, barHeight, Theme.ACCENT);
+			int barHeight = Math.round((height - 10) * (isSelected ? 1 : on));
+			ui.roundRect(x + 1, y + (height - barHeight) / 2, 2, barHeight, Theme.ACCENT_2, 1);
 		}
 
 		ModuleRow.StatusView status = ModuleRow.status(module, manager);
 		Icon icon = module.lastError() != null ? Icon.WARNING : Icon.byName(module.category().icon());
-		ui.roundRect(x + 5, y + 4, 16, 16, Theme.withAlpha(Theme.lerp(Theme.ACCENT_DIM, Theme.ACCENT, on), 0.25f + on * 0.35f), 3);
+		if (on > 0.01f) {
+			ui.gradientRect(x + 5, y + 4, 16, 16, Theme.withAlpha(Theme.ACCENT, 0.35f + on * 0.5f), Theme.withAlpha(Theme.ACCENT_2, 0.35f + on * 0.5f), 5);
+		} else {
+			ui.roundRect(x + 5, y + 4, 16, 16, Theme.withAlpha(Theme.ACCENT_DIM, 0.35f), 5);
+		}
+
 		ui.icon(icon, x + 9, y + 8, 8, module.lastError() != null ? Theme.ERROR : Theme.lerp(Theme.TEXT_SECONDARY, 0xFFFFFFFF, on));
 
 		int textX = x + 26;

@@ -73,6 +73,8 @@ public final class PlayerAlertModule extends Module {
 	private final Deque<String> recent = new ArrayDeque<>();
 	private String world;
 	private boolean baseline;
+	private java.util.Set<String> ignored = java.util.Set.of();
+	private int ticks;
 
 	@Override
 	public Tier tier() {
@@ -82,6 +84,19 @@ public final class PlayerAlertModule extends Module {
 	public PlayerAlertModule() {
 		super("player_alert", "Player Alert", "Warns you when another player comes within your render distance, and can leave the server for you.",
 				ModuleCategory.TRACKERS, false, NO_KEY);
+		leaveIgnore.onChange(value -> ignored = parseIgnored(value));
+		ignored = parseIgnored(leaveIgnore.get());
+	}
+
+	private static java.util.Set<String> parseIgnored(String text) {
+		java.util.Set<String> names = new java.util.HashSet<>();
+		for (String name : text.split(",")) {
+			if (!name.isBlank()) {
+				names.add(name.trim().toLowerCase(Locale.ROOT));
+			}
+		}
+
+		return java.util.Set.copyOf(names);
 	}
 
 	@Override
@@ -105,7 +120,7 @@ public final class PlayerAlertModule extends Module {
 			return;
 		}
 
-		String here = WorldIdentity.current() + "|" + WorldIdentity.dimension();
+		String here = WorldIdentity.place();
 		if (!here.equals(world)) {
 			// Nobody from the previous world is near any more; whoever shows up here is new.
 			inRange.clear();
@@ -115,6 +130,12 @@ public final class PlayerAlertModule extends Module {
 		Map<UUID, String> now = new LinkedHashMap<>();
 		List<String> arrived = new ArrayList<>();
 		long time = System.currentTimeMillis();
+		if (++ticks % 200 == 0) {
+			// Forget warnings older than the repeat delay, so the map does not grow with every player ever seen.
+			long keep = Math.round(cooldown.get() * 1000);
+			lastWarned.values().removeIf(at -> time - at >= keep);
+		}
+
 		for (AbstractClientPlayer other : client.level.players()) {
 			if (other == client.player || ignoreNpcs.get() && connection.getPlayerInfo(other.getUUID()) == null) {
 				continue;
@@ -187,13 +208,6 @@ public final class PlayerAlertModule extends Module {
 	private void checkAutoLeave(Minecraft client) {
 		if (!autoLeave.get() || leaving || client.isLocalServer() || client.getCurrentServer() == null) {
 			return;
-		}
-
-		java.util.Set<String> ignored = new java.util.HashSet<>();
-		for (String name : leaveIgnore.get().split(",")) {
-			if (!name.isBlank()) {
-				ignored.add(name.trim().toLowerCase(Locale.ROOT));
-			}
 		}
 
 		for (AbstractClientPlayer other : client.level.players()) {

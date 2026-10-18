@@ -57,6 +57,10 @@ public final class AutoArmorModule extends Module {
 		}
 
 		InventoryMenu menu = player.inventoryMenu;
+		if (!menu.getCarried().isEmpty()) {
+			return; // the player is moving an item by hand; clicks now would drop or swap it
+		}
+
 		for (EquipmentSlot slot : SLOTS) {
 			ItemStack worn = player.getItemBySlot(slot);
 			if (EnchantmentHelper.has(worn, EnchantmentEffectComponents.PREVENT_ARMOR_CHANGE) || keepElytra.get() && worn.has(DataComponents.GLIDER)) {
@@ -80,7 +84,7 @@ public final class AutoArmorModule extends Module {
 				client.gameMode.handleInventoryMouseClick(menu.containerId, menuSlot(slot), 0, ClickType.PICKUP, player);
 				client.gameMode.handleInventoryMouseClick(menu.containerId, best, 0, ClickType.PICKUP, player);
 				equipped++;
-				readyAt = System.currentTimeMillis() + delay.get().longValue();
+				readyAt = System.currentTimeMillis() + io.github.theamethyx.femboyclient.client.Performance.actionDelayMillis(delay.get().longValue());
 				return;
 			}
 		}

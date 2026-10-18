@@ -80,7 +80,8 @@ public final class AutoTotemModule extends Module {
 			missingSince = now;
 		}
 
-		if (now - missingSince < delay.get()) {
+		if (now - missingSince < io.github.theamethyx.femboyclient.client.Performance.actionDelayMillis(delay.get().longValue())
+				|| !player.inventoryMenu.getCarried().isEmpty()) {
 			return;
 		}
 

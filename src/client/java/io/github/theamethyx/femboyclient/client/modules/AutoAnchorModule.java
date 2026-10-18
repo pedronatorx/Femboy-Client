@@ -64,6 +64,11 @@ public final class AutoAnchorModule extends Module implements ClientHooks.HudBlo
 		return true;
 	}
 
+	@Override
+	public String lowImpactLimitation() {
+		return "it places, charges and uses anchors several times a second.";
+	}
+
 	public int explosions() {
 		return explosions;
 	}
@@ -179,7 +184,7 @@ public final class AutoAnchorModule extends Module implements ClientHooks.HudBlo
 			anchor = null;
 		}
 
-		cooldown = delay.intValue();
+		cooldown = io.github.theamethyx.femboyclient.client.Performance.actionDelayTicks(delay.intValue());
 	}
 
 	private void turn(LocalPlayer player, net.minecraft.world.phys.Vec3 point) {

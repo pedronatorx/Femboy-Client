@@ -78,19 +78,33 @@ public final class WaypointsModule extends Module implements ClientHooks.WorldRe
 		return List.copyOf(waypoints);
 	}
 
-	/** Waypoints of the world and dimension the player is in. */
+	private String herePlace;
+	private int hereCount = -1;
+	private List<Waypoint> here = List.of();
+
+	/** Waypoints of the world and dimension the player is in; kept until the place or the list changes (asked every frame). */
 	public List<Waypoint> visibleHere() {
-		String world = WorldIdentity.current();
-		String dimension = WorldIdentity.dimension();
-		List<Waypoint> result = new ArrayList<>();
-		for (Waypoint waypoint : waypoints) {
-			if (waypoint.world().equals(world) && waypoint.dimension().equals(dimension)) {
-				result.add(waypoint);
+		String place = WorldIdentity.place();
+		if (!java.util.Objects.equals(place, herePlace) || hereCount != modifications) {
+			String world = WorldIdentity.current();
+			String dimension = WorldIdentity.dimension();
+			List<Waypoint> result = new ArrayList<>();
+			for (Waypoint waypoint : waypoints) {
+				if (waypoint.world().equals(world) && waypoint.dimension().equals(dimension)) {
+					result.add(waypoint);
+				}
 			}
+
+			here = List.copyOf(result);
+			herePlace = place;
+			hereCount = modifications;
 		}
 
-		return result;
+		return here;
 	}
+
+	/** Counts changes to the waypoint list, so {@link #visibleHere()} knows when to rebuild. */
+	private int modifications;
 
 	/** @return {@code null} on success, otherwise a readable reason */
 	public String addAtPlayer(String rawName) {
@@ -110,12 +124,14 @@ public final class WaypointsModule extends Module implements ClientHooks.WorldRe
 		}
 
 		waypoints.add(new Waypoint(name, player.getBlockX(), player.getBlockY(), player.getBlockZ(), WorldIdentity.dimension(), world));
+		modifications++;
 		settingsChanged();
 		return null;
 	}
 
 	public void remove(Waypoint waypoint) {
 		if (waypoints.remove(waypoint)) {
+			modifications++;
 			settingsChanged();
 		}
 	}
@@ -168,6 +184,7 @@ public final class WaypointsModule extends Module implements ClientHooks.WorldRe
 			}
 		}
 
+		modifications++;
 		if (skipped > 0) {
 			warnings.add(skipped + " waypoint(s) were unreadable and were skipped.");
 		}
@@ -176,6 +193,7 @@ public final class WaypointsModule extends Module implements ClientHooks.WorldRe
 	@Override
 	protected void resetExtra() {
 		waypoints.clear();
+		modifications++;
 	}
 
 	// ----- rendering -------------------------------------------------------------------------
@@ -220,7 +238,7 @@ public final class WaypointsModule extends Module implements ClientHooks.WorldRe
 				continue;
 			}
 
-			String text = waypoint.name() + (distance.get() ? String.format(Locale.ROOT, "  %.0fm", waypoint.center().distanceTo(camera)) : "");
+			String text = distance.get() ? waypoint.name() + "  " + EntityEspModule.meters(waypoint.center().distanceTo(camera)) : waypoint.name();
 			ui.worldLabel(text, at[0], at[1] - 1, color.get().argb);
 		}
 	}

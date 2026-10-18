@@ -45,6 +45,9 @@ public class ModulesPage extends Page {
 	private final Dropdown<CategoryChoice> filter;
 	private final ScrollList list;
 	private final ScrollList details;
+	private final Button resetCategory;
+	/** When the reset button was first clicked; a second click within 4 seconds confirms. */
+	private long resetArmedAt;
 	private String lastSelection;
 	private String selectedId;
 	private String searchText = "";
@@ -78,6 +81,39 @@ public class ModulesPage extends Page {
 
 		list = add(new ScrollList(ui, 3, 0));
 		details = add(new ScrollList(ui, 4, 0));
+		resetCategory = add(new Button(() -> armed() ? "Click again to reset" : "Reset " + resetScopeLabel(), Button.Style.GHOST, this::resetClicked)
+				.icon(Icon.RESET));
+		resetCategory.tooltip(() -> "Restore every module listed here (" + resetScopeLabel() + ") to its defaults: settings, keys and on/off. "
+				+ "Asks for a second click.");
+	}
+
+	private boolean armed() {
+		return System.currentTimeMillis() - resetArmedAt < 4000;
+	}
+
+	private String resetScopeLabel() {
+		ModuleCategory chosen = effectiveFilter();
+		return chosen != null ? chosen.label() : title;
+	}
+
+	private void resetClicked() {
+		if (!armed()) {
+			resetArmedAt = System.currentTimeMillis();
+			return;
+		}
+
+		resetArmedAt = 0;
+		ModuleCategory chosen = effectiveFilter();
+		for (ModuleCategory category : categories) {
+			if (chosen == null || chosen == category) {
+				modules.resetCategory(category);
+			}
+		}
+
+		io.github.theamethyx.femboyclient.client.hud.Notifications.show("Reset", resetScopeLabel() + " modules are back to their defaults",
+				Theme.SUCCESS);
+		rebuildList();
+		rebuildDetails();
 	}
 
 	private ModuleCategory effectiveFilter() {
@@ -127,7 +163,8 @@ public class ModulesPage extends Page {
 		int filterWidth = categories.size() == 1 ? 0 : Math.min(96, listWidth / 2);
 		search.setBounds(x, y, listWidth - filterWidth - (filterWidth == 0 ? 0 : Theme.GAP), 15);
 		filter.setBounds(x + listWidth - filterWidth, y, filterWidth, 15);
-		list.setBounds(x, y + 15 + Theme.GAP, listWidth, height - 15 - Theme.GAP);
+		list.setBounds(x, y + 15 + Theme.GAP, listWidth, height - 15 - 2 * Theme.GAP - 14);
+		resetCategory.setBounds(x, y + height - 14, listWidth, 14);
 		details.setBounds(x + listWidth + Theme.PAD, y, width - listWidth - Theme.PAD, height);
 		rebuildList();
 		rebuildDetails();
@@ -194,7 +231,7 @@ public class ModulesPage extends Page {
 			if (module.settings().isEmpty()) {
 				rows.add(new Message("This module has no settings."));
 			} else {
-				rows.addAll(SettingRow.rowsFor(module.settings().all()));
+				rows.addAll(SettingRow.rowsFor(module.id(), module.settings().all()));
 			}
 
 			if (module instanceof io.github.theamethyx.femboyclient.client.module.ClientHooks.CustomControls custom) {

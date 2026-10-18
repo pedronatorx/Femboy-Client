@@ -145,7 +145,7 @@ public final class Presets {
 						.on("zoom")
 						.build(), ProfileRule.Trigger.BLOCK));
 		list.add(new Preset("mining", "Mining", "Auto Tool, light levels, a diamond and debris counter, durability and death coordinates. "
-				+ "Ore ESP is set up but left off (many servers forbid it).",
+				+ "Block ESP is set up but left off (it runs only in singleplayer and on your own network).",
 				new Builder()
 						.on("auto_tool")
 						.on("light_level")
@@ -153,7 +153,7 @@ public final class Presets {
 						.on("health_armor", "only_low", true)
 						.on("coordinates_hud")
 						.on("death_coordinates")
-						.off("ore_esp", "radius", 4.0)
+						.off("block_esp", "radius", 4.0)
 						.build(), ProfileRule.Trigger.PICKAXE));
 		list.add(new Preset("exploration", "Exploration", "Coordinates, waypoints and trackers, death coordinates, movement and elytra info, zoom.",
 				new Builder()

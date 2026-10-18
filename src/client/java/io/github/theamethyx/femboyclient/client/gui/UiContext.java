@@ -23,6 +23,13 @@ import io.github.theamethyx.femboyclient.client.gui.widget.Widget;
  */
 public final class UiContext {
 	public static final Identifier ICONS = Identifier.fromNamespaceAndPath(FemboyClient.MOD_ID, "textures/gui/icons.png");
+	public static final Identifier ROUND = Identifier.fromNamespaceAndPath(FemboyClient.MOD_ID, "textures/gui/round.png");
+	public static final Identifier SHADOW = Identifier.fromNamespaceAndPath(FemboyClient.MOD_ID, "textures/gui/shadow.png");
+	public static final Identifier GLOW = Identifier.fromNamespaceAndPath(FemboyClient.MOD_ID, "textures/gui/glow.png");
+	public static final Identifier RAMP = Identifier.fromNamespaceAndPath(FemboyClient.MOD_ID, "textures/gui/ramp.png");
+	public static final Identifier LOGO = Identifier.fromNamespaceAndPath(FemboyClient.MOD_ID, "textures/gui/logo.png");
+	/** Whether the GUI textures are present; checked once. Without them shapes fall back to plain stepped drawing. */
+	private static Boolean art;
 	private static final long TOOLTIP_DELAY_MS = 450;
 
 	public final Font font;
@@ -44,9 +51,49 @@ public final class UiContext {
 	private int screenHeight = 10_000;
 
 	private String shownTooltip;
+	private boolean reduceMotion;
+	private boolean cheapShapes;
 
 	public UiContext(Font font) {
 		this.font = font;
+	}
+
+	/**
+	 * Whether the smooth-shape textures loaded. A resource pack or a broken jar could remove them; then every shape is
+	 * drawn with plain rectangles instead of showing missing-texture squares.
+	 */
+	public static boolean art() {
+		if (art == null) {
+			var resources = net.minecraft.client.Minecraft.getInstance().getResourceManager();
+			art = resources.getResource(ROUND).isPresent() && resources.getResource(SHADOW).isPresent() && resources.getResource(GLOW).isPresent()
+					&& resources.getResource(RAMP).isPresent() && resources.getResource(LOGO).isPresent();
+		}
+
+		return art;
+	}
+
+	/** Forgets the texture check, e.g. after resource packs were reloaded. */
+	public static void recheckArt() {
+		art = null;
+	}
+
+	/**
+	 * For drawing done every frame during play (the HUD, ESP labels): plain shapes with 1-pixel cut corners instead of
+	 * textured smooth corners. Textured corners switch the render pipeline between quads, which costs batching, and at HUD
+	 * sizes the difference is barely visible. The menu keeps the smooth shapes.
+	 */
+	public void setCheapShapes(boolean cheapShapes) {
+		this.cheapShapes = cheapShapes;
+	}
+
+	/** With reduced motion on, things no longer slide or grow; only short fades remain. */
+	public void setReduceMotion(boolean reduceMotion) {
+		this.reduceMotion = reduceMotion;
+	}
+
+	/** Whether positions and sizes may animate this frame (animations on and motion not reduced). */
+	public boolean motion() {
+		return animate && !reduceMotion;
 	}
 
 	// ----- frame lifecycle -------------------------------------------------------------------
@@ -263,8 +310,47 @@ public final class UiContext {
 		}
 	}
 
-	/** A rectangle with 1-pixel cut corners, the "soft" panel shape used throughout Femboy Client. */
+	/** The standard soft shape used throughout Femboy Client: a rectangle with smooth 3-pixel corners. */
 	public void roundRect(int x, int y, int width, int height, int color) {
+		roundRect(x, y, width, height, color, 3);
+	}
+
+	/**
+	 * A rectangle with smooth, anti-aliased corners of {@code radius} pixels: the corners are quarters of a filtered disc
+	 * texture, the rest plain fills, so translucent colors stay even. Falls back to stepped corners without the texture.
+	 */
+	public void roundRect(int x, int y, int width, int height, int color, int radius) {
+		if (width <= 0 || height <= 0) {
+			return;
+		}
+
+		int r = Math.min(radius, Math.min(width, height) / 2);
+		if (r <= 0) {
+			rect(x, y, width, height, color);
+			return;
+		}
+
+		if (cheapShapes) {
+			cutRect(x, y, width, height, color);
+			return;
+		}
+
+		if (!art()) {
+			steppedRoundRect(x, y, width, height, color, r);
+			return;
+		}
+
+		corner(x, y, r, 0, 0, color);
+		corner(x + width - r, y, r, 32, 0, color);
+		corner(x, y + height - r, r, 0, 32, color);
+		corner(x + width - r, y + height - r, r, 32, 32, color);
+		graphics.fill(x + r, y, x + width - r, y + height, color);
+		graphics.fill(x, y + r, x + r, y + height - r, color);
+		graphics.fill(x + width - r, y + r, x + width, y + height - r, color);
+	}
+
+	/** Three fills: a rectangle with its corner pixels left out. */
+	private void cutRect(int x, int y, int width, int height, int color) {
 		if (width < 3 || height < 3) {
 			rect(x, y, width, height, color);
 			return;
@@ -275,14 +361,11 @@ public final class UiContext {
 		graphics.fill(x + width - 1, y + 1, x + width, y + height - 1, color);
 	}
 
-	/** A rectangle with rounded corners of {@code radius} pixels (drawn as stepped rows, so it stays crisp). */
-	public void roundRect(int x, int y, int width, int height, int color, int radius) {
-		int r = Math.min(radius, Math.min(width, height) / 2);
-		if (r <= 1) {
-			roundRect(x, y, width, height, color);
-			return;
-		}
+	private void corner(int x, int y, int size, int u, int v, int color) {
+		graphics.blit(RenderPipelines.GUI_TEXTURED, ROUND, x, y, u, v, size, size, 32, 32, 64, 64, color);
+	}
 
+	private void steppedRoundRect(int x, int y, int width, int height, int color, int r) {
 		for (int i = 0; i < r; i++) {
 			double dy = r - i - 0.5;
 			int inset = r - (int) Math.round(Math.sqrt(r * r - dy * dy));
@@ -293,20 +376,93 @@ public final class UiContext {
 		graphics.fill(x, y + r, x + width, y + height - r, color);
 	}
 
-	/** A soft shadow around a rounded box: a few widening, fading layers. */
+	/**
+	 * A rounded rectangle shaded from {@code left} to {@code right}: the left corners take the first color, the right
+	 * corners the second, and a filtered alpha ramp blends the middle.
+	 */
+	public void gradientRect(int x, int y, int width, int height, int left, int right, int radius) {
+		int r = Math.min(radius, Math.min(width, height) / 2);
+		if (cheapShapes || !art() || width <= 2 * r + 1) {
+			roundRect(x, y, width, height, Theme.lerp(left, right, 0.5f), radius);
+			return;
+		}
+
+		corner(x, y, r, 0, 0, left);
+		corner(x, y + height - r, r, 0, 32, left);
+		corner(x + width - r, y, r, 32, 0, right);
+		corner(x + width - r, y + height - r, r, 32, 32, right);
+		graphics.fill(x, y + r, x + r, y + height - r, left);
+		graphics.fill(x + width - r, y + r, x + width, y + height - r, right);
+		graphics.fill(x + r, y, x + width - r, y + height, left);
+		graphics.blit(RenderPipelines.GUI_TEXTURED, RAMP, x + r, y, 0, 0, width - 2 * r, height, 64, 4, 64, 4, right);
+	}
+
+	/**
+	 * A soft drop shadow under a box, from a blurred 9-slice texture: {@code spread} pixels of blur around the box, a
+	 * little lower than it. Falls back to a few fading layers without the texture.
+	 */
 	public void shadow(int x, int y, int width, int height, int radius, float strength) {
-		for (int i = 3; i >= 1; i--) {
-			int alpha = Math.round(strength * 40 / i);
-			roundRect(x - i, y - i + 1, width + 2 * i, height + 2 * i, alpha << 24, radius + i);
+		int alpha = Math.round(Math.min(1, strength * 0.55f) * 255);
+		if (!art()) {
+			for (int i = 3; i >= 1; i--) {
+				steppedRoundRect(x - i, y - i + 1, width + 2 * i, height + 2 * i, Math.round(strength * 40 / i) << 24, radius + i);
+			}
+
+			return;
+		}
+
+		int spread = 10 + radius;
+		int c = spread + radius;
+		int ox = x - spread;
+		int oy = y - spread + 3;
+		int ow = width + 2 * spread;
+		int oh = height + 2 * spread;
+		int tint = alpha << 24 | 0x000000;
+		int middleW = Math.max(0, ow - 2 * c);
+		int middleH = Math.max(0, oh - 2 * c);
+		// Corners (24 px of texture each), edges (the 16 px middle of the texture, stretched), centre.
+		graphics.blit(RenderPipelines.GUI_TEXTURED, SHADOW, ox, oy, 0, 0, c, c, 24, 24, 64, 64, tint);
+		graphics.blit(RenderPipelines.GUI_TEXTURED, SHADOW, ox + ow - c, oy, 40, 0, c, c, 24, 24, 64, 64, tint);
+		graphics.blit(RenderPipelines.GUI_TEXTURED, SHADOW, ox, oy + oh - c, 0, 40, c, c, 24, 24, 64, 64, tint);
+		graphics.blit(RenderPipelines.GUI_TEXTURED, SHADOW, ox + ow - c, oy + oh - c, 40, 40, c, c, 24, 24, 64, 64, tint);
+		graphics.blit(RenderPipelines.GUI_TEXTURED, SHADOW, ox + c, oy, 24, 0, middleW, c, 16, 24, 64, 64, tint);
+		graphics.blit(RenderPipelines.GUI_TEXTURED, SHADOW, ox + c, oy + oh - c, 24, 40, middleW, c, 16, 24, 64, 64, tint);
+		graphics.blit(RenderPipelines.GUI_TEXTURED, SHADOW, ox, oy + c, 0, 24, c, middleH, 24, 16, 64, 64, tint);
+		graphics.blit(RenderPipelines.GUI_TEXTURED, SHADOW, ox + ow - c, oy + c, 40, 24, c, middleH, 24, 16, 64, 64, tint);
+		graphics.blit(RenderPipelines.GUI_TEXTURED, SHADOW, ox + c, oy + c, 24, 24, middleW, middleH, 16, 16, 64, 64, tint);
+	}
+
+	/** A soft round glow of {@code color} (alpha included) centered on a point; nothing without the texture. */
+	public void glow(int centerX, int centerY, int radius, int color) {
+		if (art() && radius > 0) {
+			graphics.blit(RenderPipelines.GUI_TEXTURED, GLOW, centerX - radius, centerY - radius, 0, 0, radius * 2, radius * 2, 128, 128, 128, 128, color);
 		}
 	}
 
-	/** One-pixel border following the {@link #roundRect} shape. */
+	/** The Femboy Client badge at {@code size} pixels; a rounded accent square with a heart when the texture is missing. */
+	public void logo(int x, int y, int size) {
+		if (art()) {
+			graphics.blit(RenderPipelines.GUI_TEXTURED, LOGO, x, y, 0, 0, size, size, 128, 128, 128, 128, 0xFFFFFFFF);
+		} else {
+			roundRect(x, y, size, size, Theme.ACCENT, Math.max(2, size / 4));
+			icon(Icon.HEART, x + size / 4, y + size / 4, size / 2, 0xFFFFFFFF);
+		}
+	}
+
+	/**
+	 * A one-pixel border following the {@link #roundRect} shape: the straight edges, stopping where the smooth corners
+	 * begin, so it never looks squared off.
+	 */
 	public void outline(int x, int y, int width, int height, int color) {
-		graphics.fill(x + 1, y, x + width - 1, y + 1, color);
-		graphics.fill(x + 1, y + height - 1, x + width - 1, y + height, color);
-		graphics.fill(x, y + 1, x + 1, y + height - 1, color);
-		graphics.fill(x + width - 1, y + 1, x + width, y + height - 1, color);
+		outline(x, y, width, height, color, 3);
+	}
+
+	public void outline(int x, int y, int width, int height, int color, int radius) {
+		int r = Math.max(1, Math.min(radius, Math.min(width, height) / 2) - 1);
+		graphics.fill(x + r, y, x + width - r, y + 1, color);
+		graphics.fill(x + r, y + height - 1, x + width - r, y + height, color);
+		graphics.fill(x, y + r, x + 1, y + height - r, color);
+		graphics.fill(x + width - 1, y + r, x + width, y + height - r, color);
 	}
 
 	public void text(String text, int x, int y, int color) {

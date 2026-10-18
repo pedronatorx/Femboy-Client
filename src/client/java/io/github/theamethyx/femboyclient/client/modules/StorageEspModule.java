@@ -22,11 +22,14 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
+import io.github.theamethyx.femboyclient.client.Performance;
 import io.github.theamethyx.femboyclient.client.gui.UiContext;
 import io.github.theamethyx.femboyclient.client.module.ClientHooks;
 import io.github.theamethyx.femboyclient.client.render.EspRenderer;
+import io.github.theamethyx.femboyclient.client.render.FrameProjection;
 import io.github.theamethyx.femboyclient.client.render.RenderingUtilities;
-import io.github.theamethyx.femboyclient.client.world.WorldIdentity;
+import io.github.theamethyx.femboyclient.client.render.TargetLines;
+import io.github.theamethyx.femboyclient.client.world.BlockChanges;
 import io.github.theamethyx.femboyclient.core.module.Module;
 import io.github.theamethyx.femboyclient.core.module.ModuleCategory;
 import io.github.theamethyx.femboyclient.core.setting.BooleanSetting;
@@ -39,10 +42,11 @@ import io.github.theamethyx.femboyclient.core.setting.NumberSetting;
  * loaded. Blocks are chosen by block id, not by block-entity type: copper chests, for example, share the
  * chest block entity but are separate choices here.
  *
- * <p>Scans run every few ticks within a block budget, never per frame. It reads only block entities
- * the client already has and never asks the server.
+ * <p>Scans run at the scan interval, never per frame, and at once when a storage block is placed or broken nearby. It
+ * reads only block entities the client already has and never asks the server. Boxes, colors and names are worked out
+ * per scan; each frame only draws what is in view, labels the nearest few and draws target lines.
  */
-public final class StorageEspModule extends Module implements ClientHooks.WorldRender, ClientHooks.ScreenOverlay {
+public final class StorageEspModule extends Module implements ClientHooks.WorldRender, ClientHooks.ScreenOverlay, BlockChanges.Listener {
 	/** Storage groups in display order, each with its built-in color. */
 	public enum Group {
 		CHESTS("Chests", 0xF29E4C), TRAPPED("Trapped chests", 0xF27272), ENDER("Ender chests", 0x9D6EFF),
@@ -87,6 +91,8 @@ public final class StorageEspModule extends Module implements ClientHooks.WorldR
 	private final BooleanSetting throughWalls = settings().add(new BooleanSetting("through_walls", "Show through walls",
 			"Draw highlights even when other blocks are in the way.", true));
 	private final BooleanSetting labels = settings().add(new BooleanSetting("labels", "Labels", "Show the block's name and distance above it.", false));
+	private final NumberSetting maxLabels = settings().add(new NumberSetting("max_labels", "Most labels", "Labels for the nearest storage blocks only.",
+			24, 1, 64, 1, "")).visibleWhen(labels::get);
 	private final BooleanSetting customColors = settings().add(new BooleanSetting("custom_colors", "Custom colors",
 			"Choose your own color for each group instead of the built-in palette.", false));
 	private final Map<Group, ColorSetting> colors = groupColors();
@@ -97,13 +103,57 @@ public final class StorageEspModule extends Module implements ClientHooks.WorldR
 	private final NumberSetting maxTargets = settings().add(new NumberSetting("max_targets", "Maximum highlights",
 			"Performance limit: only the nearest storage blocks up to this number are drawn.", 256, 16, 2048, 16, ""));
 
-	private record Found(BlockPos pos, AABB box, Group group, String name) {
+	private final TargetLines.Settings lines = new TargetLines.Settings(settings(), false, TargetLines.Visibility.ALWAYS, 64, 256, 16);
+	private final IdSetSetting lineGroups = settings().add(new IdSetSetting("line_groups", "Lines to",
+			"Which kinds of storage get a target line.", allGroupIds())).visibleWhen(lines.enabled::get);
+
+	/** One highlighted storage block, worked out at scan time. */
+	private static final class Found implements TargetLines.Target {
+		final BlockPos pos;
+		final AABB box;
+		final Vec3 center;
+		final Group group;
+		final String name;
+		final int rgb;
+		final boolean line;
+		boolean sight = true;
+
+		Found(BlockPos pos, AABB box, Group group, String name, int rgb, boolean line) {
+			this.pos = pos;
+			this.box = box;
+			this.center = box.getCenter();
+			this.group = group;
+			this.name = name;
+			this.rgb = rgb;
+			this.line = line;
+		}
+
+		@Override
+		public Vec3 linePoint(float partialTick) {
+			return center;
+		}
+
+		@Override
+		public int lineColor() {
+			return rgb;
+		}
+
+		@Override
+		public boolean lineOfSight() {
+			return sight;
+		}
+
+		@Override
+		public boolean wantsLine() {
+			return line;
+		}
 	}
 
 	private Set<String> selected = Set.of();
 	private List<Found> found = List.of();
 	private int ticksUntilScan;
-	private String scannedLevel;
+	private int ticksUntilSightCheck;
+	private int scans;
 	private List<IdSetSetting.Choice> choices;
 
 	public StorageEspModule() {
@@ -115,6 +165,33 @@ public final class StorageEspModule extends Module implements ClientHooks.WorldR
 			ticksUntilScan = 0;
 		});
 		selected = Set.copyOf(blocks.get());
+		lineGroups.choices(() -> {
+			List<IdSetSetting.Choice> list = new ArrayList<>();
+			for (Group group : Group.values()) {
+				list.add(new IdSetSetting.Choice(groupId(group), group.label, "Storage"));
+			}
+
+			return list;
+		});
+		// Colors and line choices are baked into the scan results: rescan when they change.
+		Runnable rescan = () -> ticksUntilScan = 0;
+		customColors.onChange(value -> rescan.run());
+		colors.values().forEach(color -> color.onChange(value -> rescan.run()));
+		lineGroups.onChange(value -> rescan.run());
+	}
+
+	/** Id of a group in the "Lines to" choice, shaped like the registry ids the setting stores. */
+	static String groupId(Group group) {
+		return "storage:" + group.name().toLowerCase(Locale.ROOT);
+	}
+
+	private static Set<String> allGroupIds() {
+		Set<String> ids = new HashSet<>();
+		for (Group group : Group.values()) {
+			ids.add(groupId(group));
+		}
+
+		return ids;
 	}
 
 	/** One color per group, listed right after the "Custom colors" switch and shown only while it is on. */
@@ -178,6 +255,12 @@ public final class StorageEspModule extends Module implements ClientHooks.WorldR
 	// ----- scanning --------------------------------------------------------------------------
 
 	@Override
+	protected void onEnable() {
+		BlockChanges.add(this);
+		ticksUntilScan = 0;
+	}
+
+	@Override
 	protected void onTick() {
 		Minecraft client = Minecraft.getInstance();
 		ClientLevel level = client.level;
@@ -186,20 +269,45 @@ public final class StorageEspModule extends Module implements ClientHooks.WorldR
 			return;
 		}
 
-		String here = WorldIdentity.current() + "|" + WorldIdentity.dimension();
-		if (!here.equals(scannedLevel)) {
-			// New world or dimension: positions from the old one must never be drawn here.
-			found = List.of();
-			scannedLevel = here;
-			ticksUntilScan = 0;
+		if (--ticksUntilScan <= 0) {
+			ticksUntilScan = Performance.interval(Math.max(1, (int) Math.round(interval.get() * 20)));
+			scan(level, client.player.position());
 		}
 
-		if (--ticksUntilScan > 0) {
-			return;
+		if (lines.enabled.get() && lines.visibility.get() == TargetLines.Visibility.LINE_OF_SIGHT && --ticksUntilSightCheck <= 0) {
+			ticksUntilSightCheck = Performance.interval(5);
+			int checks = Math.min(found.size(), lines.maxCount.intValue());
+			for (int i = 0; i < checks; i++) {
+				Found f = found.get(i);
+				f.sight = TargetLines.lineOfSight(f.center, f.pos);
+			}
 		}
+	}
 
-		ticksUntilScan = Math.max(1, (int) Math.round(interval.get() * 20));
-		scan(level, client.player.position());
+	@Override
+	protected void onWorldChange() {
+		// New world or dimension: positions from the old one must never be drawn here.
+		found = List.of();
+		ticksUntilScan = 0;
+	}
+
+	// A storage block placed or broken: scan again right away instead of waiting for the interval.
+	@Override
+	public void blockChanged(ClientLevel level, BlockPos pos, BlockState oldState, BlockState newState) {
+		if (oldState.getBlock() != newState.getBlock() && (oldState.hasBlockEntity() || newState.hasBlockEntity())) {
+			ticksUntilScan = Math.min(ticksUntilScan, 2);
+		}
+	}
+
+	@Override
+	public void chunkLoaded(ClientLevel level, LevelChunk chunk) {
+	}
+
+	@Override
+	public void chunkUnloaded(ClientLevel level, LevelChunk chunk) {
+		if (!found.isEmpty()) {
+			ticksUntilScan = Math.min(ticksUntilScan, 2);
+		}
 	}
 
 	private void scan(ClientLevel level, Vec3 center) {
@@ -233,13 +341,17 @@ public final class StorageEspModule extends Module implements ClientHooks.WorldR
 						continue;
 					}
 
-					result.add(new Found(pos.immutable(), boxOf(level, pos, state), group, state.getBlock().getName().getString()));
+					result.add(new Found(pos.immutable(), boxOf(level, pos, state), group, state.getBlock().getName().getString(), colorOf(group),
+							lineGroups.get().contains(groupId(group))));
 				}
 			}
 		}
 
-		result.sort(Comparator.comparingDouble(f -> Vec3.atCenterOf(f.pos()).distanceToSqr(center)));
-		found = result.size() > maxTargets.intValue() ? List.copyOf(result.subList(0, maxTargets.intValue())) : List.copyOf(result);
+		result.sort(Comparator.comparingDouble(f -> f.center.distanceToSqr(center)));
+		int keep = Performance.cap(maxTargets.intValue(), 96);
+		found = result.size() > keep ? List.copyOf(result.subList(0, keep)) : List.copyOf(result);
+		ticksUntilSightCheck = 0;
+		scans++;
 	}
 
 	private static AABB boxOf(ClientLevel level, BlockPos pos, BlockState state) {
@@ -250,38 +362,58 @@ public final class StorageEspModule extends Module implements ClientHooks.WorldR
 
 	@Override
 	protected void onDisable() {
+		BlockChanges.remove(this);
 		found = List.of();
-		scannedLevel = null;
 	}
 
 	/** Positions highlighted after the last scan, nearest first; read by automated tests. */
 	public List<BlockPos> highlighted() {
-		return found.stream().map(Found::pos).toList();
+		List<BlockPos> positions = new ArrayList<>(found.size());
+		found.forEach(f -> positions.add(f.pos));
+		return positions;
+	}
+
+	/** Scans made so far (for tests). */
+	public int scans() {
+		return scans;
+	}
+
+	public TargetLines.Settings lines() {
+		return lines;
 	}
 
 	// ----- rendering -------------------------------------------------------------------------
 
-	private List<EspRenderer.Target> targets(Vec3 camera, boolean withLabels) {
-		List<EspRenderer.Target> targets = new ArrayList<>(found.size());
-		for (Found f : found) {
-			EspRenderer.Label label = withLabels
-					? EspRenderer.Label.of(f.name(), String.format(Locale.ROOT, "%.0fm", Vec3.atCenterOf(f.pos()).distanceTo(camera))) : null;
-			targets.add(new EspRenderer.Target(f.box(), colorOf(f.group()), label));
-		}
-
-		return targets;
-	}
-
 	@Override
 	public void renderWorld(RenderingUtilities render) {
-		EspRenderer.drawBoxes(render, targets(render.camera(), false), EspRenderer.Style.simple(outline.get(), fill.get(), throughWalls.get(), 1.5f));
+		List<EspRenderer.Target> targets = new ArrayList<>(found.size());
+		for (Found f : found) {
+			if (FrameProjection.inView(f.box)) {
+				targets.add(new EspRenderer.Target(f.box, f.rgb, null));
+			}
+		}
+
+		EspRenderer.drawBoxes(render, targets, EspRenderer.Style.simple(outline.get(), fill.get(), throughWalls.get(), 1.5f));
+		lines.draw(render, found);
 	}
 
 	@Override
 	public void renderOverlay(UiContext ui, int screenWidth, int screenHeight, float partialTick) {
-		if (labels.get()) {
-			Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().position();
-			EspRenderer.drawLabels(ui, targets(camera, true), screenWidth, screenHeight, 24, EspRenderer.LabelStyle.DEFAULT);
+		if (!labels.get()) {
+			return;
 		}
+
+		Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().position();
+		int limit = Performance.cap(maxLabels.intValue(), 12);
+		List<EspRenderer.Target> targets = new ArrayList<>(Math.min(limit, found.size()));
+		for (Found f : found) {
+			if (targets.size() >= limit) {
+				break;
+			}
+
+			targets.add(new EspRenderer.Target(f.box, f.rgb, EspRenderer.Label.of(f.name, EntityEspModule.meters(f.center.distanceTo(camera)))));
+		}
+
+		EspRenderer.drawLabels(ui, targets, screenWidth, screenHeight, limit, EspRenderer.LabelStyle.DEFAULT);
 	}
 }

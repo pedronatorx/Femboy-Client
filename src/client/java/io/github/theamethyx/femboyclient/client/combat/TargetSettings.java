@@ -117,12 +117,21 @@ public final class TargetSettings {
 			found.add((LivingEntity) entity);
 		}
 
-		Comparator<LivingEntity> order = switch (priority.get()) {
-			case CLOSEST -> Comparator.comparingDouble(e -> distance(self, e));
-			case LOWEST_HEALTH -> Comparator.comparingDouble(e -> e.getHealth() + e.getAbsorptionAmount());
-			case SMALLEST_ANGLE -> Comparator.comparingDouble(e -> Rotations.angleTo(self, e.getBoundingBox().getCenter()));
-		};
-		found.sort(order);
+		if (found.size() < 2) {
+			return found;
+		}
+
+		// Each key is computed once per entity, not on every comparison of the sort.
+		java.util.Map<LivingEntity, Double> keys = new java.util.IdentityHashMap<>();
+		for (LivingEntity entity : found) {
+			keys.put(entity, switch (priority.get()) {
+				case CLOSEST -> distance(self, entity);
+				case LOWEST_HEALTH -> (double) (entity.getHealth() + entity.getAbsorptionAmount());
+				case SMALLEST_ANGLE -> Rotations.angleTo(self, entity.getBoundingBox().getCenter());
+			});
+		}
+
+		found.sort(Comparator.comparingDouble(keys::get));
 		return found;
 	}
 

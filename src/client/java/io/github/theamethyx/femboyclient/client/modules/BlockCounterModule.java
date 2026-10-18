@@ -29,9 +29,12 @@ public final class BlockCounterModule extends Module implements ClientHooks.HudB
 
 	private final BlockScanner scanner = new BlockScanner();
 	private Map<String, Integer> counts = Map.of();
+	private long countedVersion = -1;
+	private final Map<Block, String> names = new java.util.HashMap<>();
 
 	public BlockCounterModule() {
-		super("block_counter", "Block Counter", "Counts chosen blocks in loaded chunks around you, with scan progress.", ModuleCategory.WORLD, false, NO_KEY);
+		super("block_counter", "Block Counter", "Counts chosen blocks in loaded chunks around you, with scan progress. Singleplayer and your own network only.",
+				ModuleCategory.WORLD, false, NO_KEY);
 		chosen.choices(ItemChoices::blocks);
 		chosen.onChange(ids -> rebuild());
 	}
@@ -42,14 +45,29 @@ public final class BlockCounterModule extends Module implements ClientHooks.HudB
 	}
 
 	@Override
+	public boolean testEnvironmentOnly() {
+		// Counting every loaded block reveals what other blocks hide.
+		return true;
+	}
+
+	@Override
 	protected void onEnable() {
 		rebuild();
+		scanner.start();
 	}
 
 	@Override
 	protected void onDisable() {
+		scanner.stop();
+		counts = Map.of();
+		countedVersion = -1;
+	}
+
+	@Override
+	protected void onWorldChange() {
 		scanner.clear();
 		counts = Map.of();
+		countedVersion = -1;
 	}
 
 	public Map<String, Integer> counts() {
@@ -63,10 +81,16 @@ public final class BlockCounterModule extends Module implements ClientHooks.HudB
 	@Override
 	protected void onTick() {
 		Minecraft client = Minecraft.getInstance();
-		scanner.tick(client.level, client.player.blockPosition(), radius.intValue(), 5000, 3_000_000);
+		scanner.tick(client.level, client.player.blockPosition(), radius.intValue(), io.github.theamethyx.femboyclient.client.Performance.periodMillis(60_000),
+				io.github.theamethyx.femboyclient.client.Performance.scanBudgetNanos());
+		if (scanner.version() == countedVersion) {
+			return; // nothing changed since the last count
+		}
+
+		countedVersion = scanner.version();
 		Map<String, Integer> next = new LinkedHashMap<>();
 		for (BlockScanner.Hit hit : scanner.hits()) {
-			next.merge(hit.state().getBlock().getName().getString(), 1, Integer::sum);
+			next.merge(names.computeIfAbsent(hit.state().getBlock(), block -> block.getName().getString()), 1, Integer::sum);
 		}
 
 		counts = next;

@@ -49,7 +49,8 @@ public final class AutoRefillModule extends Module {
 		Inventory inventory = player.getInventory();
 		for (int slot = 0; slot < 9; slot++) {
 			ItemStack stack = inventory.getItem(slot);
-			if (!stack.isEmpty()) {
+			// Copy only when the slot holds something new, not every tick.
+			if (!stack.isEmpty() && (remembered[slot] == null || !ItemStack.isSameItemSameComponents(stack, remembered[slot]))) {
 				remembered[slot] = stack.copyWithCount(1);
 			}
 		}
@@ -59,6 +60,10 @@ public final class AutoRefillModule extends Module {
 		}
 
 		InventoryMenu menu = player.inventoryMenu;
+		if (!menu.getCarried().isEmpty()) {
+			return; // an item is on the cursor
+		}
+
 		for (int slot = 0; slot < 9; slot++) {
 			ItemStack stack = inventory.getItem(slot);
 			ItemStack wanted = remembered[slot];
@@ -74,7 +79,7 @@ public final class AutoRefillModule extends Module {
 					client.gameMode.handleInventoryMouseClick(menu.containerId, 36 + slot, 0, ClickType.PICKUP, player);
 					client.gameMode.handleInventoryMouseClick(menu.containerId, source, 0, ClickType.PICKUP, player);
 					refills++;
-					readyAt = System.currentTimeMillis() + delay.get().longValue();
+					readyAt = System.currentTimeMillis() + io.github.theamethyx.femboyclient.client.Performance.actionDelayMillis(delay.get().longValue());
 					return;
 				}
 			}

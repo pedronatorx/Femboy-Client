@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.9.0 - 2026-10-18
+
+### Added
+- **ESP target lines.** Block ESP, Entity ESP, Storage ESP and Trackers draw lines from the crosshair to their targets, each module with its own settings: which targets (all, only on screen, only in line of sight), color, opacity, thickness, fade, hide behind blocks, distance and count. Entity ESP switches lines per group, Storage ESP per kind of storage. Lines start on the real centre ray of the drawn frame, so they leave exactly from the crosshair at any window size and GUI scale.
+- **Performance modes** (Performance, Balanced, Low impact; stored per profile). They change update intervals, scan time per tick, how many highlights and labels are drawn, how often HUD text is rebuilt, menu animations and pauses between automatic actions; Low impact pauses modules that act many times a second and says so.
+- **Menu redesign:** sidebar Home, Combat, Automation, Movement, Visuals, Inventory, World, Profiles, Settings; header with search over all modules (Ctrl+F), a profile selector and a notification bell; in-menu toasts; smooth anti-aliased rounded shapes, soft shadows, accent gradients and glows, a new logo and 32 px vector icons (made by `tools/make_gui_art.py` and `tools/make_icons.py`); collapsible setting sections with fine-tuning folded away; typed number entry and Shift + wheel steps on sliders; a two-click reset for a whole page; Reduce motion.
+- **Module conflicts:** KillAura with Aim Assist or Trigger Bot, Flight with Elytra Flight or Speed; turning one on turns the other off, with a message.
+- **Error notifications:** a module that fails is turned off and a notification names it and the reason; repeated identical log messages are counted instead of repeated.
+- `./scripts/run-benchmark.sh` and `docs/benchmarks/`: a fixed in-game scene measuring the client's own time and allocations.
+
+### Changed
+- **Ore ESP is now Block ESP:** any blocks, picked by block or by category (ores, containers and spawners, redstone, plants and wood), outline and fill, per-ore or custom colors, name and distance labels, target lines. Ore ESP settings move over automatically (configuration schema 2; also for imported profiles and presets).
+- **Block ESP, Block Counter and Geode Analyzer now run only in singleplayer and on servers in your own network**, because they read every block of the loaded chunks, which shows what other blocks hide.
+- Trackers draws target lines (on by default) besides its edge arrows, which can be switched off.
+- Entity ESP has item and projectile groups with their own color, outline and line switches; "Tracers" became "Target lines" (settings carried over).
+- Configuration files are written on a background thread; a profile also stores the theme, animation options and performance mode.
+- Labels and lines use the projection the world was drawn with (vanilla's leaves out view bobbing), so they stay on their boxes while walking.
+- Shared work: one list of loaded entities per tick for Entity ESP, Trackers and Hitboxes; HUD text built once per tick; module lookups and per-call timing keys no longer allocate; the world and connection identity is cached.
+
+### Fixed
+- Auto Pot left your view pointing down when turned off during the aiming tick.
+- Auto Armor, Auto Refill and Auto Offhand could click while you held an item on the cursor.
+- Auto Tool switched back on a later, unrelated tick when turned off while mining.
+- Sprint undid Sprint Reset's pause right after a hit.
+- Player Alert kept every warned player forever; old entries are now forgotten.
+- Auto Reconnect started a second countdown when the disconnect screen was resized.
+- Structure Finder kept results (and a queued search) from the previous dimension.
+- Storage ESP kept a broken chest highlighted until the next scan; it now rescans at once.
+- In the menu, Escape went to a text field instead of closing an open list, and Enter after typing a value kept the field focused.
+
 ## 0.8.0 - 2026-10-17
 
 ### Added

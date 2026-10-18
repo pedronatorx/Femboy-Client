@@ -75,13 +75,14 @@ public final class GeodeAnalyzerModule extends Module implements ClientHooks.Wor
 	private String selectedId;
 
 	@Override
-	public Tier tier() {
-		return Tier.ASSIST;
+	public boolean testEnvironmentOnly() {
+		// Reading every loaded block finds geodes that stone hides.
+		return true;
 	}
 
 	public GeodeAnalyzerModule() {
 		super("geode_analyzer", "Geode Analyzer",
-				"Finds amethyst geodes in loaded chunks and reports exact growth-stage counts, completeness and evidence quality.",
+				"Finds amethyst geodes in loaded chunks and reports exact growth-stage counts, completeness and evidence quality. Singleplayer and your own network only.",
 				ModuleCategory.WORLD, false, NO_KEY);
 	}
 

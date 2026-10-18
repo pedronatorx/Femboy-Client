@@ -19,8 +19,17 @@ public final class ClientEnvironment implements EnvironmentPolicy {
 	 */
 	public static volatile boolean simulatePublicServer;
 
+	/** The connection the cached answer belongs to; the address does not change during a connection. */
+	private Object testedConnection;
+	private boolean testResult;
+
 	public ClientEnvironment(Minecraft client) {
 		this.client = client;
+	}
+
+	@Override
+	public boolean lowImpactMode() {
+		return Performance.mode() == GlobalOptions.PerformanceMode.LOW_IMPACT;
 	}
 
 	@Override
@@ -38,10 +47,16 @@ public final class ClientEnvironment implements EnvironmentPolicy {
 			return true;
 		}
 
-		// The address actually connected to, not the name typed in the server list.
+		// The address actually connected to, not the name typed in the server list. Asked for every module every tick,
+		// so the answer is kept for the connection it was computed for.
 		ClientPacketListener connection = client.getConnection();
-		return connection != null && connection.getConnection().getRemoteAddress() instanceof InetSocketAddress address
-				&& PrivateNetwork.isPrivate(address.getAddress());
+		if (connection != testedConnection) {
+			testedConnection = connection;
+			testResult = connection != null && connection.getConnection().getRemoteAddress() instanceof InetSocketAddress address
+					&& PrivateNetwork.isPrivate(address.getAddress());
+		}
+
+		return testResult;
 	}
 
 	@Override

@@ -1,10 +1,10 @@
 # Femboy Client
 
-A client-side Fabric mod for **Minecraft Java Edition 1.21.11**: a themeable ClickGUI with 72 combat, automation, movement, visual, inventory, tracking, world and utility modules, a drag-and-drop HUD editor, profiles with automatic switching, and 17 ready-made presets.
+A client-side Fabric mod for **Minecraft Java Edition 1.21.11**: a themeable menu with 72 combat, automation, movement, visual, inventory, tracking, world and utility modules, ESP with target lines from your crosshair, three performance modes, a drag-and-drop HUD editor, profiles with automatic switching, and 17 ready-made presets.
 
-Everything is **off on first start**; nothing runs until you turn it on or install a preset. Every module shows a **tier** badge: *Visual* and *Assist* modules (information, ESP, HUD) and *Automation* modules that only manage your own items (Auto Attribute Swap's spear reach and weapon rules, Auto Tool, Inventory Sorter, Chest Organizer, Item Swap, Hotbar Profiles, Sprint) work on every server. **Sandbox** modules (combat automation including AutoCrystal, AutoAnchor and Auto Pot, movement changes including Anti Hunger, Auto Armor, Auto Refill, Auto Offhand) work only in a **test environment**: singleplayer, or a server you reach at a private address (your own PC, your LAN, or a VPN such as Tailscale or ZeroTier). There are no prompts or allowlists; elsewhere they simply stay off and their description says why. Femboy Client contains nothing that hides it from anti-cheat systems, and some servers' rules forbid clients like this, so check before you use it there.
+Everything is **off on first start**; nothing runs until you turn it on or install a preset. Every module shows a **tier** badge: *Visual* and *Assist* modules (information, ESP, HUD) and *Automation* modules that only manage your own items (Auto Attribute Swap's spear reach and weapon rules, Auto Tool, Inventory Sorter, Chest Organizer, Item Swap, Hotbar Profiles, Sprint) work on every server. **Sandbox** modules (combat automation including AutoCrystal, AutoAnchor and Auto Pot, movement changes including Anti Hunger, Auto Armor, Auto Refill, Auto Offhand, and the three modules that read every loaded block: Block ESP, Block Counter and Geode Analyzer) work only in a **test environment**: singleplayer, or a server you reach at a private address (your own PC, your LAN, or a VPN such as Tailscale or ZeroTier). There are no prompts or allowlists; elsewhere they simply stay off and their description says why. Femboy Client contains nothing that hides it from anti-cheat systems, and some servers' rules forbid clients like this, so check before you use it there.
 
-![Home page](docs/screenshots/0012_gui-1280x720-0-home.png)
+![Home page](docs/screenshots/0009_gui-1280x720-0-home.png)
 
 ## Versions
 
@@ -21,15 +21,17 @@ Everything is **off on first start**; nothing runs until you turn it on or insta
 ## Installation (normal Minecraft launcher)
 
 1. Install Fabric Loader 0.19.5 for Minecraft 1.21.11.
-2. Put `femboy-client-0.6.1.jar` (from `build/libs/`) and Fabric API 0.141.6+1.21.11 into the profile's `mods` folder.
+2. Put `femboy-client-0.9.0.jar` (from `build/libs/`) and Fabric API 0.141.6+1.21.11 into the profile's `mods` folder.
 3. Start the game and press **Right Shift** to open the menu. You can rebind it under Options → Controls → Key Binds → Femboy Client.
 
 Settings live in `config/femboyclient/`:
 - `femboyclient.json`: client options, active profile
-- `profiles/*.json`: modules, keys and settings per profile
+- `profiles/*.json`: modules, keys and settings per profile, plus the look and performance mode stored with each profile
 - `exports/*.json`: profiles you exported
 
-Every file is written atomically with a `.bak` copy. An unreadable file is moved aside as `*.corrupt-<time>`, never deleted, and the client falls back to the backup or to defaults.
+Every file is written atomically with a `.bak` copy, on a background thread so the game never waits for the disk. An unreadable file is moved aside as `*.corrupt-<time>`, never deleted, and the client falls back to the backup or to defaults.
+
+**Upgrading from 0.8.x:** Ore ESP is now Block ESP. Its settings (blocks, radius, "only exposed", on/off) move over automatically the first time a profile is loaded, also for profiles you import later; the previous file stays as `.bak`.
 
 **Upgrading from NOVA:** on first launch, settings from `config/nova/` are copied to `config/femboyclient/`. The old folder is left untouched.
 
@@ -43,32 +45,34 @@ export JAVA_HOME=$HOME/.local/share/jdks/jdk-25.0.4.1+1   # any JDK 25+
 
 | Task | Command |
 |---|---|
-| Build the mod jar (also runs the unit tests) | `./gradlew build` → `build/libs/femboy-client-0.6.1.jar` |
+| Build the mod jar (also runs the unit tests) | `./gradlew build` → `build/libs/femboy-client-0.9.0.jar` |
 | Unit tests only | `./gradlew test` |
 | Server GameTests, headless (includes the research experiment) | `./gradlew runGameTest` |
 | In-game client tests, headless (needs `xvfb-run`), with screenshots | `./scripts/run-client-tests.sh` |
 | Same, in a visible window | `./scripts/run-client-tests.sh --visible` |
+| Measure the client's own CPU time and allocations in a fixed scene | `./scripts/run-benchmark.sh` → `build/run/clientGameTest/benchmark.txt` (see [docs/benchmarks](docs/benchmarks/README.md)) |
 | Launch a development client to play | `./gradlew runClient` |
 | Copy the latest screenshots and reports into `docs/` | `./scripts/collect-artifacts.sh` (run directly after the client tests: other Gradle tasks clear the client run folder) |
 
 ## Using the menu
 
-The sidebar has twelve sections. **Home** shows every module in category cards: **left-click** a module to turn it on or off, **right-click** it to slide in its settings panel (tabs **Settings**, **Keybinds**, **Info**, and a Reset button; Esc closes it). On the category pages a click or right-click opens the settings on the right and the switch turns the module on or off. Every module has an on/off switch, a key (click it and press a key; Backspace clears it) that either **toggles** the module or keeps it on only while **held**, settings grouped into sections with tooltips and per-setting reset, and a module reset.
+The sidebar has nine sections: **Home, Combat, Automation, Movement, Visuals, Inventory, World, Profiles, Settings**. The header has the page title, a **search field** for all modules (Ctrl+F; results appear on Home), the **profile selector** (click it to switch profiles or manage them), a **notification bell** with the latest client messages, and the close button. Messages that arrive while the menu is open also slide in briefly at the bottom right.
+
+**Home** shows every module in cards: **left-click** a module to turn it on or off, **right-click** it to slide in its settings panel (tabs **Settings**, **Keybinds**, **Info**, and a Reset button; Esc closes it). On the other pages a click opens the settings on the right and the switch turns the module on or off; **Reset ...** under the list resets every module of the page (a second click confirms). Every module has an on/off switch, a key (click it and press a key; Backspace clears it) that either **toggles** the module or keeps it on only while **held**, and settings in **collapsible sections**: fine-tuning sections (Performance, Colors, Health, Style, Keys, Display) start folded, one click opens them. Click a number's value to type it exactly; Shift + mouse wheel over a slider moves it one step. Each setting has a tooltip and its own reset. The Info tab says why a module is paused, what it uses (for example Trackers uses Player Finder for last-seen positions) and which modules it cannot run together with.
+
+The menu has smooth rounded panels, soft shadows and glows, purple-to-magenta highlights and vector icons, drawn from a few small textures made by `tools/make_gui_art.py` and `tools/make_icons.py` (no downloads; plain shapes are used if a texture is missing). Animations: on or off, and **Reduce motion** keeps only fades. Menu scale: automatic, Minecraft's, or 1x to 4x.
 
 | Section | Contents |
 |---|---|
-| **Home** | All modules in category cards with category chips and search; left-click toggles, right-click opens the settings panel; a strip lists what is on |
+| **Home** | All modules in cards with section chips; left-click toggles, right-click opens the settings panel; a strip lists what is on |
 | **Combat** | Auto Attribute Swap, Combat Info, Target HUD, Weapon Info, Crystal & Anchor Info, Aim Trainer, Auto Criticals\*, Sprint Reset\*, Auto Weapon Switch\* |
 | **Automation** | KillAura\*, Trigger Bot\*, Aim Assist\*, Reach\*, Velocity\*, Auto StunSlam\*, Auto Offhand\*, AutoCrystal\*, AutoAnchor\*, Auto Pot\* |
 | **Movement** | Free Camera, Sprint, Movement Info, Elytra Info, Flight\*, Elytra Flight\*, Speed\*, Strafe Assist\*, Step\*, Safe Walk\*, No Slow\*, No Fall\*, Anti Hunger\* |
-| **Visuals** | Entity ESP, Entity Outlines, Storage ESP, Ore ESP, Hitboxes, Trajectories, Block Highlight, Light Level, Fullbright, Zoom, Chunk Borders |
+| **Visuals** | Entity ESP, Entity Outlines, Storage ESP, Block ESP\*, Hitboxes, Trajectories, Block Highlight, Light Level, Fullbright, Zoom, Chunk Borders; HUD and utilities: Coordinates, Performance, Module List, Keystrokes, Notifications, Better Chat, Auto Reconnect |
 | **Inventory** | Item Counters, Health & Armor, Effects, Auto Tool, Inventory Sorter, Shulker Preview, Item Swap, Hotbar Profiles, Chest Organizer, Auto Armor\*, Auto Refill\* |
-| **Trackers** | Player Finder, Trackers, Player Alert, Waypoints |
-| **World** | Geode Analyzer, Block Counter, Death Coordinates, Structure Finder, Schematic Viewer, Material List |
-| **Utilities** | Coordinates, Performance, Module List, Keystrokes, Notifications, Better Chat, Auto Reconnect |
-| **Developer** | Java Runner |
+| **World** | Geode Analyzer\*, Block Counter\*, Death Coordinates, Structure Finder, Schematic Viewer, Material List; players and places: Player Finder, Trackers, Player Alert, Waypoints; developer: Java Runner |
 | **Profiles** | Your profiles (use, copy, export, import, delete, reset), the 17 presets, automatic switching rules and delay |
-| **Settings** | General tab: emergency off, **Edit HUD layout**, client options (theme, custom accent color, menu scale, animations, tooltips, automatic switching), config folder. Diagnostics tab: frame timing, time per module, message log |
+| **Settings** | General tab: emergency off, **Edit HUD layout**, client options (performance mode, theme, custom accent color, menu scale, animations, reduce motion, tooltips, automatic switching), config folder. Diagnostics tab: frame timing, time per module, message log |
 
 \* Sandbox tier: test environments only (see [Test environments](#test-environments)).
 
@@ -97,14 +101,14 @@ The sidebar has twelve sections. **Home** shows every module in category cards: 
 | **Elytra Flight** | Controlled elytra flight while gliding: forward, up, down and hover, with adjustable speed. |
 | **Speed, Strafe Assist, Step, Safe Walk, No Slow, No Fall** | Faster ground movement; air control toward your keys; walk up full blocks (step-height attribute); don't walk off edges; full speed while eating or blocking; no fall damage (tells the server you are on the ground after a set fall distance). |
 | **Sprint** | Keeps sprint on while you move forward. Works on every server. |
-| **Ore ESP** | Highlights chosen ores within a chunk radius, optionally only those touching air; scanned in time-limited steps. |
+| **Block ESP** | (Formerly Ore ESP.) Highlights the blocks you choose (ores by default; pick by block or by category: ores, containers and spawners, redstone, plants and wood) within a chunk radius, optionally only those touching air; outline, fill, a color per ore or one color, name and distance labels, target lines. Follows block changes as they happen instead of re-reading chunks. Singleplayer and your own network only (see [Target lines](#esp-and-target-lines)). |
 | **Block Highlight, Light Level** | Outlines the block you look at in a chosen color; marks spots where hostile mobs can spawn (block light 0; red now, yellow only at night). |
 | **Zoom** | Hold a key to zoom in; scroll to change the zoom; mouse sensitivity drops with the zoom. |
 | **Auto Tool** | Selects the best hotbar tool while you mine and switches back afterwards. |
 | **Inventory Sorter** | A Sort button in your inventory that orders items by type and amount, merging stacks. |
 | **Shulker Preview** | Shows a shulker box's contents in its tooltip. |
 | **Auto Armor, Auto Refill** | Equips better armor from your inventory; refills a hotbar stack from the inventory when it runs low. |
-| **Block Counter** | Counts chosen blocks around you with scan progress (`Scanned 81/81 chunks`). |
+| **Block Counter** | Counts chosen blocks around you with scan progress (`Scanned 81/81 chunks`). Singleplayer and your own network only. |
 | **Death Coordinates** | Remembers where you died, shows it on the HUD and adds a waypoint. |
 | **AutoCrystal** | Places end crystals on obsidian or bedrock next to the target and breaks crystals that hurt it; least target damage, most self damage, never-kill-yourself, place and break delays, switch to crystals, visible turning. |
 | **AutoAnchor** | Outside the Nether: places a respawn anchor next to the target, charges it with glowstone and uses it so it explodes; same damage limits; the status line says why no spot works. |
@@ -121,8 +125,8 @@ The sidebar has twelve sections. **Home** shows every module in category cards: 
 | **Free Camera** | Fly the camera with its own rotation while your player stays put. Works on servers. See below. |
 | **Movement Info** | Speed, vertical speed, fall distance and a landing prediction with the fall damage vanilla would deal (landing block included: water, slime, hay, beds...), red when it would kill you. |
 | **Elytra Info** | Speed, height, pitch, elytra durability, rockets, and a warning when your current direction hits a block within a set time. |
-| **Entity ESP** | Highlights the entity types you choose (picked by registry id in a searchable checklist). Compact labels with separately sized name, distance and health, outlines with real thickness and opacity per category, tracer lines, color overrides for chosen types. See below. |
-| **Storage ESP** | Highlights storage blocks you choose by block id. Reads only block entities your client has already received. |
+| **Entity ESP** | Highlights the entity types you choose (picked by registry id in a searchable checklist), grouped into players, hostile, passive, villagers, items, projectiles and other. Compact labels with separately sized name, distance and health, outlines with real thickness and opacity per group, target lines per group, color overrides for chosen types. See below. |
+| **Storage ESP** | Highlights storage blocks you choose by block id, with labels and target lines (choose which kinds of storage get one). Reads only block entities your client has already received; a chest placed or broken nearby updates at once. |
 | **Hitboxes** | Entity hitboxes with eye height and look direction (like F3+B), filtered by players, hostile, passive, items, projectiles and others; color, opacity, line width, range. |
 | **Trajectories** | The predicted path of arrows (bow and crossbow), tridents, snowballs, eggs, ender pearls, splash/lingering potions and experience bottles, with the landing point and any entity in the way. Uses vanilla's per-tick physics. |
 | **Fullbright** | Lights up dark areas without changing your video settings, with adjustable intensity. |
@@ -131,16 +135,47 @@ The sidebar has twelve sections. **Home** shows every module in category cards: 
 | **Health & Armor** | Health with absorption, food and saturation, durability of armor and held items, low-health and low-durability warnings with a one-time alert. |
 | **Effects** | Active potion effects with level and time left; harmful ones in red, expiring ones highlighted. |
 | **Player Finder** | Online players from the server's player list (name, game mode, ping) with search and sorting, plus navigation to players in range and to your waypoints. See below. |
-| **Trackers** | Arrows at the screen edge pointing at players, mobs, waypoints and last-seen positions, labelled with where the position comes from. See below. |
+| **Trackers** | Target lines and/or screen-edge arrows to players, mobs, your waypoints and last-seen positions, labelled with where the position comes from. See below. |
 | **Player Alert** | Warns you when another player comes within your render distance, and can leave the server for you. See below. |
 | **Waypoints** | Save positions; see them as markers with names and distances. |
-| **Geode Analyzer** | Finds amethyst geodes in loaded chunks and keeps exact growth-stage counts up to date as chunks load and buds grow. See below. |
+| **Geode Analyzer** | Finds amethyst geodes in loaded chunks and keeps exact growth-stage counts up to date as chunks load and buds grow. Singleplayer and your own network only. See below. |
 | **Coordinates, Performance, Module List** | HUD panels. |
 | **Java Runner** | Write and run small Java programs in a separate process, with output, errors, limits and examples. See below. |
 
 HUD blocks stack in the corner you choose without overlapping, and the top-right corner starts below vanilla's effect icons.
 
-An enabled module **pauses** while no world is loaded and resumes on its own. If a module throws an error, it is turned off and reported under Settings → Diagnostics; other modules keep running.
+An enabled module **pauses** while no world is loaded and resumes on its own. If a module throws an error, it is turned off, a notification says which module and why, and the details go to Settings → Diagnostics; other modules keep running. The same message repeated within 10 seconds is counted instead of logged again.
+
+Modules that control the same thing cannot run together: turning one on turns the other off, with a message (KillAura with Aim Assist or Trigger Bot; Flight with Elytra Flight or Speed). When you change world or dimension, modules drop what described the old one (scan results, targets, found structures).
+
+## Performance modes
+
+Settings → Client options → **Performance mode** (also stored in each profile). They change what the client actually does:
+
+| | Performance | Balanced (default) | Low impact |
+|---|---|---|---|
+| Update and scan intervals of ESP, trackers, light level, storage | x2 | as set | x3 |
+| Time a block scan may use per tick | 1 ms | 2.5 ms | 1 ms |
+| Highlights, labels and lines drawn | capped (e.g. 48 entities, 150 blocks, 12 labels, 32 lines) | as set | capped |
+| HUD text rebuilt | every 2 ticks | every tick | every 2 ticks |
+| Menu animations | off | as set | as set |
+| Pauses between automatic actions (Auto Offhand, Auto Armor, Auto Refill, Auto Pot, AutoCrystal, AutoAnchor) | as set | as set | x2, at least +250 ms |
+| Modules that repeat actions many times a second (KillAura, Trigger Bot, Aim Assist, AutoCrystal, AutoAnchor, Auto Criticals, Auto StunSlam) | run | run | paused, and their status says why |
+
+Low impact means less work and fewer actions. It does not hide anything from a server and makes no claims about anti-cheat.
+
+## ESP and target lines
+
+Block ESP, Entity ESP, Storage ESP and Trackers can draw **target lines**: a line from your crosshair to each target, with settings of their own in each module (section "Target lines"):
+- **Lines to:** all targets (through walls), only targets on screen, or only targets you can see (a line-of-sight check a few times a second);
+- color (each target's highlight color or one custom color), opacity, thickness, fade with distance, hide behind blocks;
+- line distance and the most lines (the nearest targets get them).
+
+Entity ESP switches lines per group (players, hostile, passive and pets, villagers, items, projectiles, other); Storage ESP per kind of storage. Lines start on the ray through the middle of the screen of the frame being drawn (the real projection, including view bobbing and field-of-view changes), so they leave exactly from the crosshair at any window size and GUI scale. Targets behind you are reached through the screen edge on their side. Name and distance labels use the same projection, so they stay on their boxes while you walk.
+
+Under the hood the ESP modules share one list of loaded entities (built once per tick), skip boxes outside the view, and update their target lists at their update interval while drawing follows targets every frame. Block ESP reads chunks once, then follows block changes as they happen.
+
+**Where they work:** Entity ESP, Storage ESP and Trackers use only what the server sends for nearby rendering (entities and block entities) and work everywhere. Block ESP, Block Counter and Geode Analyzer read every block of the loaded chunks, which shows what other blocks hide, so they run only in singleplayer and on servers in your own network.
 
 ## Profiles and presets
 
@@ -158,7 +193,7 @@ A **profile** stores which modules are on, every setting and every key. Changes 
 
 ## Test environments
 
-Sandbox-tier modules (marked \* above, plus the Spear lunge part of Auto Attribute Swap) run only in singleplayer or on a server whose address is private: loopback (`127.x`, `::1`), LAN (`10.x`, `172.16–31.x`, `192.168.x`), link-local, the `100.64–127.x` range used by Tailscale and similar VPNs, and IPv6 unique local addresses. The check uses the address actually connected to, not the name in your server list. To use them on remote test servers, put those servers on a VPN with you. On any other server they show "Only in singleplayer and on servers in your own network (LAN or VPN)" and stay off; you never get a prompt.
+Sandbox-tier modules (marked \* above, plus the Spear lunge part of Auto Attribute Swap; this includes Block ESP, Block Counter and Geode Analyzer because they read every loaded block) run only in singleplayer or on a server whose address is private: loopback (`127.x`, `::1`), LAN (`10.x`, `172.16–31.x`, `192.168.x`), link-local, the `100.64–127.x` range used by Tailscale and similar VPNs, and IPv6 unique local addresses. The check uses the address actually connected to, not the name in your server list. To use them on remote test servers, put those servers on a VPN with you. On any other server they show "Only in singleplayer and on servers in your own network (LAN or VPN)" and stay off; you never get a prompt.
 
 Nothing here hides anything from anti-cheat or server checks (no fake rotations, no packet tricks, no anti-kick).
 
@@ -181,7 +216,7 @@ Nothing here hides anything from anti-cheat or server checks (no fake rotations,
 
 ### Player Alert
 
-- Turn it on in Trackers → Player Alert. It warns when a player comes within your range, i.e. when the server starts sending you that player.
+- Turn it on in World → Player Alert. It warns when a player comes within your range, i.e. when the server starts sending you that player.
 - **Settings:** chat message (only you see it), sound, pop-up, warn when they leave (and whether they logged off), ignore NPCs (player-shaped entities missing from the server's player list), and a repeat delay so someone walking along the edge of your range doesn't flood the chat.
 - **Auto leave** (off by default): disconnects from a multiplayer server as soon as a player is detected, optionally only within a distance and never for the friends you list. By default it then turns itself off, so rejoining does not make you leave again right away; Auto Reconnect does not bring you back.
 - Players already near you when you turn it on are not announced. Several arrivals in the same moment are combined into one message.
@@ -212,16 +247,16 @@ Nothing here hides anything from anti-cheat or server checks (no fake rotations,
 
 ### Entity ESP
 
-- **Sections:** Targets, Boxes, Colors, Labels, Health, Tracers, Performance.
+- **Sections:** Targets, Boxes, Colors, Labels, Health, Target lines, Performance.
 - **Labels** are small by default (names at 0.75x). Name, distance and health each have their own on/off switch and size. Background opacity, padding, line spacing, text color and maximum name width (long names end in "...") are adjustable. Names use the group color instead of the old underline. Labels of entities close together stack instead of overlapping.
 - **Health** is off by default. When on, it is shown for the groups you choose (players and hostile mobs by default) as a compact bar, a number, or both, with its own size and opacity.
 - **Outlines:** thickness (0.5x to 6x), opacity, and an on/off switch per group. The thickness goes into the line shader, so the slider really changes the drawn line.
-- **Tracers:** optional lines from the middle of your view to each highlighted entity, with their own thickness and opacity.
+- **Target lines:** optional lines from your crosshair to highlighted entities, switched per group, with visibility mode, color, opacity, thickness, distance and count (see [ESP and target lines](#esp-and-target-lines)). Your old tracer settings carry over.
 - **Color override:** pick entity types to draw in one override color instead of their group color.
 
 ### Trackers
 
-- **Display:** an arrow at the screen edge for each target that is off screen, and a small marker for targets that are on screen. Labels show the name, distance and source.
+- **Display:** target lines from your crosshair (on by default, with all the target-line settings), and/or an arrow at the screen edge for each target that is off screen with a small marker for targets on screen. Labels show the name, distance and source.
 - **Sources:**
   - entities your client has loaded (live positions);
   - your waypoints in this world and dimension;
@@ -284,14 +319,15 @@ src/main/java/.../femboyclient/world/    shared Minecraft code: geode fixtures, 
 src/client/java/.../femboyclient/client/ client: entrypoint, GUI, HUD, rendering, modules, mixins
 src/gametest/java/                       server GameTests and in-game client tests
 src/test/java/                           JUnit tests
-tools/make_icons.py                      generates the GUI icon atlas
-scripts/                                 test runner and artifact collection
-docs/                                    screenshots, test reports, research reports, verification report
+tools/make_icons.py                      generates the GUI icon atlas (vector glyphs, 32 px cells)
+tools/make_gui_art.py                    generates the menu's smooth-shape textures and the logo
+scripts/                                 test runner, benchmark and artifact collection
+docs/                                    screenshots, test reports, research reports, benchmarks, verification report
 ```
 
 Adding a module means writing one class (settings are declared as fields) and one line in `ModuleRegistry`. The GUI builds its page entry, settings panel and persistence from the module's category and settings.
 
-Mixins (nine, each documented in its source file):
+Mixins (each documented in its source file), among them:
 - **`KeyboardHandlerMixin`:** module key binds. Fabric API has no in-world key event, and polling once per tick misses short taps.
 - **`GameRendererMixin`:** hides the first-person hand while the free camera is active.
 - **`LocalPlayerMixin`:** keeps your player sending position updates while the free camera is active (vanilla stops them whenever another entity is the camera).
@@ -299,6 +335,9 @@ Mixins (nine, each documented in its source file):
 - **`MouseHandlerMixin`:** sends mouse movement to the free camera instead of the player.
 - **`LightTextureMixin`:** Fullbright's brightness, applied to the lightmap only (the video setting is never written).
 - **`MultiPlayerGameModeMixin`** and **`MultiPlayerGameModeAccessor`:** Auto Attribute Swap's slot change around one attack.
+- **`LevelRendererMixin`:** copies the frame's real view and projection matrices (read-only), so labels and target lines match the drawn world.
+- **`ClientLevelMixin`:** forwards single block changes to the block scanners (Block ESP, Block Counter), which then update just that block.
+- **`EntityRendererMixin`:** Entity Outlines' color per group.
 
 ## Documentation
 

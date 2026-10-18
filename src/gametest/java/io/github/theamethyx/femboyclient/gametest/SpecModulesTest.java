@@ -123,7 +123,7 @@ final class SpecModulesTest {
 		});
 		int restored = context.computeOnClient(client -> Theme.ACCENT);
 		report.check("Theme selector switches the menu colors; a custom accent overrides the theme's; default is the navy/magenta Femboy theme",
-				before == 0xFFA66BFF && magenta == 0xFFE05CC8 && custom == 0xFF33CC99 && restored == before,
+				before == 0xFF9D6BFF && magenta == 0xFFE05CC8 && custom == 0xFF33CC99 && restored == before,
 				String.format(Locale.ROOT, "default %08X, midnight magenta %08X, custom %08X, back %08X", before, magenta, custom, restored));
 	}
 
@@ -174,20 +174,20 @@ final class SpecModulesTest {
 		server.runCommand("setblock 5 -62 5 minecraft:diamond_ore");
 		server.runCommand("setblock 6 -61 5 minecraft:diamond_ore");
 		context.waitTicks(3);
-		enable(context, OreEspModule.class, true);
+		enable(context, BlockEspModule.class, true);
 		enable(context, BlockCounterModule.class, true);
 		context.waitTicks(30);
-		List<BlockPos> ores = context.computeOnClient(client -> femboy().modules().get(OreEspModule.class).shown().stream().map(h -> h.pos()).toList());
-		set(context, OreEspModule.class, "exposed_only", true);
+		List<BlockPos> ores = context.computeOnClient(client -> femboy().modules().get(BlockEspModule.class).shown().stream().map(h -> h.pos()).toList());
+		set(context, BlockEspModule.class, "exposed_only", true);
 		context.waitTicks(3);
-		List<BlockPos> exposed = context.computeOnClient(client -> femboy().modules().get(OreEspModule.class).shown().stream().map(h -> h.pos()).toList());
+		List<BlockPos> exposed = context.computeOnClient(client -> femboy().modules().get(BlockEspModule.class).shown().stream().map(h -> h.pos()).toList());
 		context.takeScreenshot("visuals-ore-esp");
 		var counts = context.computeOnClient(client -> femboy().modules().get(BlockCounterModule.class).counts());
 		String progress = context.computeOnClient(client -> femboy().modules().get(BlockCounterModule.class).scanner().scannedChunks() + "/"
 				+ femboy().modules().get(BlockCounterModule.class).scanner().chunksInRange());
-		context.runOnClient(client -> femboy().modules().resetToDefaults(femboy().modules().get(OreEspModule.class)));
+		context.runOnClient(client -> femboy().modules().resetToDefaults(femboy().modules().get(BlockEspModule.class)));
 		enable(context, BlockCounterModule.class, false);
-		report.check("Ore ESP finds both placed diamond ores; 'only exposed' keeps just the one touching air",
+		report.check("Block ESP finds both placed diamond ores; 'only exposed' keeps just the one touching air",
 				ores.contains(new BlockPos(5, -62, 5)) && ores.contains(new BlockPos(6, -61, 5)) && exposed.contains(new BlockPos(6, -61, 5))
 						&& !exposed.contains(new BlockPos(5, -62, 5)), "all " + ores + ", exposed " + exposed);
 		report.check("Block Counter counts the 2 diamond ores in loaded chunks and shows full scan progress",

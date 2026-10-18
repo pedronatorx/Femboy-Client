@@ -28,6 +28,11 @@ public final class TriggerBotModule extends Module {
 		return true;
 	}
 
+	@Override
+	public String lowImpactLimitation() {
+		return "it attacks for you whenever your crosshair is on a target.";
+	}
+
 	public int attacks() {
 		return attacks;
 	}

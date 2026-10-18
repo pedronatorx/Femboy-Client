@@ -28,11 +28,15 @@ public final class LightLevelModule extends Module implements ClientHooks.WorldR
 	private final BooleanSetting showNight = settings().add(new BooleanSetting("night", "Show night-only spots",
 			"Also mark spots that are dark only at night (yellow).", true));
 
-	public record Spot(BlockPos pos, boolean darkNow) {
+	/** A spawnable block top; {@code box} is the marker drawn on it, made once per scan. */
+	public record Spot(BlockPos pos, boolean darkNow, AABB box) {
+		Spot(BlockPos pos, boolean darkNow) {
+			this(pos, darkNow, new AABB(pos.getX() + 0.15, pos.getY() + 0.01, pos.getZ() + 0.15, pos.getX() + 0.85, pos.getY() + 0.03, pos.getZ() + 0.85));
+		}
 	}
 
 	private List<Spot> spots = List.of();
-	private int ticks;
+	private int ticksUntilScan;
 
 	public LightLevelModule() {
 		super("light_level", "Light Level", "Marks where hostile mobs can spawn: block light 0 (red now, yellow at night).",
@@ -43,56 +47,71 @@ public final class LightLevelModule extends Module implements ClientHooks.WorldR
 		return spots;
 	}
 
+	/**
+	 * Scans every half second (light changes slowly). Each column is walked from the top once, reusing the block above
+	 * instead of reading it again, and the cheap checks (is the space above free?) come before the expensive ones.
+	 */
 	@Override
 	protected void onTick() {
-		if (ticks++ % 10 != 0) {
+		if (--ticksUntilScan > 0) {
 			return;
 		}
 
+		ticksUntilScan = io.github.theamethyx.femboyclient.client.Performance.interval(10);
 		Minecraft client = Minecraft.getInstance();
 		ClientLevel level = client.level;
 		BlockPos center = client.player.blockPosition();
 		int r = radius.intValue();
 		int h = height.intValue();
+		boolean night = showNight.get();
 		List<Spot> next = new ArrayList<>();
-		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+		BlockPos.MutableBlockPos ground = new BlockPos.MutableBlockPos();
+		BlockPos.MutableBlockPos above = new BlockPos.MutableBlockPos();
 		for (int dx = -r; dx <= r; dx++) {
 			for (int dz = -r; dz <= r; dz++) {
-				for (int dy = -h; dy <= h; dy++) {
-					pos.set(center.getX() + dx, center.getY() + dy, center.getZ() + dz);
-					BlockState ground = level.getBlockState(pos);
-					BlockPos above = pos.above();
-					BlockState air = level.getBlockState(above);
-					if (!ground.isFaceSturdy(level, pos, Direction.UP) || !air.getCollisionShape(level, above).isEmpty() || !air.getFluidState().isEmpty()) {
-						continue;
-					}
-
-					if (level.getBrightness(LightLayer.BLOCK, above) > 0) {
+				int x = center.getX() + dx;
+				int z = center.getZ() + dz;
+				BlockState upper = level.getBlockState(above.set(x, center.getY() + h + 1, z));
+				for (int y = center.getY() + h; y >= center.getY() - h; y--) {
+					BlockState state = level.getBlockState(ground.set(x, y, z));
+					above.set(x, y + 1, z);
+					boolean free = upper.isAir() || upper.getFluidState().isEmpty() && upper.getCollisionShape(level, above).isEmpty();
+					BlockState top = upper;
+					upper = state;
+					if (!free || !top.getFluidState().isEmpty() || !state.isFaceSturdy(level, ground, Direction.UP)
+							|| level.getBrightness(LightLayer.BLOCK, above) > 0) {
 						continue;
 					}
 
 					boolean darkNow = level.getBrightness(LightLayer.SKY, above) <= 7;
-					if (darkNow || showNight.get()) {
+					if (darkNow || night) {
 						next.add(new Spot(above.immutable(), darkNow));
 					}
 				}
 			}
 		}
 
-		spots = next;
+		spots = List.copyOf(next);
 	}
 
 	@Override
 	protected void onDisable() {
 		spots = List.of();
+		ticksUntilScan = 0;
+	}
+
+	@Override
+	protected void onWorldChange() {
+		spots = List.of();
+		ticksUntilScan = 0;
 	}
 
 	@Override
 	public void renderWorld(RenderingUtilities render) {
 		for (Spot spot : spots) {
-			BlockPos p = spot.pos();
-			AABB top = new AABB(p.getX() + 0.15, p.getY() + 0.01, p.getZ() + 0.15, p.getX() + 0.85, p.getY() + 0.03, p.getZ() + 0.85);
-			render.filledBox(top, spot.darkNow() ? 0x70F24A4A : 0x60F2C14E, false);
+			if (io.github.theamethyx.femboyclient.client.render.FrameProjection.inView(spot.box())) {
+				render.filledBox(spot.box(), spot.darkNow() ? 0x70F24A4A : 0x60F2C14E, false);
+			}
 		}
 	}
 }

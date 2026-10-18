@@ -339,12 +339,20 @@ public final class SchematicViewerModule extends Module implements ClientHooks.W
 		int bad = wrongColor.get();
 		for (BlockPos pos : current.missingNear()) {
 			AABB box = new AABB(pos).deflate(0.05);
+			if (!io.github.theamethyx.femboyclient.client.render.FrameProjection.inView(box)) {
+				continue;
+			}
+
 			render.filledBox(box, (0x30 << 24) | (miss & 0xFFFFFF), throughWalls.get());
 			render.boxOutline(box, 0xC0000000 | (miss & 0xFFFFFF), 1f, throughWalls.get());
 		}
 
 		for (BlockPos pos : current.wrongNear()) {
 			AABB box = new AABB(pos).inflate(0.02);
+			if (!io.github.theamethyx.femboyclient.client.render.FrameProjection.inView(box)) {
+				continue;
+			}
+
 			render.filledBox(box, (0x40 << 24) | (bad & 0xFFFFFF), throughWalls.get());
 			render.boxOutline(box, 0xFF000000 | (bad & 0xFFFFFF), 1.5f, throughWalls.get());
 		}

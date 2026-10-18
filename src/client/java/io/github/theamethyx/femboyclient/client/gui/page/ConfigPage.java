@@ -72,7 +72,7 @@ public class ConfigPage extends Page {
 		rows.add(new HudEditorRow());
 
 		rows.add(new SectionTitle("Client options", "Apply to every profile. Profiles have their own page."));
-		rows.addAll(SettingRow.rowsFor(femboy.options().settings.all()));
+		rows.addAll(SettingRow.rowsFor("options", femboy.options().settings.all()));
 
 		rows.add(new SectionTitle("Files", "Stored in " + config.root().toAbsolutePath()));
 		rows.add(new FileActions());

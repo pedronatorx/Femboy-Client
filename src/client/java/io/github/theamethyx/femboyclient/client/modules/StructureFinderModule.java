@@ -112,9 +112,29 @@ public final class StructureFinderModule extends Module implements ClientHooks.H
 
 	@Override
 	protected void onEnable() {
+		reset();
+	}
+
+	@Override
+	protected void onDisable() {
+		reset();
+	}
+
+	@Override
+	protected void onWorldChange() {
+		// Another dimension has other structures: drop the results and any search still running for the old one.
+		reset();
+	}
+
+	private void reset() {
 		found.clear();
+		pending.clear();
+		queue = List.of();
 		searchedFrom = null;
+		searchedFor = Set.of();
+		// A search still running on the server thread finishes there; its result is no longer read.
 		running = null;
+		runningId = null;
 	}
 
 	@Override

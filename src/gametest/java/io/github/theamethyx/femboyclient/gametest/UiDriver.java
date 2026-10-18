@@ -40,6 +40,15 @@ final class UiDriver {
 		});
 	}
 
+	/** Opens a collapsed settings section on the current page by clicking its header, like a user would. */
+	void openSection(String title) {
+		var header = find(io.github.theamethyx.femboyclient.client.gui.widget.SettingRow.SectionHeader.class, h -> h.title().equals(title));
+		if (header != null && context.computeOnClient(client -> header.collapsed())) {
+			click(header);
+			context.waitTicks(2);
+		}
+	}
+
 	/** Clicks the center of a widget with the left mouse button, scrolling it into view first. */
 	void click(Widget widget) {
 		context.runOnClient(client -> {

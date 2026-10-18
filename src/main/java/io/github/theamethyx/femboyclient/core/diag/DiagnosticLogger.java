@@ -23,6 +23,12 @@ public final class DiagnosticLogger {
 	private final List<Consumer<Entry>> listeners = new CopyOnWriteArrayList<>();
 	private int warningCount;
 	private int errorCount;
+	/** Window in which an identical message (same level, source and text) is counted instead of logged again. */
+	static final long REPEAT_WINDOW_MILLIS = 10_000;
+	private String lastKey;
+	private long lastAt;
+	private int repeats;
+	private Entry lastRepeated;
 
 	public void info(String source, String message) {
 		record(Level.INFO, source, message, null);
@@ -39,15 +45,36 @@ public final class DiagnosticLogger {
 	private void record(Level level, String source, String message, Throwable cause) {
 		String detail = cause == null ? null : cause.getClass().getSimpleName() + ": " + cause.getMessage();
 		Entry entry = new Entry(Instant.now(), level, source, message, detail);
+		long now = System.currentTimeMillis();
+		String key = level + "|" + source + "|" + message;
+		Entry summary = null;
 
 		synchronized (entries) {
-			if (entries.size() == CAPACITY) {
-				entries.removeFirst();
+			// The same message again and again (e.g. a failing save retried every few seconds) is counted, not repeated:
+			// the log stays readable and the first occurrence keeps its stack trace.
+			if (key.equals(lastKey) && now - lastAt < REPEAT_WINDOW_MILLIS) {
+				repeats++;
+				lastAt = now;
+				return;
 			}
 
-			entries.addLast(entry);
+			if (repeats > 0) {
+				summary = new Entry(Instant.now(), Level.INFO, lastRepeated.source(), "The previous message repeated " + repeats + " more time(s).", null);
+				addEntry(summary);
+			}
+
+			lastKey = key;
+			lastAt = now;
+			repeats = 0;
+			lastRepeated = entry;
+
+			addEntry(entry);
 			if (level == Level.WARN) warningCount++;
 			if (level == Level.ERROR) errorCount++;
+		}
+
+		if (summary != null) {
+			LOG.info("[{}] {}", summary.source(), summary.message());
 		}
 
 		switch (level) {
@@ -57,6 +84,14 @@ public final class DiagnosticLogger {
 		}
 
 		listeners.forEach(listener -> listener.accept(entry));
+	}
+
+	private void addEntry(Entry entry) {
+		if (entries.size() == CAPACITY) {
+			entries.removeFirst();
+		}
+
+		entries.addLast(entry);
 	}
 
 	/** Newest entries last. */
@@ -83,6 +118,8 @@ public final class DiagnosticLogger {
 			entries.clear();
 			warningCount = 0;
 			errorCount = 0;
+			lastKey = null;
+			repeats = 0;
 		}
 	}
 

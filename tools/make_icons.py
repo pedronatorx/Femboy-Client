@@ -1,11 +1,14 @@
 """Generates the Femboy Client GUI icon atlas (white glyphs, tinted at draw time).
 
 Usage: python3 tools/make_icons.py src/client/resources/assets/femboyclient/textures/gui/icons.png
-Each icon is a 16x16 cell; the order below must match Icon.java.
+Icons are designed on a 16x16 grid and rendered at SCALE times that size (32x32 cells), so they stay sharp when the menu
+is drawn at 2x or 3x; the atlas has a .mcmeta with blur on, so smaller draws are filtered smoothly.
+The order below must match Icon.java.
 """
 import math, struct, sys, zlib
 
-CELL, SS = 16, 8          # cell size, supersampling factor
+SCALE = 2                 # rendered pixels per design unit
+CELL, SS = 16 * SCALE, 6  # output cell size, supersampling factor
 ICONS = []                # (name, draw function)
 
 def icon(name):
@@ -137,6 +140,28 @@ def _(): return poly([(8,1.5),(13.5,13.5),(8,10.5),(2.5,13.5)])
 def _(): return union(circle(8,8,3.2), *[line(8+5*math.cos(a),8+5*math.sin(a),8+7*math.cos(a),8+7*math.sin(a),1.5) for a in [i*math.pi/4 for i in range(8)]])
 @icon("target")
 def _(): return union(ring(8,8,6,W), ring(8,8,2.8,W), circle(8,8,0.9))
+@icon("bell")
+def _(): return union(minus(union(circle(8,7,4.6), rect(3.4,7,12.6,11.6)), union(circle(8,7,3.0), rect(5,7,11,10.2))),
+                      rrect(2,10.6,14,12.2,0.8), circle(8,13.6,1.4), rect(7.3,1.2,8.7,2.8))
+@icon("globe")
+def _():
+    meridian = lambda x, y: ((x-8)/2.6)**2 + ((y-8)/6.2)**2 <= 1 and not ((x-8)/(2.6-W))**2 + ((y-8)/(6.2-W))**2 <= 1
+    return union(ring(8,8,6.2,W), meridian, line(2,8,14,8,1.3), line(3.2,4.8,12.8,4.8,1.1), line(3.2,11.2,12.8,11.2,1.1))
+@icon("bolt")
+def _(): return poly([(9.5,1),(3,9),(7.4,9),(6,15),(13,6.6),(8.6,6.6)])
+@icon("movement")  # speed lines and a chevron
+def _(): return union(line(1.5,5,6.5,5,1.5), line(1,8,7.5,8,1.5), line(1.5,11,6.5,11,1.5), line(9,3.5,13.5,8,2.0), line(13.5,8,9,12.5,2.0))
+@icon("layers")
+def _(): return union(poly([(8,1.8),(14.6,5.4),(8,9),(1.4,5.4)]), outline(poly([(1.4,8.6),(8,12.2),(14.6,8.6),(14.6,10.2),(8,13.8),(1.4,10.2)]),
+                      lambda x, y: False))
+@icon("sliders")
+def _(): return union(line(2,4.5,14,4.5,1.3), line(2,11.5,14,11.5,1.3), circle(5.5,4.5,2.1), circle(10.5,11.5,2.1))
+@icon("heart")
+def _(): return union(circle(5.3,6.2,3.2), circle(10.7,6.2,3.2), poly([(2.25,7.2),(13.75,7.2),(8,14)]))
+@icon("sparkle")
+def _(): return union(poly([(8,0.8),(9.5,6.5),(15.2,8),(9.5,9.5),(8,15.2),(6.5,9.5),(0.8,8),(6.5,6.5)]))
+@icon("chevron_right")
+def _(): return union(line(6.5,4,10.5,8,1.8), line(10.5,8,6.5,12,1.8))
 
 def render(path):
     cols = 8; rows = math.ceil(len(ICONS)/cols)
@@ -146,7 +171,7 @@ def render(path):
         f = make(); ox, oy = (idx % cols)*CELL, (idx//cols)*CELL
         for y in range(CELL):
             for x in range(CELL):
-                cov = sum(f(x+(sx+.5)/SS, y+(sy+.5)/SS) for sy in range(SS) for sx in range(SS)) / (SS*SS)
+                cov = sum(f((x+(sx+.5)/SS)/SCALE, (y+(sy+.5)/SS)/SCALE) for sy in range(SS) for sx in range(SS)) / (SS*SS)
                 i = ((oy+y)*w + ox+x)*4
                 px[i:i+4] = bytes([255, 255, 255, round(cov*255)])
     raw = b''.join(b'\x00' + bytes(px[y*w*4:(y+1)*w*4]) for y in range(h))

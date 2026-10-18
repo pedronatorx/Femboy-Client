@@ -14,8 +14,8 @@ public final class Theme {
 	/** Built-in themes. Each sets surfaces, text and the accent pair; state colors are shared. */
 	public enum Palette implements EnumSetting.Labeled {
 		FEMBOY("Femboy (navy, purple, magenta)",
-				0x8C05060C, 0xF20A0B16, 0xF20F1120, 0xFF161829, 0xFF1D2034, 0xFF24283F, 0xFF2A2E47, 0xFF3A3F5E,
-				0xFFECEAF6, 0xFFA7A5BF, 0xFF6F6D88, 0xFFA66BFF, 0xFFE070E8),
+				0xA006070D, 0xF40B0C17, 0xF20F1121, 0xFF161A2B, 0xFF1E2237, 0xFF262B45, 0xFF252941, 0xFF3A3F63,
+				0xFFEEEBFA, 0xFFA9A6C4, 0xFF6F6C8C, 0xFF9D6BFF, 0xFFE070E8),
 		CHARCOAL("Charcoal (classic)",
 				0x8C060608, 0xF20D0D10, 0xF2131317, 0xFF1A1A20, 0xFF212129, 0xFF272731, 0xFF2B2B35, 0xFF3A3A47,
 				0xFFE9E9EF, 0xFFA3A3B2, 0xFF6E6E7D, 0xFF9D6EFF, 0xFFB58FFF),
@@ -65,6 +65,9 @@ public final class Theme {
 	public static final int ERROR = 0xFFF27272;
 	public static final int INFO = 0xFF6EA8FF;
 
+	/** Second accent, the far end of accent gradients (magenta in the default theme). */
+	public static int ACCENT_2;
+
 	// Spacing.
 	public static final int PAD = 6;
 	public static final int GAP = 4;
@@ -100,6 +103,7 @@ public final class Theme {
 		ACCENT_STRONG = customAccent == null ? c[12] : lerp(ACCENT, 0xFFFFFFFF, 0.3f);
 		ACCENT_DIM = lerp(ACCENT, 0xFF000000, 0.4f);
 		ACCENT_TINT = withAlpha(ACCENT, 0.15f);
+		ACCENT_2 = customAccent == null ? c[12] : lerp(ACCENT, 0xFFFF6FD8, 0.55f);
 	}
 
 	public static Palette current() {

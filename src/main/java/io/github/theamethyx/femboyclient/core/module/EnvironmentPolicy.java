@@ -16,6 +16,11 @@ public interface EnvironmentPolicy {
 		return false;
 	}
 
+	/** Whether the client runs in Low-Impact mode, where modules that repeat actions many times a second pause. */
+	default boolean lowImpactMode() {
+		return false;
+	}
+
 	EnvironmentPolicy IN_WORLD = new EnvironmentPolicy() {
 		@Override
 		public boolean inWorld() {

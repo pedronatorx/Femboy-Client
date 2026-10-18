@@ -55,6 +55,7 @@ import io.github.theamethyx.femboyclient.core.setting.EnumSetting;
 public final class ExplosionInfoModule extends Module implements ClientHooks.HudBlock, ClientHooks.WorldRender {
 	private static final float CRYSTAL_POWER = 6;
 	private static final float ANCHOR_POWER = 5;
+	private static final EquipmentSlot[] ARMOR = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
 
 	private final EnumSetting<HudAnchor> anchor = settings().add(new EnumSetting<>("anchor", "Position",
 			"Screen corner for the estimates.", HudAnchor.TOP_RIGHT));
@@ -202,13 +203,13 @@ public final class ExplosionInfoModule extends Module implements ClientHooks.Hud
 			damage = Math.max(damage * (25 - resisted) / 25f, 0);
 		}
 
-		int protection = 0;
-		for (EquipmentSlot slot : new EquipmentSlot[] {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+		int levels = 0;
+		for (EquipmentSlot slot : ARMOR) {
 			var stack = entity.getItemBySlot(slot);
-			protection += level(entity, Enchantments.PROTECTION, stack) + 2 * level(entity, Enchantments.BLAST_PROTECTION, stack);
+			levels += level(entity, Enchantments.PROTECTION, stack) + 2 * level(entity, Enchantments.BLAST_PROTECTION, stack);
 		}
 
-		return protection > 0 ? CombatRules.getDamageAfterMagicAbsorb(damage, protection) : damage;
+		return levels > 0 ? CombatRules.getDamageAfterMagicAbsorb(damage, levels) : damage;
 	}
 
 	/** {@code ServerExplosion.getSeenPercent} with the block at {@code removed} treated as air. */
@@ -249,9 +250,26 @@ public final class ExplosionInfoModule extends Module implements ClientHooks.Hud
 		return total == 0 ? 0 : (float) clear / total;
 	}
 
+	// Enchantment holders of the current registries, looked up once instead of for every armor piece of every estimate.
+	private static Object holdersFor;
+	private static Holder<Enchantment> protection;
+	private static Holder<Enchantment> blastProtection;
+
 	private static int level(LivingEntity entity, ResourceKey<Enchantment> key, net.minecraft.world.item.ItemStack stack) {
-		return entity.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).get(key)
-				.map(holder -> EnchantmentHelper.getItemEnchantmentLevel((Holder<Enchantment>) holder, stack)).orElse(0);
+		if (stack.isEmpty() || !stack.isEnchanted()) {
+			return 0;
+		}
+
+		var registries = entity.registryAccess();
+		if (registries != holdersFor) {
+			var lookup = registries.lookupOrThrow(Registries.ENCHANTMENT);
+			protection = lookup.get(Enchantments.PROTECTION).orElse(null);
+			blastProtection = lookup.get(Enchantments.BLAST_PROTECTION).orElse(null);
+			holdersFor = registries;
+		}
+
+		Holder<Enchantment> holder = key == Enchantments.PROTECTION ? protection : key == Enchantments.BLAST_PROTECTION ? blastProtection : null;
+		return holder == null ? 0 : EnchantmentHelper.getItemEnchantmentLevel(holder, stack);
 	}
 
 	@Override

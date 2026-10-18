@@ -43,6 +43,11 @@ public final class AimAssistModule extends Module {
 		return true;
 	}
 
+	@Override
+	public String lowImpactLimitation() {
+		return "it keeps turning your view for you.";
+	}
+
 	public LivingEntity target() {
 		return target;
 	}

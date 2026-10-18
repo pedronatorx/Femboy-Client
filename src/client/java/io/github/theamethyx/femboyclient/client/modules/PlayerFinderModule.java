@@ -101,7 +101,7 @@ public final class PlayerFinderModule extends Module implements ClientHooks.HudB
 	@Override
 	protected void onTick() {
 		Minecraft client = Minecraft.getInstance();
-		String here = WorldIdentity.current() + "|" + WorldIdentity.dimension();
+		String here = WorldIdentity.place();
 		if (!here.equals(sightingsWorld)) {
 			lastSeen.clear();
 			trackedPlayer = null;

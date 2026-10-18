@@ -12,12 +12,41 @@ import net.minecraft.world.level.storage.LevelResource;
  * {@code singleplayer/<save folder>} or {@code server/<address>}.
  */
 public final class WorldIdentity {
+	// Many modules ask every tick (some every frame); the answer only changes with the level or the connection.
+	private static Object cachedLevel;
+	private static Object cachedConnection;
+	private static String cachedWorld;
+	private static String cachedDimension;
+	private static String cachedPlace;
+
 	private WorldIdentity() {
+	}
+
+	private static void refresh(Minecraft client) {
+		if (client.level != cachedLevel || client.getConnection() != cachedConnection) {
+			cachedLevel = client.level;
+			cachedConnection = client.getConnection();
+			cachedWorld = compute(client);
+			cachedDimension = client.level == null ? null : client.level.dimension().identifier().toString();
+			cachedPlace = cachedWorld + "|" + cachedDimension;
+		}
 	}
 
 	/** @return the key, or {@code null} when no world is loaded */
 	public static String current() {
 		Minecraft client = Minecraft.getInstance();
+		refresh(client);
+		return cachedWorld;
+	}
+
+	/** {@link #current()} and {@link #dimension()} together, e.g. to notice any world or dimension change. */
+	public static String place() {
+		Minecraft client = Minecraft.getInstance();
+		refresh(client);
+		return cachedPlace;
+	}
+
+	private static String compute(Minecraft client) {
 		if (client.level == null) {
 			return null;
 		}
@@ -36,6 +65,7 @@ public final class WorldIdentity {
 	/** Dimension identifier of the client world, e.g. {@code minecraft:overworld}. */
 	public static String dimension() {
 		Minecraft client = Minecraft.getInstance();
-		return client.level == null ? null : client.level.dimension().identifier().toString();
+		refresh(client);
+		return cachedDimension;
 	}
 }

@@ -84,7 +84,7 @@ public class ModuleRow extends Container {
 		int textRight = toggle.x() - 6;
 		ui.textClipped(module.name(), x + 18, y + 6, textRight - x - 24, nameColor);
 		// Small status dot: green running, amber paused, red error.
-		ui.rect(textRight - 1, y + 9, 3, 3, status.color());
+		ui.roundRect(textRight - 2, y + 8, 5, 5, status.color(), 2);
 
 		toggle.render(ui);
 		if (hot) {

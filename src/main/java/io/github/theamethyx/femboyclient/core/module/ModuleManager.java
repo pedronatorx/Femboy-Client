@@ -2,6 +2,7 @@ package io.github.theamethyx.femboyclient.core.module;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -24,7 +25,14 @@ import io.github.theamethyx.femboyclient.core.diag.PerformanceMonitor;
  */
 public final class ModuleManager {
 	private final Map<String, Module> modules = new LinkedHashMap<>();
+	/** Registration order, rebuilt only when a module is registered; {@link #all()} hands this out without copying. */
+	private List<Module> ordered = List.of();
+	private Module[] array = new Module[0];
+	/** {@link #get(Class)} results; modules never change after registration, so a miss is cached too. */
+	private final Map<Class<?>, Module> byClass = new HashMap<>();
 	private final List<Consumer<Module>> listeners = new CopyOnWriteArrayList<>();
+	private final List<FailureListener> failureListeners = new CopyOnWriteArrayList<>();
+	private final List<ConflictListener> conflictListeners = new CopyOnWriteArrayList<>();
 	private final DiagnosticLogger diagnostics;
 	private final PerformanceMonitor performance;
 	private EnvironmentPolicy environment;
@@ -36,7 +44,17 @@ public final class ModuleManager {
 	}
 
 	public enum Phase {
-		REGISTER, ENABLE, DISABLE, TICK, RENDER_HUD, RENDER_WORLD, SAVE, LOAD
+		REGISTER, ENABLE, DISABLE, TICK, RENDER_HUD, RENDER_WORLD, SAVE, LOAD, WORLD_CHANGE
+	}
+
+	/** Told when a module fails and is turned off, with a readable reason (for notifications). */
+	public interface FailureListener {
+		void failed(Module module, Phase phase, String reason);
+	}
+
+	/** Told when turning {@code enabled} on turned {@code turnedOff} off because they conflict. */
+	public interface ConflictListener {
+		void resolved(Module enabled, Module turnedOff);
 	}
 
 	// ----- registration ----------------------------------------------------------------------
@@ -47,6 +65,9 @@ public final class ModuleManager {
 		}
 
 		modules.put(module.id(), module);
+		ordered = List.copyOf(modules.values());
+		array = ordered.toArray(new Module[0]);
+		byClass.clear();
 		module.settings().all().forEach(setting -> setting.onChange(value -> notifyChanged(module)));
 
 		if (!runGuarded(module, Phase.REGISTER, module::onRegister)) {
@@ -56,23 +77,33 @@ public final class ModuleManager {
 		return module;
 	}
 
+	/** All modules in registration order. The list is immutable and shared; it does not change after startup. */
 	public List<Module> all() {
-		return Collections.unmodifiableList(new ArrayList<>(modules.values()));
+		return ordered;
 	}
 
 	public Module get(String id) {
 		return modules.get(id);
 	}
 
+	/** The module of this type, or {@code null}. Constant time after the first call: mixins call this every frame. */
 	@SuppressWarnings("unchecked")
 	public <M extends Module> M get(Class<M> type) {
-		for (Module module : modules.values()) {
+		Module cached = byClass.get(type);
+		if (cached != null || byClass.containsKey(type)) {
+			return (M) cached;
+		}
+
+		Module found = null;
+		for (Module module : array) {
 			if (type.isInstance(module)) {
-				return (M) module;
+				found = module;
+				break;
 			}
 		}
 
-		return null;
+		byClass.put(type, found);
+		return (M) found;
 	}
 
 	public List<Module> byCategory(ModuleCategory category) {
@@ -132,10 +163,42 @@ public final class ModuleManager {
 		if (module.isEnabled() != enabled) {
 			module.setEnabledFlag(enabled);
 			diagnostics.info(module.name(), enabled ? "Enabled" : "Disabled");
+			if (enabled) {
+				resolveConflicts(module);
+			}
 		}
 
 		updateRunning(module);
 		notifyChanged(module);
+	}
+
+	/** Whether two modules declare that they cannot run together (checked both ways). */
+	public boolean conflict(Module a, Module b) {
+		return a != b && (a.conflicts().contains(b.id()) || b.conflicts().contains(a.id()));
+	}
+
+	/** Enabled modules that conflict with {@code module}. */
+	public List<Module> conflictsOf(Module module) {
+		List<Module> result = new ArrayList<>();
+		for (Module other : array) {
+			if (other.isEnabled() && conflict(module, other)) {
+				result.add(other);
+			}
+		}
+
+		return result;
+	}
+
+	private void resolveConflicts(Module module) {
+		for (Module other : conflictsOf(module)) {
+			other.setEnabledFlag(false);
+			updateRunning(other);
+			notifyChanged(other);
+			diagnostics.info(other.name(), "Turned off: it cannot run together with " + module.name() + ".");
+			for (ConflictListener listener : conflictListeners) {
+				listener.resolved(module, other);
+			}
+		}
 	}
 
 	public void setKey(Module module, int key) {
@@ -177,6 +240,17 @@ public final class ModuleManager {
 		return turnedOff;
 	}
 
+	/** Restores every module of a category to its defaults (settings, key, enabled state). */
+	public void resetCategory(ModuleCategory category) {
+		for (Module module : array) {
+			if (module.category() == category) {
+				resetToDefaults(module);
+			}
+		}
+
+		diagnostics.info("Client", "Reset all " + category.label() + " modules to their defaults.");
+	}
+
 	/** Restores a module's settings, key and enabled state to their defaults. */
 	public void resetToDefaults(Module module) {
 		requireRegistered(module);
@@ -202,17 +276,33 @@ public final class ModuleManager {
 	 * every running module. Call once per client tick.
 	 */
 	public void tick() {
-		for (Module module : modules.values()) {
+		long bytes = performance.allocatedBytes();
+		long start = System.nanoTime();
+		for (Module module : array) {
 			updateRunning(module);
 			if (module.isRunning()) {
 				runGuarded(module, Phase.TICK, module::onTick);
+			}
+		}
+
+		performance.record("client/tick", System.nanoTime() - start, performance.allocatedBytes() - bytes);
+	}
+
+	/**
+	 * Tells running modules that the client switched to another world or dimension while they keep running, so they drop
+	 * cached state from the old one. Call once per change, from the client thread.
+	 */
+	public void worldChanged() {
+		for (Module module : array) {
+			if (module.isRunning()) {
+				runGuarded(module, Phase.WORLD_CHANGE, module::onWorldChange);
 			}
 		}
 	}
 
 	/** Stops every running module, e.g. when the client shuts down. Enabled flags are kept. */
 	public void stopAll() {
-		for (Module module : modules.values()) {
+		for (Module module : array) {
 			if (module.isRunning()) {
 				module.setRunning(false);
 				runGuarded(module, Phase.DISABLE, module::onDisable);
@@ -251,6 +341,7 @@ public final class ModuleManager {
 	 * @return {@code true} if the code completed normally
 	 */
 	public boolean runGuarded(Module module, Phase phase, Runnable action) {
+		long bytes = performance.allocatedBytes();
 		long start = System.nanoTime();
 
 		try {
@@ -262,7 +353,8 @@ public final class ModuleManager {
 			handleFailure(module, phase, t);
 			return false;
 		} finally {
-			performance.record(module.id() + "/" + phase.name().toLowerCase(Locale.ROOT), System.nanoTime() - start);
+			long nanos = System.nanoTime() - start;
+			performance.record(module.timingKeys[phase.ordinal()], nanos, performance.allocatedBytes() - bytes);
 		}
 	}
 
@@ -271,6 +363,13 @@ public final class ModuleManager {
 				+ (t.getMessage() == null ? t.getClass().getSimpleName() : t.getMessage());
 		module.recordError(message);
 		diagnostics.error(module.name(), message + ". The module was turned off; other modules are unaffected.", t);
+		for (FailureListener listener : failureListeners) {
+			try {
+				listener.failed(module, phase, message);
+			} catch (RuntimeException e) {
+				diagnostics.warn("Client", "A failure notification could not be shown: " + e);
+			}
+		}
 
 		if (phase == Phase.DISABLE || phase == Phase.SAVE) {
 			// Turning it off again would recurse; saving failures do not affect running state.
@@ -363,6 +462,14 @@ public final class ModuleManager {
 	/** Called on the client thread whenever a module's state or settings change. */
 	public void addListener(Consumer<Module> listener) {
 		listeners.add(listener);
+	}
+
+	public void addFailureListener(FailureListener listener) {
+		failureListeners.add(listener);
+	}
+
+	public void addConflictListener(ConflictListener listener) {
+		conflictListeners.add(listener);
 	}
 
 	private void notifyChanged(Module module) {

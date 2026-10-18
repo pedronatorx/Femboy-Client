@@ -47,6 +47,11 @@ public final class WTapModule extends Module {
 	}
 
 	@Override
+	protected void onDisable() {
+		left = 0;
+	}
+
+	@Override
 	protected void onTick() {
 		LocalPlayer player = Minecraft.getInstance().player;
 		if (left > 0) {

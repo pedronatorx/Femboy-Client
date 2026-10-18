@@ -60,6 +60,16 @@ public final class KillAuraModule extends Module implements ClientHooks.HudBlock
 		return true;
 	}
 
+	@Override
+	public String lowImpactLimitation() {
+		return "it attacks for you several times a second.";
+	}
+
+	@Override
+	public java.util.Set<String> conflicts() {
+		return java.util.Set.of("aim_assist", "trigger_bot");
+	}
+
 	public LivingEntity target() {
 		return target;
 	}

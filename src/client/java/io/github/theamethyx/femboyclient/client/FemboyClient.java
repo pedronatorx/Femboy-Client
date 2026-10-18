@@ -41,6 +41,13 @@ public final class FemboyClient implements ClientModInitializer {
 	private HudManager hud;
 	private final AutoProfileSwitcher profileSwitcher = new AutoProfileSwitcher();
 	private final CombatTracker combat = new CombatTracker();
+	/** Writes configuration files off the client thread, one at a time. */
+	private final java.util.concurrent.ExecutorService configWriter = java.util.concurrent.Executors.newSingleThreadExecutor(runnable -> {
+		Thread thread = new Thread(runnable, "Femboy Client config writer");
+		thread.setDaemon(true);
+		return thread;
+	});
+	private net.minecraft.client.multiplayer.ClientLevel lastLevel;
 
 	public static FemboyClient get() {
 		return instance;
@@ -54,6 +61,7 @@ public final class FemboyClient implements ClientModInitializer {
 		diagnostics = new DiagnosticLogger();
 		performance = new PerformanceMonitor();
 		options = new GlobalOptions();
+		Performance.bind(options);
 		modules = new ModuleManager(diagnostics, performance, new NoWorldYet());
 		keybinds = new KeybindManager(modules);
 
@@ -67,8 +75,13 @@ public final class FemboyClient implements ClientModInitializer {
 			diagnostics.error("Config", "Could not copy settings from config/nova/; starting with defaults. The old folder is untouched.", e);
 		}
 
-		config =new ConfigurationManager(configDir, modules, options.settings, diagnostics, System::currentTimeMillis);
+		config = new ConfigurationManager(configDir, modules, options.settings, diagnostics, System::currentTimeMillis, configWriter);
+		config.setProfileOptions(GlobalOptions.PROFILE_OPTIONS);
 		modules.setEnvironment(new ClientEnvironment(client));
+		modules.addFailureListener((module, phase, reason) -> io.github.theamethyx.femboyclient.client.hud.Notifications.show(module.name() + " stopped",
+				reason + " (details in Settings, Diagnostics)", io.github.theamethyx.femboyclient.client.gui.Theme.ERROR));
+		modules.addConflictListener((enabled, turnedOff) -> io.github.theamethyx.femboyclient.client.hud.Notifications.show(turnedOff.name() + " turned off",
+				"it cannot run together with " + enabled.name(), io.github.theamethyx.femboyclient.client.gui.Theme.WARNING));
 
 		ModuleRegistry.registerAll(modules);
 
@@ -87,6 +100,8 @@ public final class FemboyClient implements ClientModInitializer {
 		io.github.theamethyx.femboyclient.client.modules.ChestOrganizerModule.registerEvents();
 		io.github.theamethyx.femboyclient.client.modules.ShulkerPreviewModule.registerTooltip();
 		WorldRenderEvents.START_MAIN.register(context -> performance.markFrame(System.nanoTime()));
+		WorldRenderEvents.END_EXTRACTION.register(context -> io.github.theamethyx.femboyclient.client.render.FrameProjection.captureFrustum(context.frustum()));
+		io.github.theamethyx.femboyclient.client.world.BlockChanges.register();
 		ClientLifecycleEvents.CLIENT_STOPPING.register(this::onStopping);
 	}
 
@@ -102,6 +117,17 @@ public final class FemboyClient implements ClientModInitializer {
 		}
 
 		keybinds.releaseUnheld(key -> com.mojang.blaze3d.platform.InputConstants.isKeyDown(client.getWindow(), key));
+		ClientTicks.advance();
+		if (client.level != lastLevel) {
+			// A new world or dimension: shared caches start over, running modules drop what described the old one.
+			io.github.theamethyx.femboyclient.client.world.EntityIndex.invalidate();
+			if (lastLevel != null && client.level != null) {
+				modules.worldChanged();
+			}
+
+			lastLevel = client.level;
+		}
+
 		profileSwitcher.tick(client, this);
 		combat.tick(client, comboTimeoutMillis());
 		modules.tick();
@@ -130,6 +156,7 @@ public final class FemboyClient implements ClientModInitializer {
 	private void onStopping(Minecraft client) {
 		modules.stopAll();
 		config.saveNow();
+		configWriter.shutdown();
 		worldRender.close();
 	}
 

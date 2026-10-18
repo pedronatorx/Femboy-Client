@@ -15,10 +15,14 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 import io.github.theamethyx.femboyclient.client.FemboyClient;
+import io.github.theamethyx.femboyclient.client.Performance;
 import io.github.theamethyx.femboyclient.client.gui.Icon;
 import io.github.theamethyx.femboyclient.client.gui.UiContext;
 import io.github.theamethyx.femboyclient.client.module.ClientHooks;
 import io.github.theamethyx.femboyclient.client.render.EspRenderer;
+import io.github.theamethyx.femboyclient.client.render.RenderingUtilities;
+import io.github.theamethyx.femboyclient.client.render.TargetLines;
+import io.github.theamethyx.femboyclient.client.world.EntityIndex;
 import io.github.theamethyx.femboyclient.core.module.Module;
 import io.github.theamethyx.femboyclient.core.module.ModuleCategory;
 import io.github.theamethyx.femboyclient.core.setting.BooleanSetting;
@@ -26,8 +30,9 @@ import io.github.theamethyx.femboyclient.core.setting.ColorSetting;
 import io.github.theamethyx.femboyclient.core.setting.NumberSetting;
 
 /**
- * Screen-edge arrows pointing at targets you are interested in, with a small marker when the target is
- * on screen. Deliberately different from ESP boxes: trackers say <em>where to look</em>, not what is there.
+ * Points you at targets you are interested in: target lines from the crosshair and/or screen-edge arrows with a small
+ * marker when the target is on screen. The ESP modules have their own target lines for what they highlight; Trackers
+ * adds the targets no ESP covers (your waypoints and last-seen positions) and works without boxes.
  *
  * <p>Sources, each labelled so you know how fresh the position is:
  * <ul>
@@ -39,16 +44,66 @@ import io.github.theamethyx.femboyclient.core.setting.NumberSetting;
  * The target list is rebuilt every few ticks; entities that despawn or leave range drop out at the next
  * rebuild and are skipped immediately if already removed.
  */
-public final class TrackersModule extends Module implements ClientHooks.ScreenOverlay {
+public final class TrackersModule extends Module implements ClientHooks.ScreenOverlay, ClientHooks.WorldRender {
 	public enum Source { PLAYER, HOSTILE, PASSIVE, VILLAGER, WAYPOINT, LAST_SEEN }
 
 	/** One indicator as drawn in the last frame; read by automated tests. */
 	public record Indicator(String name, Source source, boolean onScreen, int x, int y, String label) {
 	}
 
-	private record Target(String name, Source source, Entity entity, Vec3 fixed, long seenAt) {
+	private final class Target implements TargetLines.Target {
+		final String name;
+		final Source source;
+		final Entity entity;
+		final Vec3 fixed;
+		final long seenAt;
+
+		Target(String name, Source source, Entity entity, Vec3 fixed, long seenAt) {
+			this.name = name;
+			this.source = source;
+			this.entity = entity;
+			this.fixed = fixed;
+			this.seenAt = seenAt;
+		}
+
 		Vec3 position(float partialTick) {
 			return entity != null ? entity.getPosition(partialTick).add(0, entity.getBbHeight() / 2, 0) : fixed;
+		}
+
+		String name() {
+			return name;
+		}
+
+		Source source() {
+			return source;
+		}
+
+		Entity entity() {
+			return entity;
+		}
+
+		long seenAt() {
+			return seenAt;
+		}
+
+		@Override
+		public Vec3 linePoint(float partialTick) {
+			return position(partialTick);
+		}
+
+		@Override
+		public int lineColor() {
+			return colorOf(source);
+		}
+
+		@Override
+		public boolean lineOfSight() {
+			return true;
+		}
+
+		@Override
+		public boolean wantsLine() {
+			return entity == null || !entity.isRemoved();
 		}
 	}
 
@@ -69,6 +124,8 @@ public final class TrackersModule extends Module implements ClientHooks.ScreenOv
 			"How often the target list is rebuilt. Arrows still follow moving targets every frame.", 4, 1, 40, 1, "ticks"));
 
 	{ settings().section("Style"); }
+	private final BooleanSetting arrows = settings().add(new BooleanSetting("arrows", "Edge arrows and markers",
+			"Arrows at the screen edge for targets outside your view, markers on those inside it. Target lines are set below.", true));
 	private final NumberSetting size = settings().add(new NumberSetting("size", "Indicator size", "Size of the arrows and markers.", 10, 6, 24, 1, "px"));
 	private final NumberSetting edgeMargin = settings().add(new NumberSetting("edge_margin", "Distance from screen edge",
 			"How far from the screen edge the arrows sit.", 28, 8, 120, 2, "px"));
@@ -86,6 +143,8 @@ public final class TrackersModule extends Module implements ClientHooks.ScreenOv
 	private final ColorSetting villagerColor = settings().add(new ColorSetting("color_villagers", "Villagers", "Color for villagers.", 0xF2C14E));
 	private final ColorSetting waypointColor = settings().add(new ColorSetting("color_waypoints", "Waypoints", "Color for waypoints.", 0x6EA8FF));
 	private final ColorSetting lastSeenColor = settings().add(new ColorSetting("color_last_seen", "Last seen", "Color for last-seen positions.", 0xF29E4C));
+
+	private final TargetLines.Settings lines = new TargetLines.Settings(settings(), true, TargetLines.Visibility.ALWAYS, 256, 2048, 12);
 
 	private List<Target> targets = List.of();
 	private List<Indicator> lastIndicators = List.of();
@@ -109,7 +168,7 @@ public final class TrackersModule extends Module implements ClientHooks.ScreenOv
 			return;
 		}
 
-		ticksUntilUpdate = updateInterval.intValue();
+		ticksUntilUpdate = Performance.interval(updateInterval.intValue());
 		Minecraft client = Minecraft.getInstance();
 		if (client.level == null || client.player == null) {
 			targets = List.of();
@@ -119,8 +178,8 @@ public final class TrackersModule extends Module implements ClientHooks.ScreenOv
 		Vec3 me = client.player.position();
 		double max = maxDistance.get();
 		List<Target> found = new ArrayList<>();
-		for (Entity entity : client.level.entitiesForRendering()) {
-			if (entity == client.player || !entity.isAlive() || entity.isInvisibleTo(client.player) || entity.distanceToSqr(me) > max * max) {
+		for (Entity entity : EntityIndex.within(max)) {
+			if (!entity.isAlive() || entity.isInvisibleTo(client.player)) {
 				continue;
 			}
 
@@ -152,7 +211,8 @@ public final class TrackersModule extends Module implements ClientHooks.ScreenOv
 		}
 
 		found.sort(Comparator.comparingDouble(t -> t.position(1).distanceToSqr(me)));
-		targets = found.size() > maxIndicators.intValue() ? List.copyOf(found.subList(0, maxIndicators.intValue())) : List.copyOf(found);
+		int limit = Performance.cap(maxIndicators.intValue(), 16);
+		targets = found.size() > limit ? List.copyOf(found.subList(0, limit)) : List.copyOf(found);
 	}
 
 	private static Source sourceOf(Entity entity) {
@@ -197,6 +257,27 @@ public final class TrackersModule extends Module implements ClientHooks.ScreenOv
 		ticksUntilUpdate = 0;
 	}
 
+	@Override
+	protected void onWorldChange() {
+		targets = List.of();
+		lastIndicators = List.of();
+		ticksUntilUpdate = 0;
+	}
+
+	public TargetLines.Settings lines() {
+		return lines;
+	}
+
+	@Override
+	public List<Requirement> requirements() {
+		return List.of(new Requirement("waypoints", "your waypoints as targets"), new Requirement("player_finder", "last-seen positions of players"));
+	}
+
+	@Override
+	public void renderWorld(RenderingUtilities render) {
+		lines.draw(render, targets);
+	}
+
 	/** Indicators drawn in the last frame. */
 	public List<Indicator> lastIndicators() {
 		return lastIndicators;
@@ -204,6 +285,11 @@ public final class TrackersModule extends Module implements ClientHooks.ScreenOv
 
 	@Override
 	public void renderOverlay(UiContext ui, int screenWidth, int screenHeight, float partialTick) {
+		if (!arrows.get()) {
+			lastIndicators = List.of();
+			return;
+		}
+
 		Minecraft client = Minecraft.getInstance();
 		Camera camera = client.gameRenderer.getMainCamera();
 		Vec3 eye = camera.position();
@@ -274,7 +360,7 @@ public final class TrackersModule extends Module implements ClientHooks.ScreenOv
 	private String label(Target target, double distance) {
 		String text = target.name();
 		if (showDistance.get()) {
-			text += String.format(Locale.ROOT, " · %.0fm", distance);
+			text += " · " + EntityEspModule.meters(distance);
 		}
 
 		return switch (target.source()) {

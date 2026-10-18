@@ -17,7 +17,7 @@
   - "Observed" shows when the oldest chunk data behind a geode was read.
 - **Storage ESP** reads block entities the client already has.
   - On servers that hide block entities (anti-xray plugins), it shows what the server sent, which may be fake or nothing. Not tested.
-  - Changes appear at the next scan (default every second).
+  - A storage block placed or broken nearby triggers a rescan within 2 ticks; other changes (a chunk unloading far away) appear at the next scan.
 - **Entity ESP pets** are entities with an owner (tamed wolves, cats, parrots, horses...). Other "pet-like" mobs, such as name-tagged ones, count by their type.
 - **World labels** (ESP, waypoints) stack among themselves but can be drawn under HUD panels in the same screen corner.
 - **Free camera.**
@@ -73,7 +73,16 @@
 - **AutoCrystal/AutoAnchor/Auto Pot** turn your view visibly; they act one step per tick, so they are slower than clients that hide rotations. AutoAnchor does nothing in the Nether.
 - **Anti Hunger** makes the server treat you as walking, so sprint-jumps cost the walking jump hunger and other server-side sprint effects (such as sprint knockback when the "report sprint when attacking" setting is off) are lost.
 - **Player Alert auto leave** only leaves multiplayer servers, never singleplayer.
-- **Ore ESP and Block Counter** see only what the server sent; anti-xray servers send fake ores.
+- **Block ESP and Block Counter** see only what the server sent; anti-xray servers send fake ores. Since 0.9.0 they (and Geode Analyzer) run only in singleplayer and on servers in your own network.
+- **Target lines.**
+  - "Only targets you can see" checks the line of sight from your player's eyes a few times a second (not every frame, and from the player, not from a free camera).
+  - "Hide behind blocks" uses the depth buffer, so a line can also be cut where it passes behind a block near the target.
+  - Checked standing still; not tested while walking with view bobbing, in third person or with the free camera.
+- **Performance modes.** Low impact pauses KillAura, Trigger Bot, Aim Assist, AutoCrystal, AutoAnchor, Auto Criticals and Auto StunSlam; they resume when you change the mode. The caps in Performance and Low impact (for example 48 entities, 150 blocks, 12 labels) are fixed, not settings.
+- **Profiles store the look:** switching to a profile also switches its theme, animation options and performance mode. Profiles saved before 0.9.0 have none stored and keep the current ones.
+- **Module conflicts** are resolved by turning the other module off; nothing is merged.
+- **Menu art** comes from small filtered textures. A resource pack that replaces them changes the look; if they are missing the menu falls back to plain shapes (not tested). The HUD keeps plain shapes on purpose: smooth corners would cost batching every frame.
+- **Benchmark limits:** see [docs/benchmarks](docs/benchmarks/README.md). Keystrokes did not get faster.
 - **No Fall** tells the server you are on the ground; it does not help when the server checks falls itself.
 - **HUD editor:** the name label of a block dragged to the very top can overlap the help panel.
 

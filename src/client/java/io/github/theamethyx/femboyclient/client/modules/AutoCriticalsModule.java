@@ -31,6 +31,11 @@ public final class AutoCriticalsModule extends Module {
 		return true;
 	}
 
+	@Override
+	public String lowImpactLimitation() {
+		return "it adds a jump and a delayed attack to your hits.";
+	}
+
 	public int crits() {
 		return crits;
 	}
