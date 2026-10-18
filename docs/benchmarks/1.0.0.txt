@@ -1,0 +1,55 @@
+Femboy Client benchmark
+Build: 1.0.0
+Java: 21.0.12.1, 16 CPUs, max heap 2048 MB
+Scene: 100 husks, 40 cows, 20 items, 121 chests, 4802 diamond ores; 28 modules listed
+Each round: 300 ticks while turning 1.5 degrees per tick; 100 ticks of warm-up first.
+
+all modules off:
+  client cost per tick: modules tick 0.004 ms (0.0 KB), HUD 0.048 ms (0.6 KB), world 0.000 ms (0.0 KB)
+  1248 frames in 300 ticks; client drawing per frame 0.012 ms; frame time average 12.16 ms, worst 22.31 ms (last 240 frames, GPU and harness dependent)
+all on, round 1:
+  client cost per tick: modules tick 0.247 ms (38.2 KB), HUD 2.525 ms (1078.0 KB), world 5.166 ms (1242.4 KB)
+  728 frames in 300 ticks; client drawing per frame 3.169 ms; frame time average 19.48 ms, worst 42.03 ms (last 240 frames, GPU and harness dependent)
+all on, round 2:
+  client cost per tick: modules tick 0.189 ms (37.8 KB), HUD 2.281 ms (1080.3 KB), world 5.143 ms (1217.9 KB)
+  724 frames in 300 ticks; client drawing per frame 3.076 ms; frame time average 25.26 ms, worst 40.91 ms (last 240 frames, GPU and harness dependent)
+all on, round 3:
+  client cost per tick: modules tick 0.188 ms (37.7 KB), HUD 1.628 ms (664.8 KB), world 3.494 ms (745.5 KB)
+  449 frames in 300 ticks; client drawing per frame 3.422 ms; frame time average 33.43 ms, worst 41.08 ms (last 240 frames, GPU and harness dependent)
+mode performance:
+  client cost per tick: modules tick 0.148 ms (20.3 KB), HUD 1.047 ms (456.8 KB), world 3.383 ms (720.1 KB)
+  448 frames in 300 ticks; client drawing per frame 2.967 ms; frame time average 33.43 ms, worst 39.99 ms (last 240 frames, GPU and harness dependent)
+mode low_impact:
+  client cost per tick: modules tick 0.123 ms (14.3 KB), HUD 1.025 ms (458.0 KB), world 3.474 ms (721.2 KB)
+  448 frames in 300 ticks; client drawing per frame 3.012 ms; frame time average 33.47 ms, worst 40.96 ms (last 240 frames, GPU and harness dependent)
+
+Per module, median of the 3 rounds (time and allocation per game tick, all phases together):
+  module                    us/tick      KB/tick
+  entity_esp                  696.1       310.12
+  trackers                    496.1       285.89
+  block_esp                   253.8       405.90
+  keystrokes                  242.9        45.17
+  storage_esp                 234.0       244.02
+  light_level                 128.5       423.90
+  hitboxes                    100.7        80.54
+  explosion_info               52.4         3.04
+  module_list_hud              39.0         1.61
+  movement_info                22.9         1.62
+  coordinates_hud              20.6         2.66
+  health_armor                 20.1         1.64
+  performance_hud              17.0         2.49
+  item_counters                14.5         0.33
+  waypoints                    13.2         0.15
+  combat_info                  11.0         0.25
+  trajectories                 10.9         0.19
+  chunk_borders                 8.0         3.66
+  block_counter                 6.0         0.23
+  target_hud                    4.6         0.00
+  effects                       4.4         0.09
+  player_alert                  4.1         0.14
+  player_finder                 3.7         0.03
+  block_highlight               3.5         0.12
+  weapon_info                   3.3         0.00
+  elytra_info                   2.7         0.00
+  death_coordinates             1.7         0.00
+  entity_outlines               0.1         0.00

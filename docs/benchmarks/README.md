@@ -3,7 +3,8 @@
 `./scripts/run-benchmark.sh` runs one in-game measurement in a fixed scene and writes `build/run/clientGameTest/benchmark.txt` (copied to `build-logs/`). The files here are its output:
 
 - [0.8.0-baseline.txt](0.8.0-baseline.txt): Femboy Client 0.8.0 (commit `ef43ab2`) with only the measurement code added.
-- [0.9.0.txt](0.9.0.txt): this version.
+- [0.9.0.txt](0.9.0.txt): 0.9.0.
+- [1.0.0.txt](1.0.0.txt): 1.0.0, same harness, to check that the 1.0 additions (HUD conditions, scale and opacity, rules and timeline checks each tick, the health bookkeeping) did not make the client slower.
 
 ## Method
 
@@ -47,6 +48,17 @@ Per module, time per game tick (median of three rounds):
 | Low impact | 0.11 ms | 14 KB | 2.98 ms |
 
 The mode rounds ran after the Balanced rounds with the same modules on; each is a single round.
+
+## 1.0.0 against 0.9.0 (same scene, Balanced)
+
+| | 0.9.0 | 1.0.0 |
+|---|---|---|
+| Module tick work per tick | 0.18 to 0.23 ms | 0.19 to 0.25 ms |
+| Allocated during module ticks, per tick | 37 KB | 38 KB |
+| Client drawing (HUD + world overlays) per frame | 3.07 to 3.62 ms | 3.08 to 3.42 ms |
+| Performance / Low impact, module tick | 0.13 / 0.11 ms | 0.15 / 0.12 ms |
+
+Within run-to-run variation; 1.0 neither sped up nor slowed down the measured modules. Each run is one measurement on a loaded machine with software rendering, so differences of a few hundredths of a millisecond are noise.
 
 ## Not measured
 
