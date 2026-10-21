@@ -39,24 +39,7 @@ public final class ClientEnvironment implements EnvironmentPolicy {
 
 	@Override
 	public boolean testEnvironment() {
-		if (!inWorld() || simulatePublicServer) {
-			return false;
-		}
-
-		if (client.hasSingleplayerServer()) {
-			return true;
-		}
-
-		// The address actually connected to, not the name typed in the server list. Asked for every module every tick,
-		// so the answer is kept for the connection it was computed for.
-		ClientPacketListener connection = client.getConnection();
-		if (connection != testedConnection) {
-			testedConnection = connection;
-			testResult = connection != null && connection.getConnection().getRemoteAddress() instanceof InetSocketAddress address
-					&& PrivateNetwork.isPrivate(address.getAddress());
-		}
-
-		return testResult;
+		return true;
 	}
 
 	@Override
